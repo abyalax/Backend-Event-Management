@@ -1,0 +1,9 @@
+set -e
+
+echo "⚡ Running Build Test"
+pnpm concurrently "pnpm --filter frontend build" "pnpm --filter backend build" || exit 1
+
+echo "⚡ Running Backend tests"
+pnpm --filter backend test || exit 1
+echo "⚡ Running lint-staged"
+pnpm lint-staged

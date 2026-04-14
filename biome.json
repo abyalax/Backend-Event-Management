@@ -1,0 +1,80 @@
+{
+  "$schema": "https://biomejs.dev/schemas/2.2.5/schema.json",
+  "vcs": {
+    "enabled": false,
+    "clientKind": "git",
+    "useIgnoreFile": false
+  },
+  "files": {
+    "ignoreUnknown": false,
+    "includes": [
+      "{src,test}/**/*.ts",
+      "{src,test}/modules/**/*.module.ts",
+      "{src,test}/**/*.{entity,interface,provider,service,dto,controller,controller.spec}.ts",
+      "!src/infrastructure/database/migrations",
+      "!node_modules",
+      "!dist"
+    ]
+  },
+  "formatter": {
+    "enabled": true,
+    "indentWidth": 2,
+    "indentStyle": "space",
+    "bracketSpacing": true
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "a11y": "off",
+      "correctness": {
+        "useUniqueElementIds": "off"
+      },
+      "complexity": {
+        "useLiteralKeys": "off"
+      },
+      "suspicious": {
+        "recommended": true,
+        "noArrayIndexKey": "off",
+        "noUnknownAtRules": "off"
+      },
+      "style": {
+        "useImportType": "off",
+        "useFilenamingConvention": "off",
+        "useShorthandAssign": "off",
+        "useCollapsedElseIf": "on",
+        "useNamingConvention": "off",
+        "recommended": true
+      }
+    }
+  },
+  "javascript": {
+    "parser": {
+      "unsafeParameterDecoratorsEnabled": true
+    },
+    "formatter": {
+      "quoteStyle": "single",
+      "indentStyle": "space",
+      "indentWidth": 2,
+      "lineWidth": 160,
+      "trailingCommas": "all",
+      "arrowParentheses": "always"
+    }
+  },
+  "assist": {
+    "enabled": true,
+    "includes": [
+      "{src,test}/**/*.ts",
+      "{src,test}/modules/**/*.module.ts",
+      "{src,test}/**/*.{entity,interface,provider,service,dto,controller,controller.spec}.ts",
+      "!src/infrastructure/database/migrations",
+      "!node_modules",
+      "!dist"
+    ],
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    }
+  }
+}

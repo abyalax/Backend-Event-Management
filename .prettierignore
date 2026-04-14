@@ -1,0 +1,11 @@
+build
+coverage
+
+**/.git
+**/.svn
+**/.hg
+**/node_modules
+
+**/migrations/*-generated.ts
+
+**/*.mock.ts
