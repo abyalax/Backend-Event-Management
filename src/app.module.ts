@@ -1,12 +1,14 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
-import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { GracefulShutdownModule } from 'nestjs-graceful-shutdown';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { RolesGuard } from './common/guards/roles.guard';
+import { EnvValidator } from './infrastructure/config/config.provider';
 import { closeConnection } from './infrastructure/database/database.provider';
 import { AuthModule } from './modules/auth/auth.module';
-import { ProductModule } from './modules/product/product.module';
+import { EventModule } from './modules/event/event.module';
 import { UserModule } from './modules/user/user.module';
 
 const gracefulShutdownImports =
@@ -28,23 +30,23 @@ const gracefulShutdownImports =
   imports: [
     ...gracefulShutdownImports,
     ThrottlerModule.forRoot({
-      throttlers: [
-        {
-          ttl: 60000,
-          limit: 10,
-        },
-      ],
+      throttlers: [{ ttl: 60000, limit: 20 }], // max 20 request/menit
     }),
-    ProductModule,
     AuthModule,
     UserModule,
+    EventModule,
   ],
   controllers: [AppController],
   providers: [
+    EnvValidator,
     AppService,
     {
       provide: APP_GUARD,
-      useClass: ThrottlerModule,
+      useClass: ThrottlerGuard,
+    },
+    {
+      provide: APP_GUARD,
+      useClass: RolesGuard,
     },
   ],
 })

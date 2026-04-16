@@ -1,6 +1,6 @@
 export const USER = {
   LOGIN: {
-    email: 'johnadmin@gmail.com',
+    email: 'admin@gmail.com',
     password: 'password',
   },
 };

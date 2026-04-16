@@ -1,13 +1,25 @@
-import * as bcrypt from 'bcryptjs';
-import { User } from '~/modules/user/user.entity';
+import * as bcrypt from "bcryptjs";
+import type { User } from "~/modules/user/entity/user.entity";
 
 export const mockUser = async (): Promise<User[]> => {
-  const plaintextPassword = 'password';
+  const plaintextPassword = "password";
   const passwordHashed = await bcrypt.hash(plaintextPassword, 10);
 
-  const admin: User = { id: 1, name: 'John Admin', email: 'johnadmin@gmail.com', password: passwordHashed, roles: [] };
-  const kasir: User = { id: 2, name: 'John Kasir', email: 'johnkasir@gmail.com', password: passwordHashed, roles: [] };
-  const karyawan: User = { id: 3, name: 'John Karyawan', email: 'johnkaryawan@gmail.com', password: passwordHashed, roles: [] };
+  const admin: User = {
+    id: "550e8400-e29b-41d4-a716-446655440000",
+    name: "Alex Admin",
+    email: "admin@gmail.com",
+    password: passwordHashed,
+    roles: [],
+  };
+  const user: User = {
+    id: "550e8400-e29b-41d4-a716-446655440001",
+    name: "Devina Cust",
+    email: "customer@gmail.com",
+    password: passwordHashed,
+    roles: [],
+  };
 
-  return [admin, kasir, karyawan];
+  return [admin, user];
 };
+

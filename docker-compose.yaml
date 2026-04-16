@@ -1,18 +1,60 @@
-version: "3.9"
-
 services:
   postgres:
     image: postgres:16
-    container_name: boilerplate_nest
+    container_name: event_management_postgres
     restart: always
     environment:
       POSTGRES_USER: root
       POSTGRES_PASSWORD: postgress_pass
-      POSTGRES_DB: db_nest
+      POSTGRES_DB: db_event_management
     ports:
-      - "5432:5432"
+      - '5432:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
 
+  # redis:
+  #   image: redis:7-alpine
+  #   container_name: event_management_redis
+  #   restart: always
+  #   ports:
+  #     - '6379:6379'
+  #   volumes:
+  #     - redis_data:/data
+
+  # minio:
+  #   image: minio/minio:latest
+  #   container_name: event_management_minio
+  #   restart: always
+  #   ports:
+  #     - '9000:9000'
+  #     - '9001:9001'
+  #   environment:
+  #     MINIO_ROOT_USER: minioadmin
+  #     MINIO_ROOT_PASSWORD: minioadmin123
+  #   volumes:
+  #     - minio_data:/data
+  #   command: server /data --console-address ":9001"
+
+  dbgate:
+    image: dbgate/dbgate
+    restart: always
+    ports:
+      - 8080:3000
+    volumes:
+      - dbgate-data:/root/.dbgate
+    environment:
+      CONNECTIONS: POSTGRES
+
+      LABEL_POSTGRES: Postgres
+      SERVER_POSTGRES: postgres
+      USER_POSTGRES: root
+      PASSWORD_POSTGRES: postgress_pass
+      PORT_POSTGRES: 5432
+      ENGINE_POSTGRES: postgres@dbgate-plugin-postgres
+      DATABASE_POSTGRES: db_event_management
+
 volumes:
   postgres_data:
+  redis_data:
+  minio_data:
+  dbgate-data:

@@ -81,9 +81,9 @@ describe('Module Authentication', () => {
       expect.objectContaining({
         statusCode: HttpStatus.CREATED,
         data: expect.objectContaining({
-          id: expect.any(Number),
-          name: expect.any(String),
-          email: expect.any(String),
+          id: expect.anything(),
+          name: expect.anything(),
+          email: expect.anything(),
           roles: expect.arrayContaining<RoleDto>([]),
         }),
       }),

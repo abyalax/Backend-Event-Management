@@ -3,8 +3,8 @@ import { NestFactory } from '@nestjs/core';
 import * as cookieParser from 'cookie-parser';
 import { AppModule } from './app.module';
 
-import 'reflect-metadata';
 import { setupGracefulShutdown } from 'nestjs-graceful-shutdown';
+import 'reflect-metadata';
 import { GlobalExceptionFilter } from './common/filters/global.filter';
 import { env } from './config/env';
 
@@ -15,17 +15,20 @@ async function bootstrap() {
   setupGracefulShutdown({ app });
 
   app.use(cookieParser(env.COOKIE_SECRET));
-  app.useGlobalFilters(globalException);
   app.useGlobalPipes(
     new ValidationPipe({
       transform: true,
       whitelist: true,
+      forbidNonWhitelisted: true,
       transformOptions: {
         excludeExtraneousValues: true,
         enableImplicitConversion: true,
       },
     }),
   );
+
+  app.useGlobalFilters(globalException);
+
   app.enableCors({
     origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175'],
     credentials: true,

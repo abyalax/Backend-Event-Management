@@ -1,5 +1,5 @@
-import { Column, Entity, JoinTable, ManyToMany, PrimaryGeneratedColumn } from 'typeorm';
-import type { User } from '~/modules/user/user.entity';
+import { Column, CreateDateColumn, DeleteDateColumn, Entity, JoinTable, ManyToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import type { User } from '~/modules/user/entity/user.entity';
 import type { Permission } from './permission.entity';
 
 @Entity('roles')
@@ -7,7 +7,7 @@ export class Role {
   @PrimaryGeneratedColumn({ name: 'id_role' })
   id: number;
 
-  @Column({ name: 'name_role', length: 50 })
+  @Column({ name: 'name', length: 50 })
   name: string;
 
   @ManyToMany('User', 'roles')
@@ -20,4 +20,13 @@ export class Role {
     inverseJoinColumn: { name: 'id_permission', referencedColumnName: 'id' },
   })
   permissions: Permission[];
+
+  @CreateDateColumn({ type: 'timestamp with time zone', name: 'created_at' })
+  createdAt?: string;
+
+  @UpdateDateColumn({ type: 'timestamp with time zone', name: 'updated_at' })
+  updatedAt?: string;
+
+  @DeleteDateColumn({ type: 'timestamp with time zone', name: 'deleted_at' })
+  deletedAt?: Date;
 }

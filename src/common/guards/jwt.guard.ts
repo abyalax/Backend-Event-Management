@@ -1,6 +1,7 @@
 import { CanActivate, ExecutionContext, Injectable, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
+
 import { env } from '~/config/env';
 import { UserService } from '~/modules/user/user.service';
 import { EMessage } from '../types/response';
@@ -22,12 +23,12 @@ export class JwtGuard implements CanActivate {
       });
       if (verifyToken) {
         const user = await this.userService.findOneBy({ id: verifyToken.sub });
-        request['user'] = {
+        request.user = {
           name: user.name,
           email: user.email,
           password: '',
           id: user.id,
-          sub: user.id,
+          sub: Number(user.id),
           roles: user.roles ?? [],
           permissions: user?.roles?.flatMap((role) => role.permissions) ?? [],
         };

@@ -77,7 +77,7 @@ export class AuthService {
     };
   }
 
-  async getFullPermissions(id: number): Promise<PermissionsDto[] | undefined> {
+  async getFullPermissions(id: string): Promise<PermissionsDto[] | undefined> {
     const permission = await this.userService.getFullPermissions(id);
     return plainToInstance(PermissionsDto, permission, {
       excludeExtraneousValues: true,

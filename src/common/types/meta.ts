@@ -1,5 +1,4 @@
 import z from 'zod';
-import { stringNumber } from '../schema';
 
 export type SortOrder = 'ASC' | 'DESC';
 
@@ -8,7 +7,7 @@ interface Pagination {
   per_page?: number;
 }
 interface Sorting<E> {
-  sort_by?: keyof E | undefined;
+  sort_by: keyof E | undefined;
   sort_order?: SortOrder;
 }
 interface GlobalFilter {
@@ -17,16 +16,35 @@ interface GlobalFilter {
 
 export interface MetaRequest<E> extends Pagination, Sorting<E>, GlobalFilter {}
 
-export const MetaResponseSchema = z.object({
-  page: stringNumber('page must be a valid number'),
-  per_page: stringNumber('per_page must be a valid number'),
-  total_count: stringNumber('total_count must be a valid number'),
-  total_pages: stringNumber('total_pages must be a valid number'),
-});
-
-export type MetaResponse = z.infer<typeof MetaResponseSchema>;
-
-export interface Paginated<T = unknown> {
+export declare class Paginated<T> {
   data: T[];
-  meta: MetaResponse;
+  meta: {
+    itemsPerPage: number;
+    totalItems?: number;
+    currentPage?: number;
+    totalPages?: number;
+    sortBy: [string, SortOrder][];
+    searchBy: string[];
+    search: string;
+    select: string[];
+    filter?: {
+      [column: string]: string | string[];
+    };
+    cursor?: string;
+  };
+  links: {
+    first?: string;
+    previous?: string;
+    current: string;
+    next?: string;
+    last?: string;
+  };
 }
+
+export const MetaResponseSchema = z.object({
+  currentPage: z.number(),
+  itemsPerPage: z.number(),
+  totalItems: z.number(),
+  totalPages: z.number(),
+  sortBy: z.array(z.array(z.string())),
+});

@@ -1,13 +1,12 @@
 import { Exclude, Expose, Type } from 'class-transformer';
-import { IsArray, IsNumber, IsOptional, IsString } from 'class-validator';
+import { IsArray, IsOptional, IsString } from 'class-validator';
 import { RoleDto } from '~/modules/auth/dto/role/get-role.dto';
 
 @Exclude()
 export class UserDto {
   @Expose()
-  @Type(() => Number)
-  @IsNumber()
-  id: number;
+  @IsString()
+  id: string;
 
   @Expose()
   @IsString()

@@ -8,7 +8,9 @@ export const envSchema = z.object({
   JWT_PUBLIC_KEY: z.string({ message: 'JWT public key is required' }),
   JWT_EXPIRATION: z.string({ message: 'JWT expiration is required' }),
   JWT_REFRESH_SECRET: z.string({ message: 'JWT refresh secret is required' }),
-  JWT_REFRESH_EXPIRATION: z.string({ message: 'JWT refresh expiration is required' }),
+  JWT_REFRESH_EXPIRATION: z.string({
+    message: 'JWT refresh expiration is required',
+  }),
   /**Database Config */
   DATABASE_URL: z.string({ message: 'Required Database URL' }),
   DATABASE_TYPE: z.string({ message: 'Required Database Type' }),

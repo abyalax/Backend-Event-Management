@@ -1,0 +1,122 @@
+import { MigrationInterface, QueryRunner } from "typeorm";
+
+export class Generated1776359784659 implements MigrationInterface {
+    name = 'Generated1776359784659'
+
+    public async up(queryRunner: QueryRunner): Promise<void> {
+        await queryRunner.query(`CREATE TABLE "permissions" ("id" SERIAL NOT NULL, "key" character varying(80) NOT NULL, "name" character varying(80) NOT NULL, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "deleted_at" TIMESTAMP WITH TIME ZONE, CONSTRAINT "UQ_017943867ed5ceef9c03edd9745" UNIQUE ("key"), CONSTRAINT "UQ_48ce552495d14eae9b187bb6716" UNIQUE ("name"), CONSTRAINT "PK_920331560282b8bd21bb02290df" PRIMARY KEY ("id"))`);
+        await queryRunner.query(`CREATE TABLE "roles" ("id_role" SERIAL NOT NULL, "name" character varying(50) NOT NULL, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "deleted_at" TIMESTAMP WITH TIME ZONE, CONSTRAINT "PK_3ebdb96dd6787bda0e3c8f89d66" PRIMARY KEY ("id_role"))`);
+        await queryRunner.query(`CREATE TABLE "categories" ("id" SERIAL NOT NULL, "name" character varying(100) NOT NULL, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "deleted_at" TIMESTAMP WITH TIME ZONE, CONSTRAINT "UQ_8b0be371d28245da6e4f4b61878" UNIQUE ("name"), CONSTRAINT "PK_24dbc6126a28ff948da33e97d3b" PRIMARY KEY ("id"))`);
+        await queryRunner.query(`CREATE INDEX "category_name" ON "categories" ("name") `);
+        await queryRunner.query(`CREATE TABLE "event_categories" ("id_category" SERIAL NOT NULL, "name" character varying(100) NOT NULL, "description" text, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "deleted_at" TIMESTAMP WITH TIME ZONE, CONSTRAINT "PK_10666fa3893cdcfd0fd4493ba85" PRIMARY KEY ("id_category"))`);
+        await queryRunner.query(`CREATE INDEX "idx_event_categories_created_at" ON "event_categories" ("created_at") `);
+        await queryRunner.query(`CREATE INDEX "idx_event_categories_name" ON "event_categories" ("name") `);
+        await queryRunner.query(`CREATE TABLE "events" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "title" character varying(200) NOT NULL, "description" text, "max_attendees" integer, "is_virtual" boolean NOT NULL DEFAULT false, "location" character varying(255) NOT NULL, "start_date" TIMESTAMP WITH TIME ZONE NOT NULL, "end_date" TIMESTAMP WITH TIME ZONE NOT NULL, "status" character varying(20) NOT NULL, "category_id" integer NOT NULL, "created_by" uuid NOT NULL, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "deleted_at" TIMESTAMP WITH TIME ZONE, CONSTRAINT "PK_40731c7151fe4be3116e45ddf73" PRIMARY KEY ("id"))`);
+        await queryRunner.query(`CREATE INDEX "idx_events_created_at" ON "events" ("created_at") `);
+        await queryRunner.query(`CREATE INDEX "idx_events_status" ON "events" ("status") `);
+        await queryRunner.query(`CREATE INDEX "idx_events_date_range" ON "events" ("start_date", "end_date") `);
+        await queryRunner.query(`CREATE INDEX "idx_events_category_id" ON "events" ("category_id") `);
+        await queryRunner.query(`CREATE INDEX "idx_events_title" ON "events" ("title") `);
+        await queryRunner.query(`CREATE TABLE "notifications" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "user_id" uuid NOT NULL, "type" character varying(50) NOT NULL, "title" character varying(200) NOT NULL, "message" text NOT NULL, "is_read" boolean NOT NULL DEFAULT false, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_6a72c3c0f683f6462415e653c3a" PRIMARY KEY ("id"))`);
+        await queryRunner.query(`CREATE INDEX "idx_notifications_created_at" ON "notifications" ("created_at") `);
+        await queryRunner.query(`CREATE INDEX "idx_notifications_is_read" ON "notifications" ("is_read") `);
+        await queryRunner.query(`CREATE INDEX "idx_notifications_user_id" ON "notifications" ("user_id") `);
+        await queryRunner.query(`CREATE TABLE "order_items" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "order_id" uuid NOT NULL, "ticket_id" uuid NOT NULL, "quantity" integer NOT NULL, "price" numeric(10,2) NOT NULL, "subtotal" numeric(10,2) NOT NULL, CONSTRAINT "PK_005269d8574e6fac0493715c308" PRIMARY KEY ("id"))`);
+        await queryRunner.query(`CREATE INDEX "idx_order_items_ticket_id" ON "order_items" ("ticket_id") `);
+        await queryRunner.query(`CREATE INDEX "idx_order_items_order_id" ON "order_items" ("order_id") `);
+        await queryRunner.query(`CREATE TABLE "orders" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "user_id" uuid NOT NULL, "total_amount" numeric(10,2) NOT NULL, "status" character varying(20) NOT NULL, "expired_at" TIMESTAMP WITH TIME ZONE, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "deleted_at" TIMESTAMP WITH TIME ZONE, CONSTRAINT "PK_710e2d4957aa5878dfe94e4ac2f" PRIMARY KEY ("id"))`);
+        await queryRunner.query(`CREATE INDEX "idx_orders_created_at" ON "orders" ("created_at") `);
+        await queryRunner.query(`CREATE INDEX "idx_orders_status" ON "orders" ("status") `);
+        await queryRunner.query(`CREATE INDEX "idx_orders_user_id" ON "orders" ("user_id") `);
+        await queryRunner.query(`CREATE TABLE "payments" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "order_id" uuid NOT NULL, "external_id" character varying(100) NOT NULL, "amount" numeric(10,2) NOT NULL, "status" character varying(20) NOT NULL, "paid_at" TIMESTAMP WITH TIME ZONE, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), CONSTRAINT "PK_197ab7af18c93fbb0c9b28b4a59" PRIMARY KEY ("id"))`);
+        await queryRunner.query(`CREATE INDEX "idx_payments_status" ON "payments" ("status") `);
+        await queryRunner.query(`CREATE UNIQUE INDEX "idx_payments_external_id" ON "payments" ("external_id") `);
+        await queryRunner.query(`CREATE INDEX "idx_payments_order_id" ON "payments" ("order_id") `);
+        await queryRunner.query(`CREATE TABLE "generated_event_tickets" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "order_item_id" uuid NOT NULL, "qr_code_url" character varying(500) NOT NULL, "pdf_url" character varying(500) NOT NULL, "is_used" boolean NOT NULL DEFAULT false, "issued_at" TIMESTAMP WITH TIME ZONE NOT NULL, "ticket_id" uuid, CONSTRAINT "PK_1b9042ea57d05e81acca074f9d0" PRIMARY KEY ("id"))`);
+        await queryRunner.query(`CREATE INDEX "idx_generated_event_tickets_is_used" ON "generated_event_tickets" ("is_used") `);
+        await queryRunner.query(`CREATE INDEX "idx_generated_event_tickets_order_item_id" ON "generated_event_tickets" ("order_item_id") `);
+        await queryRunner.query(`CREATE TABLE "tickets" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "event_id" uuid NOT NULL, "name" character varying(100) NOT NULL, "price" numeric(10,2) NOT NULL, "quota" integer NOT NULL, "sold" integer NOT NULL DEFAULT '0', "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "deleted_at" TIMESTAMP WITH TIME ZONE, CONSTRAINT "PK_343bc942ae261cf7a1377f48fd0" PRIMARY KEY ("id"))`);
+        await queryRunner.query(`CREATE INDEX "idx_tickets_created_at" ON "tickets" ("created_at") `);
+        await queryRunner.query(`CREATE INDEX "idx_tickets_name" ON "tickets" ("name") `);
+        await queryRunner.query(`CREATE INDEX "idx_tickets_event_id" ON "tickets" ("event_id") `);
+        await queryRunner.query(`CREATE TABLE "users" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "name" character varying(100) NOT NULL, "email" character varying(100) NOT NULL, "password" character varying(100) NOT NULL, "refresh_token" text, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "deleted_at" TIMESTAMP WITH TIME ZONE, CONSTRAINT "PK_a3ffb1c0c8416b9fc6f907b7433" PRIMARY KEY ("id"))`);
+        await queryRunner.query(`CREATE TABLE "role_permissions" ("id_role" integer NOT NULL, "id_permission" integer NOT NULL, CONSTRAINT "PK_f1d50d1a08901894b08dfa94fb2" PRIMARY KEY ("id_role", "id_permission"))`);
+        await queryRunner.query(`CREATE INDEX "IDX_c0f5917f07a9e2bfd31ac5fb15" ON "role_permissions" ("id_role") `);
+        await queryRunner.query(`CREATE INDEX "IDX_5e7caee2bb7c1030ab07ad70ec" ON "role_permissions" ("id_permission") `);
+        await queryRunner.query(`CREATE TABLE "user_roles" ("id_user" uuid NOT NULL, "id_role" integer NOT NULL, CONSTRAINT "PK_dbfb392b1b20247554de529ea7c" PRIMARY KEY ("id_user", "id_role"))`);
+        await queryRunner.query(`CREATE INDEX "IDX_37a75bf56b7a6ae65144e0d5c0" ON "user_roles" ("id_user") `);
+        await queryRunner.query(`CREATE INDEX "IDX_af69ec5d5bd973309c025e7a62" ON "user_roles" ("id_role") `);
+        await queryRunner.query(`ALTER TABLE "events" ADD CONSTRAINT "FK_643188b30e049632f80367be4e1" FOREIGN KEY ("category_id") REFERENCES "event_categories"("id_category") ON DELETE RESTRICT ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "notifications" ADD CONSTRAINT "FK_9a8a82462cab47c73d25f49261f" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "order_items" ADD CONSTRAINT "FK_145532db85752b29c57d2b7b1f1" FOREIGN KEY ("order_id") REFERENCES "orders"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "order_items" ADD CONSTRAINT "FK_14d6d26343634ee91fb9cf486ba" FOREIGN KEY ("ticket_id") REFERENCES "tickets"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "orders" ADD CONSTRAINT "FK_a922b820eeef29ac1c6800e826a" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "payments" ADD CONSTRAINT "FK_b2f7b823a21562eeca20e72b006" FOREIGN KEY ("order_id") REFERENCES "orders"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "generated_event_tickets" ADD CONSTRAINT "FK_1bf520ea9885b79d64001479fb6" FOREIGN KEY ("order_item_id") REFERENCES "order_items"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "generated_event_tickets" ADD CONSTRAINT "FK_c9296233357aa16bffd2d74ee1a" FOREIGN KEY ("ticket_id") REFERENCES "tickets"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "tickets" ADD CONSTRAINT "FK_bd5387c23fb40ae7e3526ad75ea" FOREIGN KEY ("event_id") REFERENCES "events"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "role_permissions" ADD CONSTRAINT "FK_c0f5917f07a9e2bfd31ac5fb154" FOREIGN KEY ("id_role") REFERENCES "roles"("id_role") ON DELETE CASCADE ON UPDATE CASCADE`);
+        await queryRunner.query(`ALTER TABLE "role_permissions" ADD CONSTRAINT "FK_5e7caee2bb7c1030ab07ad70ec2" FOREIGN KEY ("id_permission") REFERENCES "permissions"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "user_roles" ADD CONSTRAINT "FK_37a75bf56b7a6ae65144e0d5c00" FOREIGN KEY ("id_user") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE`);
+        await queryRunner.query(`ALTER TABLE "user_roles" ADD CONSTRAINT "FK_af69ec5d5bd973309c025e7a62e" FOREIGN KEY ("id_role") REFERENCES "roles"("id_role") ON DELETE NO ACTION ON UPDATE NO ACTION`);
+    }
+
+    public async down(queryRunner: QueryRunner): Promise<void> {
+        await queryRunner.query(`ALTER TABLE "user_roles" DROP CONSTRAINT "FK_af69ec5d5bd973309c025e7a62e"`);
+        await queryRunner.query(`ALTER TABLE "user_roles" DROP CONSTRAINT "FK_37a75bf56b7a6ae65144e0d5c00"`);
+        await queryRunner.query(`ALTER TABLE "role_permissions" DROP CONSTRAINT "FK_5e7caee2bb7c1030ab07ad70ec2"`);
+        await queryRunner.query(`ALTER TABLE "role_permissions" DROP CONSTRAINT "FK_c0f5917f07a9e2bfd31ac5fb154"`);
+        await queryRunner.query(`ALTER TABLE "tickets" DROP CONSTRAINT "FK_bd5387c23fb40ae7e3526ad75ea"`);
+        await queryRunner.query(`ALTER TABLE "generated_event_tickets" DROP CONSTRAINT "FK_c9296233357aa16bffd2d74ee1a"`);
+        await queryRunner.query(`ALTER TABLE "generated_event_tickets" DROP CONSTRAINT "FK_1bf520ea9885b79d64001479fb6"`);
+        await queryRunner.query(`ALTER TABLE "payments" DROP CONSTRAINT "FK_b2f7b823a21562eeca20e72b006"`);
+        await queryRunner.query(`ALTER TABLE "orders" DROP CONSTRAINT "FK_a922b820eeef29ac1c6800e826a"`);
+        await queryRunner.query(`ALTER TABLE "order_items" DROP CONSTRAINT "FK_14d6d26343634ee91fb9cf486ba"`);
+        await queryRunner.query(`ALTER TABLE "order_items" DROP CONSTRAINT "FK_145532db85752b29c57d2b7b1f1"`);
+        await queryRunner.query(`ALTER TABLE "notifications" DROP CONSTRAINT "FK_9a8a82462cab47c73d25f49261f"`);
+        await queryRunner.query(`ALTER TABLE "events" DROP CONSTRAINT "FK_643188b30e049632f80367be4e1"`);
+        await queryRunner.query(`DROP INDEX "public"."IDX_af69ec5d5bd973309c025e7a62"`);
+        await queryRunner.query(`DROP INDEX "public"."IDX_37a75bf56b7a6ae65144e0d5c0"`);
+        await queryRunner.query(`DROP TABLE "user_roles"`);
+        await queryRunner.query(`DROP INDEX "public"."IDX_5e7caee2bb7c1030ab07ad70ec"`);
+        await queryRunner.query(`DROP INDEX "public"."IDX_c0f5917f07a9e2bfd31ac5fb15"`);
+        await queryRunner.query(`DROP TABLE "role_permissions"`);
+        await queryRunner.query(`DROP TABLE "users"`);
+        await queryRunner.query(`DROP INDEX "public"."idx_tickets_event_id"`);
+        await queryRunner.query(`DROP INDEX "public"."idx_tickets_name"`);
+        await queryRunner.query(`DROP INDEX "public"."idx_tickets_created_at"`);
+        await queryRunner.query(`DROP TABLE "tickets"`);
+        await queryRunner.query(`DROP INDEX "public"."idx_generated_event_tickets_order_item_id"`);
+        await queryRunner.query(`DROP INDEX "public"."idx_generated_event_tickets_is_used"`);
+        await queryRunner.query(`DROP TABLE "generated_event_tickets"`);
+        await queryRunner.query(`DROP INDEX "public"."idx_payments_order_id"`);
+        await queryRunner.query(`DROP INDEX "public"."idx_payments_external_id"`);
+        await queryRunner.query(`DROP INDEX "public"."idx_payments_status"`);
+        await queryRunner.query(`DROP TABLE "payments"`);
+        await queryRunner.query(`DROP INDEX "public"."idx_orders_user_id"`);
+        await queryRunner.query(`DROP INDEX "public"."idx_orders_status"`);
+        await queryRunner.query(`DROP INDEX "public"."idx_orders_created_at"`);
+        await queryRunner.query(`DROP TABLE "orders"`);
+        await queryRunner.query(`DROP INDEX "public"."idx_order_items_order_id"`);
+        await queryRunner.query(`DROP INDEX "public"."idx_order_items_ticket_id"`);
+        await queryRunner.query(`DROP TABLE "order_items"`);
+        await queryRunner.query(`DROP INDEX "public"."idx_notifications_user_id"`);
+        await queryRunner.query(`DROP INDEX "public"."idx_notifications_is_read"`);
+        await queryRunner.query(`DROP INDEX "public"."idx_notifications_created_at"`);
+        await queryRunner.query(`DROP TABLE "notifications"`);
+        await queryRunner.query(`DROP INDEX "public"."idx_events_title"`);
+        await queryRunner.query(`DROP INDEX "public"."idx_events_category_id"`);
+        await queryRunner.query(`DROP INDEX "public"."idx_events_date_range"`);
+        await queryRunner.query(`DROP INDEX "public"."idx_events_status"`);
+        await queryRunner.query(`DROP INDEX "public"."idx_events_created_at"`);
+        await queryRunner.query(`DROP TABLE "events"`);
+        await queryRunner.query(`DROP INDEX "public"."idx_event_categories_name"`);
+        await queryRunner.query(`DROP INDEX "public"."idx_event_categories_created_at"`);
+        await queryRunner.query(`DROP TABLE "event_categories"`);
+        await queryRunner.query(`DROP INDEX "public"."category_name"`);
+        await queryRunner.query(`DROP TABLE "categories"`);
+        await queryRunner.query(`DROP TABLE "roles"`);
+        await queryRunner.query(`DROP TABLE "permissions"`);
+    }
+
+}

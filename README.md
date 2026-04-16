@@ -19,20 +19,22 @@
 [Nest](https://github.com/nestjs/nest) Boilerplate Backend Typescript.
 
 Base Feature
-* Authentication (JWT Http Only Cookie)
-* Authorization (Role Base Access Controll)
-* TypeORM (with Seeder Extension)
-* Middleware Guard
-* Pipeline Tranformer and Validation
-* Error Handler (already mapped and easy to scale)
-* Rate Limiter
-* Gracefully Shutdown
-* Example Module
+
+- Authentication (JWT Http Only Cookie)
+- Authorization (Role Base Access Controll)
+- TypeORM (with Seeder Extension)
+- Middleware Guard
+- Pipeline Tranformer and Validation
+- Error Handler (already mapped and easy to scale)
+- Rate Limiter
+- Gracefully Shutdown
+- Example Module
 
 Future Feature
-* Caching
-* Queue and Background Task
-* Upload File
+
+- Caching
+- Queue and Background Task
+- Upload File
 
 ## Project setup
 
@@ -103,36 +105,66 @@ This will generate full modul entity, example entity user
     └── user.service.ts
 ```
 
-## Script Custom
+## Database Commands
 
-Command TypeORM
+### TypeORM CLI
+
+Access TypeORM CLI directly:
 
 ```bash
 pnpm orm
 ```
 
-Generate Migration from Entity
+### Migration Management
+
+Generate migration from entity changes:
 
 ```bash
 pnpm migrate:generate
 ```
 
-Create New Empty Migrationn
+Create new empty migration:
 
 ```bash
 pnpm migrate:create
 ```
 
-Run Migration
+Run all pending migrations:
 
 ```bash
 pnpm migrate:run
 ```
 
-Run Seeder
+Show migration status:
 
 ```bash
-pnpm seed
+pnpm migrate:show
+```
+
+Revert last migration:
+
+```bash
+pnpm migrate:revert
+```
+
+Drop all database tables:
+
+```bash
+pnpm schema:drop
+```
+
+### Database Seeding
+
+Run database seeders:
+
+```bash
+pnpm seed:run
+```
+
+Create new seeder:
+
+```bash
+pnpm seed:create
 ```
 
 ## Stay in touch

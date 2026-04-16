@@ -1,5 +1,5 @@
 import { Permission } from '~/modules/auth/entity/permission.entity';
-import { User } from '~/modules/user/user.entity';
+import { User } from '~/modules/user/entity/user.entity';
 
 interface UserPayload extends User {
   sub: number;

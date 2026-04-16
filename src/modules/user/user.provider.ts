@@ -1,9 +1,9 @@
-import { DataSource } from 'typeorm';
+import type { DataSource } from 'typeorm';
 import { REPOSITORY } from '~/common/constants/database';
 import { PostgreeConnection } from '~/infrastructure/database/database.provider';
 import { Permission } from '../auth/entity/permission.entity';
 import { Role } from '../auth/entity/role.entity';
-import { User } from './user.entity';
+import { User } from './entity/user.entity';
 
 export const userProvider = [
   {

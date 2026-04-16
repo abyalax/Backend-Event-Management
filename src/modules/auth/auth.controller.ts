@@ -13,7 +13,7 @@ import { SignUpDto } from './dto/sign-up.dto';
 
 @Controller('auth')
 export class AuthController {
-  constructor(private authService: AuthService) {}
+  constructor(private readonly authService: AuthService) {}
 
   @HttpCode(HttpStatus.CREATED)
   @Post('register')
@@ -63,7 +63,6 @@ export class AuthController {
   @UseGuards(AuthGuard, JwtGuard, RolesGuard)
   @Get('permissions')
   async getFullPermissions(@Request() req: RequestExpress): Promise<TResponse<PermissionsDto[] | undefined>> {
-    console.log(req.user);
     const id = req.user?.id;
     if (!id) throw new UnauthorizedException('ID User not found');
     const permission = await this.authService.getFullPermissions(id);
