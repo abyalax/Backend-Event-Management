@@ -1,0 +1,39 @@
+meta {
+  name: Delete User By ID
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{base_url}}/users/a96539c8-f941-4109-890e-9a4fce227e83
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  # Delete User
+  
+  Deletes a user from the system.
+  
+  ## Request
+  - **Method**: DELETE
+  - **Endpoint**: `/api/v1/users/:id`
+  
+  ## URL Parameters
+  | Parameter | Type | Required | Description |
+  |-----------|------|----------|-------------|
+  | id | integer | Yes | The user's unique identifier |
+  
+  ## Response (204 No Content)
+  Returns no body on successful deletion.
+  
+  ## Error Responses
+  - **400 Bad Request**: Invalid user ID format
+  - **404 Not Found**: User not found
+  - **500 Internal Server Error**: Database or server error
+}

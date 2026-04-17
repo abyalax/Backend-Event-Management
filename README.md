@@ -173,6 +173,52 @@ Create new seeder:
 pnpm seed:create
 ```
 
+After running the command, a new seeder file will be created in:
+
+```
+src/infrastructure/database/seeds/
+```
+```
+└── 📁src
+    └── 📁infrastructure
+        └── 📁cache
+        └── 📁config
+        └── 📁database
+            └── 📁mock
+            └── 📁seeds
+                ├── 1_users.seed.ts
+                ├── 2_events.seed.ts
+                ├── 1776390677780-created.seed.ts  -> for example file new
+                ├── README.md
+    ├── app.controller.ts
+    ├── app.module.ts
+    ├── app.service.ts
+    ├── index.ts
+    └── main.ts
+```
+
+The new seeder will be named with a timestamp, for example: `1776390677780-created.seed.ts`
+
+You can rename the class to better represent the data being seeded. Here's an example seeder structure:
+
+```ts
+import { DataSource } from 'typeorm';
+import { Seeder, SeederFactoryManager } from 'typeorm-extension';
+
+export class CreatedSeed1776390677780 implements Seeder {
+    track = false;
+
+    public async run(
+        dataSource: DataSource,
+        factoryManager: SeederFactoryManager
+    ): Promise<any> {
+        // Add your seeding logic here
+    }
+}
+```
+
+> **IMPORTANT**: Set the `track` property to `true` to enable tracking in the database. This ensures that when you create new seeders, old seeders will be ignored.
+
 ## Stay in touch
 
 - Author - [Abya Lacks](https://profile-abya.vercel.app/)
@@ -183,4 +229,4 @@ pnpm seed:create
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
 
-_Last Updated on 08.31 17 April 2026_
+_Last Updated on 08.56 17 April 2026_

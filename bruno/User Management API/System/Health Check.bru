@@ -1,0 +1,30 @@
+meta {
+  name: Health Check
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{base_url}}/health
+  body: none
+  auth: none
+}
+
+docs {
+  # Health Check
+  
+  Checks if the API server is running and healthy.
+  
+  ## Request
+  - **Method**: GET
+  - **Endpoint**: `/api/v1/health`
+  
+  ## Response (200 OK)
+  ```json
+  {
+    "status": "healthy"
+  }
+  ```
+  
+  This endpoint always returns a 200 status if the server is running.
+}

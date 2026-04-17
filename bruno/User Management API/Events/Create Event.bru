@@ -1,0 +1,61 @@
+meta {
+  name: Create Event
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{base_url}}/events
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "title": "Web Development Training",
+    "description": "Hands-on training covering modern web development technologies including React, Node.js, and TypeScript.",
+    "maxAttendees": 50,
+    "isVirtual": true,
+    "location": "Online - Zoom",
+    "startDate": "2024-07-20T13:00:00.000Z",
+    "endDate": "2024-07-20T17:00:00.000Z",
+    "status": "upcoming",
+    "categoryId": 2,
+    "createdBy": "550e8400-e29b-41d4-a716-446655440001"
+  }
+}
+
+docs {
+  # Create User
+  
+  Creates a new user in the system.
+  
+  ## Request
+  - **Method**: POST
+  - **Endpoint**: `/api/v1/users`
+  - **Content-Type**: application/json
+  
+  ## Request Body
+  | Field | Type | Required | Description |
+  |-------|------|----------|-------------|
+  | name | string | Yes | User's full name |
+  | email | string | Yes | User's email address (must be valid) |
+  | password | string | Yes | User's password (minimum 6 characters) |
+  
+  ## Response (201 Created)
+  ```json
+  {
+    "id": 1,
+    "name": "John Doe",
+    "email": "john@example.com"
+  }
+  ```
+  
+  ## Error Responses
+  - **400 Bad Request**: Invalid request body or validation errors
+  - **409 Conflict**: Email already exists
+}

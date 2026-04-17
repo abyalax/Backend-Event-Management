@@ -1,0 +1,68 @@
+meta {
+  name: Update Events
+  type: http
+  seq: 3
+}
+
+patch {
+  url: {{base_url}}/events/87db0da7-2d29-4aba-90f1-b491f68b1b2c
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}
+
+body:json {
+  {
+    "title": "Web Development Training",
+    "description": "Hands-on training covering modern web development technologies including Vue, Node.js, and TypeScript.",
+    "maxAttendees": 50,
+    "isVirtual": true,
+    "location": "Online - Zoom",
+    "startDate": "2024-07-20T13:00:00.000Z",
+    "endDate": "2024-07-20T17:00:00.000Z",
+    "status": "upcoming",
+    "categoryId": 2,
+    "createdBy": "550e8400-e29b-41d4-a716-446655440001"
+  }
+}
+
+docs {
+  # Update User
+  
+  Updates an existing user's information. All fields are optional - only provide the fields you want to update.
+  
+  ## Request
+  - **Method**: PUT
+  - **Endpoint**: `/api/v1/users/:id`
+  - **Content-Type**: application/json
+  
+  ## URL Parameters
+  | Parameter | Type | Required | Description |
+  |-----------|------|----------|-------------|
+  | id | integer | Yes | The user's unique identifier |
+  
+  ## Request Body (all fields optional)
+  | Field | Type | Required | Description |
+  |-------|------|----------|-------------|
+  | name | string | No | User's full name |
+  | email | string | No | User's email address (must be valid) |
+  | password | string | No | User's password (minimum 6 characters) |
+  
+  ## Response (200 OK)
+  ```json
+  {
+    "id": 1,
+    "name": "John Smith",
+    "email": "john.smith@example.com"
+  }
+  ```
+  
+  ## Error Responses
+  - **400 Bad Request**: Invalid user ID format or validation errors
+  - **404 Not Found**: User not found
+  - **409 Conflict**: Email already exists
+  - **500 Internal Server Error**: Database or server error
+}
