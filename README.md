@@ -182,3 +182,5 @@ pnpm seed:create
 ## License
 
 Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+
+_Last Updated on 08.31 17 April 2026_
