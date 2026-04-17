@@ -44,16 +44,22 @@ pnpm install
 
 ## Compile and run the project
 
+Build
+
+```bash
+pnpm run build
+```
+
 Development
 
 ```bash
-pnpm run start
+pnpm run dev
 ```
 
 Watch mode
 
 ```bash
-pnpm run start:dev
+pnpm run start:debug
 ```
 
 Production mode
