@@ -3,7 +3,7 @@ import { Repository } from 'typeorm';
 import { REPOSITORY } from '~/common/constants/database';
 import { mockRepository } from '~/test/common/mock';
 import { AuthModule } from '../auth/auth.module';
-import { EventCategory } from './entity/event-category.entity';
+import { EventCategory } from '../event-category/entity/event-category.entity';
 import { Event } from './entity/event.entity';
 import { EventService } from './event.service';
 

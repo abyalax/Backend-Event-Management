@@ -20,7 +20,7 @@ export class AuthController {
   async signUp(@Body() signUpDto: SignUpDto): Promise<TResponse<UserDto>> {
     const user = await this.authService.signUp(signUpDto);
     return {
-      statusCode: HttpStatus.CREATED,
+      message: 'register account successfully',
       data: user,
     };
   }
@@ -38,7 +38,7 @@ export class AuthController {
       signed: true,
     });
     const res: TResponse<UserDto> = {
-      statusCode: HttpStatus.ACCEPTED,
+      message: 'login account successfully',
       data: plainToInstance(UserDto, data.user, { excludeExtraneousValues: true }),
     };
     return res;
@@ -49,13 +49,13 @@ export class AuthController {
   async refreshToken(@Request() req: RequestExpress, @Res() response: ResponseExpress): Promise<void> {
     const refresh_token: string = req.signedCookies.refresh_token;
     const data = await this.authService.refreshToken(refresh_token);
-    console.log('getting new access_token: ', data.access_token);
     response.cookie('access_token', data.access_token, {
       httpOnly: true,
       signed: true,
     });
 
     response.status(200).json({
+      message: 'getting new access_token',
       statusCode: HttpStatus.OK,
     });
   }
@@ -67,7 +67,7 @@ export class AuthController {
     if (!id) throw new UnauthorizedException('ID User not found');
     const permission = await this.authService.getFullPermissions(id);
     return {
-      statusCode: HttpStatus.OK,
+      message: 'get permission successfully',
       data: permission,
     };
   }
@@ -84,7 +84,6 @@ export class AuthController {
       signed: true,
     });
     return {
-      statusCode: HttpStatus.ACCEPTED,
       message: 'Successfully logout',
     };
   }

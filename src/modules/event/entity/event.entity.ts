@@ -10,8 +10,13 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
+import { EventCategory } from '~/modules/event-category/entity/event-category.entity';
 import type { Ticket } from '~/modules/ticket/entity/ticket.entity';
-import type { EventCategory } from './event-category.entity';
+
+export enum EEventStatus {
+  AVAILABLE = 'Available',
+  UNAVAILABLE = 'UnAvailable',
+}
 
 @Entity({ name: 'events' })
 @Index('idx_events_title', ['title'])

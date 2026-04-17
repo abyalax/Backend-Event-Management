@@ -9,7 +9,8 @@ export class ValidationFail extends Error {
     const errorDetails = Array.isArray(errors) ? errors : [errors];
     this.details = errorDetails;
     this.name = '';
-    this.message = '\n' + this.constructor.name + '\n' + errorDetails.map((error) => `${JSON.stringify(error).replace(/"/g, ' ')}`).join('\n') + '\n';
+    this.message =
+      '\n' + this.constructor.name + '\n' + errorDetails.map((error) => `${JSON.stringify(error).replaceAll('"', ' ')}`).join('\n') + '\n';
     this.stack = undefined;
   }
 }

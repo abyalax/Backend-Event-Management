@@ -3,7 +3,7 @@ import { join } from 'node:path';
 import { DataSource } from 'typeorm';
 import { Permission } from '~/modules/auth/entity/permission.entity';
 import { Role } from '~/modules/auth/entity/role.entity';
-import { EventCategory } from '~/modules/event/entity/event-category.entity';
+import { EventCategory } from '~/modules/event-category/entity/event-category.entity';
 import { Event } from '~/modules/event/entity/event.entity';
 import { Notification } from '~/modules/notifications/entity/notification.entity';
 import { OrderItem } from '~/modules/order/entity/order-item.entity';

@@ -17,7 +17,7 @@ export class UserController {
   async get(@Paginate() query: PaginateQuery): Promise<TResponse<Paginated<UserDto>>> {
     const paginatedUsers = await this.userService.list(query);
     return {
-      statusCode: HttpStatus.OK,
+      message: 'get data user successfully',
       data: {
         meta: paginatedUsers.meta,
         links: paginatedUsers.links,
@@ -53,7 +53,7 @@ export class UserController {
   async remove(@Param('id') id: string): Promise<TResponse<boolean>> {
     const removed = await this.userService.remove(id);
     return {
-      statusCode: HttpStatus.NO_CONTENT,
+      message: 'delete data user successfully',
       data: removed.affected ? removed.affected > 0 : false,
     };
   }

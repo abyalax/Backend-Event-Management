@@ -30,7 +30,7 @@ describe('EventController', () => {
           useValue: mockRepository,
         },
         {
-          provide: REPOSITORY.CATEGORY,
+          provide: REPOSITORY.EVENT_CATEGORY,
           useValue: mockRepository,
         },
         {

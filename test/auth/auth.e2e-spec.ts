@@ -79,7 +79,7 @@ describe('Module Authentication', () => {
 
     expect(res.body).toEqual(
       expect.objectContaining({
-        statusCode: HttpStatus.CREATED,
+        message: expect.anything(),
         data: expect.objectContaining({
           id: expect.anything(),
           name: expect.anything(),

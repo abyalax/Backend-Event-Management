@@ -4,4 +4,5 @@ export const REPOSITORY = Object.freeze({
   PERMISSION: 'permission_repository',
   ROLE: 'role_repository',
   EVENT_CATEGORY: 'event_category_repository',
+  TICKET: 'ticket_repository',
 });

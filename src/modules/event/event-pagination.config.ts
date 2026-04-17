@@ -9,7 +9,7 @@ export const EVENT_PAGINATION_CONFIG: PaginateConfig<Event> = {
     status: [FilterOperator.ILIKE, FilterOperator.EQ],
   },
   defaultSortBy: [['createdAt', 'DESC']],
-  defaultLimit: 15,
+  defaultLimit: 10,
   maxLimit: 100,
   relations: ['category'],
   multiWordSearch: true,

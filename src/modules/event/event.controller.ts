@@ -13,10 +13,10 @@ export class EventController {
 
   @HttpCode(HttpStatus.OK)
   @Get()
-  async find(@Paginate() query: PaginateQuery): Promise<TResponse<Paginated<Event>>> {
+  async list(@Paginate() query: PaginateQuery): Promise<TResponse<Paginated<Event>>> {
     const paginatedEvents = await this.eventService.list(query);
     return {
-      statusCode: HttpStatus.OK,
+      message: 'get data event successfully',
       data: paginatedEvents,
     };
   }
@@ -24,10 +24,10 @@ export class EventController {
   @HttpCode(HttpStatus.CREATED)
   @Post()
   async create(@Body() CreateEventDto: CreateEventDto): Promise<TResponse<Event>> {
-    const Event = await this.eventService.create(CreateEventDto);
+    const created = await this.eventService.create(CreateEventDto);
     return {
-      statusCode: HttpStatus.CREATED,
-      data: Event,
+      message: 'create data event successfully',
+      data: created,
     };
   }
 
@@ -36,7 +36,7 @@ export class EventController {
   async getIdEvents(): Promise<TResponse<number[]>> {
     const ids = await this.eventService.getIds();
     return {
-      statusCode: HttpStatus.OK,
+      message: 'get data ids event successfully',
       data: ids,
     };
   }
@@ -46,7 +46,7 @@ export class EventController {
   async findOneByID(@Param('id') id: string): Promise<TResponse<Event>> {
     const Event = await this.eventService.findOneByID(id);
     return {
-      statusCode: HttpStatus.OK,
+      message: 'get data event successfully',
       data: Event,
     };
   }
@@ -56,7 +56,7 @@ export class EventController {
   async update(@Param('id') id: string, @Body() payload: UpdateEventDto): Promise<TResponse<boolean>> {
     const isUpdated = await this.eventService.update(id, payload);
     return {
-      statusCode: HttpStatus.NO_CONTENT,
+      message: 'update data event successfully',
       data: isUpdated,
     };
   }
@@ -66,7 +66,7 @@ export class EventController {
   async remove(@Param('id') id: string): Promise<TResponse<boolean>> {
     const isDeleted = await this.eventService.remove(id);
     return {
-      statusCode: HttpStatus.NO_CONTENT,
+      message: 'delete data event successfully',
       data: isDeleted,
     };
   }

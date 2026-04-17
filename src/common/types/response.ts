@@ -1,8 +1,5 @@
-import { HttpStatus } from '@nestjs/common';
-
 export type TResponse<T = unknown> = {
-  statusCode: HttpStatus;
-  message?: string | string[];
+  message: string | string[];
   error?: unknown;
   data?: T;
 };

@@ -8,7 +8,9 @@ import { RolesGuard } from './common/guards/roles.guard';
 import { EnvValidator } from './infrastructure/config/config.provider';
 import { closeConnection } from './infrastructure/database/database.provider';
 import { AuthModule } from './modules/auth/auth.module';
+import { EventCategoryModule } from './modules/event-category/event-category.module';
 import { EventModule } from './modules/event/event.module';
+import { TicketModule } from './modules/ticket/ticket.module';
 import { UserModule } from './modules/user/user.module';
 
 const gracefulShutdownImports =
@@ -35,6 +37,8 @@ const gracefulShutdownImports =
     AuthModule,
     UserModule,
     EventModule,
+    EventCategoryModule,
+    TicketModule,
   ],
   controllers: [AppController],
   providers: [

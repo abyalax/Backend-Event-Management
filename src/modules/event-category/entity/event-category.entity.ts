@@ -1,5 +1,5 @@
 import { Column, CreateDateColumn, DeleteDateColumn, Entity, Index, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
-import { Event } from './event.entity';
+import { Event } from '~/modules/event/entity/event.entity';
 
 @Entity({ name: 'event_categories' })
 @Index('idx_event_categories_name', ['name'])

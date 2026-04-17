@@ -2,15 +2,9 @@ import { Provider } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { REPOSITORY } from '~/common/constants/database';
 import { PostgreeConnection } from '~/infrastructure/database/database.provider';
-import { EventCategory } from '../event-category/entity/event-category.entity';
-import { Event } from './entity/event.entity';
+import { EventCategory } from './entity/event-category.entity';
 
-export const eventProvider: Provider[] = [
-  {
-    provide: REPOSITORY.EVENT,
-    useFactory: (dataSource: DataSource) => dataSource.getRepository(Event),
-    inject: [PostgreeConnection.provide],
-  },
+export const eventCategoryProvider: Provider[] = [
   {
     provide: REPOSITORY.EVENT_CATEGORY,
     useFactory: (dataSource: DataSource) => dataSource.getRepository(EventCategory),

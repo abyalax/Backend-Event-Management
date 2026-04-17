@@ -35,6 +35,18 @@ services:
   #     - minio_data:/data
   #   command: server /data --console-address ":9001"
 
+  #  mailpit:
+  #   image: axllent/mailpit:latest
+  #   container_name: mailpit_nuxt
+  #   ports:
+  #     - "${MAILPIT_SMTP_PORT}:1025"
+  #     - "${MAILPIT_UI_PORT}:8025"
+  #   environment:
+  #     - MP_MAX_MESSAGES=${MAILPIT_MAX_MESSAGES}
+  #     - MP_SMTP_AUTH_ACCEPT_ANY=${MAILPIT_SMTP_AUTH_ACCEPT_ANY}
+  #   volumes:
+  #     - mailpit_data:/var/lib/mailpit/data
+
   dbgate:
     image: dbgate/dbgate
     restart: always

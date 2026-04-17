@@ -1,6 +1,6 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { JsonWebTokenError, NotBeforeError, TokenExpiredError } from '@nestjs/jwt';
-import { QueryFailedError, EntityNotFoundError, EntityPropertyNotFoundError } from 'typeorm';
+import { EntityNotFoundError, EntityPropertyNotFoundError, QueryFailedError } from 'typeorm';
 import { ZodError } from 'zod';
 import { EMessage } from '../types/response';
 

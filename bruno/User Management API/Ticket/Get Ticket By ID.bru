@@ -1,0 +1,45 @@
+meta {
+  name: Get Ticket By ID
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{base_url}}/tickets/c73d73e9-342d-4927-b3bf-034995d3fdc6
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
+
+docs {
+  # Get User by ID
+  
+  Retrieves a specific user by their ID.
+  
+  ## Request
+  - **Method**: GET
+  - **Endpoint**: `/api/v1/users/:id`
+  
+  ## URL Parameters
+  | Parameter | Type | Required | Description |
+  |-----------|------|----------|-------------|
+  | id | integer | Yes | The user's unique identifier |
+  
+  ## Response (200 OK)
+  ```json
+  {
+    "id": 1,
+    "name": "John Doe",
+    "email": "john@example.com"
+  }
+  ```
+  
+  ## Error Responses
+  - **400 Bad Request**: Invalid user ID format
+  - **404 Not Found**: User not found
+  - **500 Internal Server Error**: Database or server error
+}
