@@ -1,5 +1,4 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Post, Request, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
-import { plainToInstance } from 'class-transformer';
 import { Request as RequestExpress, Response as ResponseExpress } from 'express';
 import { JwtGuard } from '~/common/guards/jwt.guard';
 import { RolesGuard } from '~/common/guards/roles.guard';
@@ -20,14 +19,14 @@ export class AuthController {
   async signUp(@Body() signUpDto: SignUpDto): Promise<TResponse<UserDto>> {
     const user = await this.authService.signUp(signUpDto);
     return {
-      message: 'register account successfully',
+      message: 'Register account successfully',
       data: user,
     };
   }
 
   @HttpCode(HttpStatus.ACCEPTED)
   @Post('login')
-  async signIn(@Body() signInDto: SignInDto, @Res({ passthrough: true }) response: ResponseExpress): Promise<TResponse<UserDto>> {
+  async signIn(@Body() signInDto: SignInDto, @Res() response: ResponseExpress): Promise<void> {
     const data = await this.authService.signIn(signInDto.email, signInDto.password);
     response.cookie('refresh_token', data.refresh_token, {
       httpOnly: true,
@@ -38,10 +37,10 @@ export class AuthController {
       signed: true,
     });
     const res: TResponse<UserDto> = {
-      message: 'login account successfully',
-      data: plainToInstance(UserDto, data.user, { excludeExtraneousValues: true }),
+      message: 'Login account successfully',
+      data: data.user,
     };
-    return res;
+    response.status(HttpStatus.ACCEPTED).json(res);
   }
 
   @HttpCode(HttpStatus.OK)
@@ -54,9 +53,8 @@ export class AuthController {
       signed: true,
     });
 
-    response.status(200).json({
+    response.status(HttpStatus.OK).json({
       message: 'getting new access_token',
-      statusCode: HttpStatus.OK,
     });
   }
 

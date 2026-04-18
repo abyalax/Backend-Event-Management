@@ -30,7 +30,7 @@ async function bootstrap() {
   app.useGlobalFilters(globalException);
 
   app.enableCors({
-    origin: ['http://localhost:5173', 'http://localhost:5174', 'http://localhost:5175'],
+    origin: ['http://localhost:3000'],
     credentials: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
   });
@@ -38,5 +38,5 @@ async function bootstrap() {
   await app.listen(env.PORT);
 }
 bootstrap()
-  .then(() => console.log('Nest Aplication running on http://localhost:3000'))
+  .then(() => console.log(`Nest Aplication running on http://localhost:${env.PORT}`))
   .catch((err) => console.log(err));

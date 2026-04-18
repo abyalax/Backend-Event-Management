@@ -17,49 +17,47 @@ export class AuthService {
 
   async signUp(signUpDto: SignUpDto): Promise<UserDto> {
     const userExist = await this.userService.findByEmail(signUpDto.email);
-    if (userExist) throw new BadRequestException();
+    if (userExist) throw new BadRequestException('Email already exist');
 
-    const created = await this.userService.create(signUpDto);
-    const user = await this.userService.findOne({ where: { id: created.id }, relations: ['roles'] });
+    const hashedPassword = await bcrypt.hash(signUpDto.password, 10);
+    const user = await this.userService.create({
+      ...signUpDto,
+      password: hashedPassword,
+    });
     return plainToInstance(UserDto, user, {
       excludeExtraneousValues: true,
     });
   }
 
   async signIn(email: string, password: string): Promise<{ access_token: string; refresh_token: string; user: UserDto }> {
-    const isUserExist = await this.userService.findByEmail(email);
-    if (isUserExist === null) throw new NotFoundException();
+    // User + Roles + Permissions (via eager)
+    const userEntity = await this.userService.findByEmail(email);
+    if (!userEntity) throw new NotFoundException('Email not found');
 
-    const comparePassword = await bcrypt.compare(password, isUserExist.password);
-    if (!comparePassword) throw new UnauthorizedException();
+    const isMatch = await bcrypt.compare(password, userEntity.password);
+    if (!isMatch) throw new UnauthorizedException('Password does not match');
 
-    const permissions = await this.userService.getFlattenPermissions(isUserExist.id);
-    const userDTO = plainToInstance(UserDto, isUserExist, {
+    // flatten permissions via DTO
+    const user = plainToInstance(UserDto, userEntity, {
       excludeExtraneousValues: true,
     });
 
-    const user: UserDto = {
-      id: userDTO.id,
-      name: userDTO.name,
-      email: userDTO.email,
-      permissions: permissions,
-      roles: userDTO.roles,
-    };
-    const payload = { email: isUserExist.email, sub: isUserExist.id };
-    const access_token = await this.jwtService.signAsync(payload, {
-      expiresIn: 60 * 30, // 30 minutes
-      secret: env.JWT_SECRET,
-    });
-    const refresh_token = await this.jwtService.signAsync(payload, {
-      expiresIn: 60 * 60 * 24, // 24 hour
-      secret: env.JWT_REFRESH_SECRET,
+    // Extract permissions from all roles
+    const permissions: string[] = [];
+    userEntity.roles?.forEach((role) => {
+      role.permissions?.forEach((permission) => {
+        if (permission.key) permissions.push(permission.key);
+      });
     });
 
-    return {
-      access_token,
-      refresh_token,
-      user,
-    };
+    const payload = { email: user.email, sub: user.id, permissions };
+
+    const [access_token, refresh_token] = await Promise.all([
+      this.jwtService.signAsync(payload, { expiresIn: '30m', secret: env.JWT_SECRET }),
+      this.jwtService.signAsync(payload, { expiresIn: '1d', secret: env.JWT_REFRESH_SECRET }),
+    ]);
+
+    return { access_token, refresh_token, user };
   }
 
   async refreshToken(refresh_token?: string): Promise<{ access_token: string }> {

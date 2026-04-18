@@ -28,18 +28,6 @@ export class UserService {
     return user?.refreshToken;
   }
 
-  async getFlattenPermissions(userId: string) {
-    const raw = await this.permissionRepository
-      .createQueryBuilder('permission')
-      .distinct(true)
-      .innerJoin('permission.roles', 'role')
-      .innerJoin('role.users', 'user')
-      .where('user.id = :userId', { userId })
-      .select('permission.key', 'key')
-      .getRawMany();
-    return raw.map((row) => row.key);
-  }
-
   async getFullPermissions(userId: string) {
     const permissions = await this.permissionRepository
       .createQueryBuilder('permission')

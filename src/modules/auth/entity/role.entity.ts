@@ -13,7 +13,7 @@ export class Role {
   @ManyToMany('User', 'roles')
   users: User[];
 
-  @ManyToMany('Permission', 'roles')
+  @ManyToMany('Permission', 'roles', { eager: true })
   @JoinTable({
     name: 'role_permissions',
     joinColumn: { name: 'id_role', referencedColumnName: 'id' },

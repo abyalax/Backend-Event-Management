@@ -1,19 +1,19 @@
 meta {
-  name: Register
+  name: Register - Success
   type: http
   seq: 2
 }
 
 post {
-  url: {{api_url}}/auth/register
+  url: {{base_url}}/auth/register
   body: json
   auth: inherit
 }
 
 body:json {
   {
-    "name": "Admin Account",
-    "email": "admin@gmail.com",
+    "name": "Rendy Bhar",
+    "email": "rendybhar@gmail.com",
     "password": "secure_password"
   }
 }

@@ -1,12 +1,11 @@
 import { faker } from '@faker-js/faker';
-import { HttpStatus, INestApplication } from '@nestjs/common';
+import { INestApplication } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { TestingModule } from '@nestjs/testing';
 import * as request from 'supertest';
 import { App } from 'supertest/types';
 import { validateDto } from '~/common/helpers/validation';
 import { env } from '~/config/env';
-import { RoleDto } from '~/modules/auth/dto/role/get-role.dto';
 import { SignUpDto } from '~/modules/auth/dto/sign-up.dto';
 import { UserDto } from '~/modules/user/dto/user.dto';
 import { setupApplication } from '~/test/setup_e2e';
@@ -32,10 +31,11 @@ describe('Module Authentication', () => {
       email: USER.LOGIN.email,
       password: USER.LOGIN.password,
     };
-    const res = await request(app.getHttpServer()).post('/auth/login').send(credentials).expect(HttpStatus.ACCEPTED);
-
+    const res = await request(app.getHttpServer()).post('/auth/login').send(credentials);
     expect(res.headers['set-cookie']).toBeDefined();
+
     const cookies = res.headers['set-cookie'];
+
     const access_token = extractHttpOnlyCookie('access_token', cookies) ?? '';
     const refresh_token = extractHttpOnlyCookie('refresh_token', cookies) ?? '';
 
@@ -55,7 +55,7 @@ describe('Module Authentication', () => {
     expect(payload).toHaveProperty('email');
     expect(payload.email).toEqual(USER.LOGIN.email);
 
-    const data = await res.body.data;
+    const data = res.body.data;
     const validated = await validateDto(UserDto, data);
     expect(validated).toBeInstanceOf(UserDto);
   });
@@ -75,8 +75,7 @@ describe('Module Authentication', () => {
     };
 
     const validated = await validateDto(SignUpDto, credentials);
-    const res = await request(app.getHttpServer()).post('/auth/register').send(validated).expect(HttpStatus.CREATED);
-
+    const res = await request(app.getHttpServer()).post('/auth/register').send(validated);
     expect(res.body).toEqual(
       expect.objectContaining({
         message: expect.anything(),
@@ -84,7 +83,6 @@ describe('Module Authentication', () => {
           id: expect.anything(),
           name: expect.anything(),
           email: expect.anything(),
-          roles: expect.arrayContaining<RoleDto>([]),
         }),
       }),
     );

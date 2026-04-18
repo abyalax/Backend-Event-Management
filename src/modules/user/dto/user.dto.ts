@@ -26,10 +26,6 @@ export class UserDto {
   @Type(() => RoleDto)
   roles: RoleDto[];
 
-  @Expose()
-  @IsArray()
-  permissions: string[];
-
   @Exclude()
   @IsString()
   @IsOptional()

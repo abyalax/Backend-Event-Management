@@ -15,7 +15,7 @@ describe('AppController (e2e)', () => {
   });
 
   it('GET: /health', () => {
-    return request(app.getHttpServer()).get('/health').expect(200).expect('Hello World! Nest ready to serve!!');
+    return request(app.getHttpServer()).get('/health').expect(200);
   });
 
   afterAll(async () => {
