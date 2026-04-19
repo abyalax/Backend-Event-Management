@@ -1,10 +1,11 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
+import { JwtModule, JwtService } from '@nestjs/jwt';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { GracefulShutdownModule } from 'nestjs-graceful-shutdown';
+import { env } from '~/config/env';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { RolesGuard } from './common/guards/roles.guard';
 import { EnvValidator } from './infrastructure/config/config.provider';
 import { closeConnection } from './infrastructure/database/database.provider';
 import { AuthModule } from './modules/auth/auth.module';
@@ -34,6 +35,11 @@ const gracefulShutdownImports =
     ThrottlerModule.forRoot({
       throttlers: [{ ttl: 60000, limit: 20 }], // max 20 request/menit
     }),
+    JwtModule.register({
+      secret: env.JWT_SECRET,
+      privateKey: env.JWT_PRIVATE_KEY,
+      publicKey: env.JWT_PUBLIC_KEY,
+    }),
     AuthModule,
     UserModule,
     EventModule,
@@ -44,13 +50,10 @@ const gracefulShutdownImports =
   providers: [
     EnvValidator,
     AppService,
+    JwtService,
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
-    },
-    {
-      provide: APP_GUARD,
-      useClass: RolesGuard,
     },
   ],
 })

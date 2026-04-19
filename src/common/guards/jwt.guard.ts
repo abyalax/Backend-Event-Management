@@ -3,15 +3,11 @@ import { JwtService } from '@nestjs/jwt';
 import { Request } from 'express';
 
 import { env } from '~/config/env';
-import { UserService } from '~/modules/user/user.service';
 import { EMessage } from '../types/response';
 
 @Injectable()
 export class JwtGuard implements CanActivate {
-  constructor(
-    private readonly jwtService: JwtService,
-    private readonly userService: UserService,
-  ) {}
+  constructor(private readonly jwtService: JwtService) {}
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request: Request = context.switchToHttp().getRequest();
     const token: string = request.signedCookies.access_token;
@@ -22,15 +18,11 @@ export class JwtGuard implements CanActivate {
         secret: env.JWT_SECRET,
       });
       if (verifyToken) {
-        const user = await this.userService.findOneBy({ id: verifyToken.sub });
         request.user = {
-          name: user.name,
-          email: user.email,
-          password: '',
-          id: user.id,
-          sub: Number(user.id),
-          roles: user.roles ?? [],
-          permissions: user?.roles?.flatMap((role) => role.permissions) ?? [],
+          name: verifyToken.name,
+          email: verifyToken.email,
+          id: verifyToken.id,
+          permissions: verifyToken?.permissions ?? [],
         };
         return true;
       }

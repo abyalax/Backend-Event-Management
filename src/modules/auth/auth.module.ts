@@ -2,7 +2,7 @@ import { Module } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { JwtModule } from '@nestjs/jwt';
 import { JwtGuard } from '~/common/guards/jwt.guard';
-import { RolesGuard } from '~/common/guards/roles.guard';
+import { PermissionsGuard } from '~/common/guards/permission.guard';
 import { env } from '~/config/env';
 import { UserModule } from '../user/user.module';
 import { AuthController } from './auth.controller';
@@ -18,6 +18,6 @@ import { AuthService } from './auth.service';
     }),
   ],
   controllers: [AuthController],
-  providers: [AuthService, JwtGuard, RolesGuard, Reflector],
+  providers: [AuthService, JwtGuard, PermissionsGuard, Reflector],
 })
 export class AuthModule {}

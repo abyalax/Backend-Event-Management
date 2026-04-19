@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException, UnauthorizedExcepti
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { plainToInstance } from 'class-transformer';
+import { UserPayload } from '~/common/types/global';
 import { env } from '~/config/env';
 import { UserDto } from '../user/dto/user.dto';
 import { UserService } from '../user/user.service';
@@ -37,7 +38,6 @@ export class AuthService {
     const isMatch = await bcrypt.compare(password, userEntity.password);
     if (!isMatch) throw new UnauthorizedException('Password does not match');
 
-    // flatten permissions via DTO
     const user = plainToInstance(UserDto, userEntity, {
       excludeExtraneousValues: true,
     });
@@ -50,7 +50,12 @@ export class AuthService {
       });
     });
 
-    const payload = { email: user.email, sub: user.id, permissions };
+    const payload: UserPayload = {
+      name: user.name,
+      email: user.email,
+      id: user.id,
+      permissions,
+    };
 
     const [access_token, refresh_token] = await Promise.all([
       this.jwtService.signAsync(payload, { expiresIn: '30m', secret: env.JWT_SECRET }),

@@ -2,7 +2,6 @@ import { RoleDto } from '../auth/dto/role/get-role.dto';
 
 export interface IUserPayload {
   id: number;
-  sub: number;
   email: string;
   roles: RoleDto[];
   permissions: string[];

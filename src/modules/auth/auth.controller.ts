@@ -1,7 +1,7 @@
 import { Body, Controller, Get, HttpCode, HttpStatus, Post, Request, Res, UnauthorizedException, UseGuards } from '@nestjs/common';
 import { Request as RequestExpress, Response as ResponseExpress } from 'express';
 import { JwtGuard } from '~/common/guards/jwt.guard';
-import { RolesGuard } from '~/common/guards/roles.guard';
+import { PermissionsGuard } from '~/common/guards/permission.guard';
 import { TResponse } from '~/common/types/response';
 import { AuthGuard } from '../../common/guards/auth.guard';
 import { UserDto } from '../user/dto/user.dto';
@@ -58,7 +58,7 @@ export class AuthController {
     });
   }
 
-  @UseGuards(AuthGuard, JwtGuard, RolesGuard)
+  @UseGuards(AuthGuard, JwtGuard, PermissionsGuard)
   @Get('permissions')
   async getFullPermissions(@Request() req: RequestExpress): Promise<TResponse<PermissionsDto[] | undefined>> {
     const id = req.user?.id;

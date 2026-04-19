@@ -1,5 +1,9 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
+import { PERMISSIONS } from '~/common/constants/permissions';
+import { Permissions } from '~/common/decorators/permissions.decorator';
+import { JwtGuard } from '~/common/guards/jwt.guard';
+import { PermissionsGuard } from '~/common/guards/permission.guard';
 import { Paginated } from '~/common/types/meta';
 import { TResponse } from '~/common/types/response';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -8,10 +12,12 @@ import { UpdateUserDto } from './dto/update-user.dto';
 import { UserDto } from './dto/user.dto';
 import { UserService } from './user.service';
 
+@UseGuards(JwtGuard, PermissionsGuard)
 @Controller('users')
 export class UserController {
   constructor(private readonly userService: UserService) {}
 
+  @Permissions(PERMISSIONS.USER.READ, PERMISSIONS.USER.CREATE) // example guard
   @HttpCode(HttpStatus.OK)
   @Get('')
   async get(@Query() query: QueryUserDto): Promise<TResponse<Paginated<UserDto>>> {

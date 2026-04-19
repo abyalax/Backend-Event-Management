@@ -1,9 +1,7 @@
-import { Permission } from '~/modules/auth/entity/permission.entity';
 import { User } from '~/modules/user/entity/user.entity';
 
-interface UserPayload extends User {
-  sub: number;
-  permissions: Permission[];
+export interface UserPayload extends Omit<User, 'roles' | 'password'> {
+  permissions: string[];
 }
 
 declare module 'express' {

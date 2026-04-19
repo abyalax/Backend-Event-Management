@@ -49,10 +49,11 @@ describe('Module Authentication', () => {
     expect(() => jwtService.verify(refresh_token_raw, { secret: env.JWT_REFRESH_SECRET })).not.toThrow();
 
     const payload = jwtService.verify(access_token_raw);
-    expect(payload).toHaveProperty('sub');
+    expect(payload).toHaveProperty('id');
     expect(payload).toHaveProperty('exp');
     expect(payload).toHaveProperty('iat');
     expect(payload).toHaveProperty('email');
+    expect(payload).toHaveProperty('permissions');
     expect(payload.email).toEqual(USER.LOGIN.email);
 
     const data = res.body.data;

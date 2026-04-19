@@ -46,7 +46,7 @@ describe('Module User', () => {
       const res = await request(app.getHttpServer())
         .get('/users')
         .query(query)
-        .set('Cookie', `access_token=s%3A${encodeURIComponent(access_token)}`);
+        .set('Cookie', [`access_token=s:${access_token}`]);
 
       const body = await res.body;
 

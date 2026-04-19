@@ -5,9 +5,16 @@ meta {
 }
 
 get {
-  url: {{base_url}}/users
+  url: {{base_url}}/users?page=1&limit=10&sort_by=name&sort_order=ASC
   body: none
   auth: none
+}
+
+params:query {
+  page: 1
+  limit: 10
+  sort_by: name
+  sort_order: ASC
 }
 
 headers {
