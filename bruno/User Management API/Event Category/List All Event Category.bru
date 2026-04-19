@@ -5,7 +5,7 @@ meta {
 }
 
 get {
-  url: {{base_url}}/event-category?page=1&limit=10&search=Tech-focused
+  url: {{base_url}}/event-category?page=1&limit=10&sortBy=tiitle:asc
   body: none
   auth: none
 }
@@ -13,8 +13,8 @@ get {
 params:query {
   page: 1
   limit: 10
-  search: Tech-focused
-  ~sortBy: sortBy=tiitle:DESC
+  sortBy: tiitle:asc
+  ~search: Tech-focused
 }
 
 headers {

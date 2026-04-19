@@ -1,9 +1,9 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
-import { Paginate, PaginateQuery } from 'nestjs-paginate';
 import { Paginated } from '~/common/types/meta';
 import { TResponse } from '~/common/types/response';
 import { CreateUserDto } from './dto/create-user.dto';
+import { QueryUserDto } from './dto/query-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserDto } from './dto/user.dto';
 import { UserService } from './user.service';
@@ -14,8 +14,15 @@ export class UserController {
 
   @HttpCode(HttpStatus.OK)
   @Get('')
-  async get(@Paginate() query: PaginateQuery): Promise<TResponse<Paginated<UserDto>>> {
-    const paginatedUsers = await this.userService.list(query);
+  async get(@Query() query: QueryUserDto): Promise<TResponse<Paginated<UserDto>>> {
+    const sortBy: [string, string][] = query.sort_by && query.sort_order ? [[query.sort_by, query.sort_order]] : [['updatedAt', 'DESC']];
+    const paginatedUsers = await this.userService.list({
+      page: query.page,
+      limit: query.limit,
+      search: query.search,
+      sortBy,
+      path: '',
+    });
     return {
       message: 'get data user successfully',
       data: {

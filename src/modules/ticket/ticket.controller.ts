@@ -1,8 +1,8 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post } from '@nestjs/common';
-import { Paginate, PaginateQuery } from 'nestjs-paginate';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
 import { Paginated } from '~/common/types/meta';
 import { TResponse } from '~/common/types/response';
 import { CreateTicketDto } from './dto/create-ticket.dto';
+import { QueryTicketDto } from './dto/query-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
 import { Ticket } from './entity/ticket.entity';
 import { TicketService } from './ticket.service';
@@ -13,8 +13,15 @@ export class TicketController {
 
   @HttpCode(HttpStatus.OK)
   @Get()
-  async find(@Paginate() query: PaginateQuery): Promise<TResponse<Paginated<Ticket>>> {
-    const paginatedEvents = await this.ticketService.list(query);
+  async find(@Query() query: QueryTicketDto): Promise<TResponse<Paginated<Ticket>>> {
+    const sortBy: [string, string][] = query.sort_by && query.sort_order ? [[query.sort_by, query.sort_order]] : [['updatedAt', 'DESC']];
+    const paginatedEvents = await this.ticketService.list({
+      page: query.page,
+      limit: query.limit,
+      search: query.search,
+      sortBy,
+      path: '',
+    });
     return {
       message: 'get data ticket successfully',
       data: paginatedEvents,

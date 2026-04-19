@@ -1,11 +1,10 @@
-import z from 'zod';
-
 export type SortOrder = 'ASC' | 'DESC';
 
 interface Pagination {
   page?: number;
-  per_page?: number;
+  limit?: number;
 }
+
 interface Sorting<E> {
   sort_by: keyof E | undefined;
   sort_order?: SortOrder;
@@ -40,11 +39,3 @@ export declare class Paginated<T> {
     last?: string;
   };
 }
-
-export const MetaResponseSchema = z.object({
-  currentPage: z.number(),
-  itemsPerPage: z.number(),
-  totalItems: z.number(),
-  totalPages: z.number(),
-  sortBy: z.array(z.array(z.string())),
-});

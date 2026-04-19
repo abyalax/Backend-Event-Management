@@ -70,7 +70,7 @@ describe('Module Product', () => {
      * contoh
      */
     test('GET /transaction + QueryTransactionDto', async () => {
-      const query: QueryTransactionDto = { page: 1, per_page: 10, min_total_price: 15000, max_total_price: 100000 };
+      const query: QueryTransactionDto = { page: 1, limit: 10, min_total_price: 15000, max_total_price: 100000 };
       const res = await request(app.getHttpServer())
         .get('/transaction')
         .query(query)

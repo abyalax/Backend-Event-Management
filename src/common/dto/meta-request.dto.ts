@@ -1,5 +1,5 @@
-import { IsOptional, IsNumber, IsString, IsEnum } from 'class-validator';
 import { Exclude, Expose, Type } from 'class-transformer';
+import { IsEnum, IsNumber, IsOptional, IsString } from 'class-validator';
 
 @Exclude()
 export class MetaRequestDto {
@@ -13,7 +13,7 @@ export class MetaRequestDto {
   @IsOptional()
   @IsNumber()
   @Type(() => Number)
-  public per_page?: number;
+  public limit?: number;
 
   @Expose()
   @IsOptional()

@@ -45,7 +45,7 @@ describe('EventService', () => {
     it('should return LegacyPaginated events', async () => {
       const query: QueryEventDto = {
         page: 1,
-        per_page: 10,
+        limit: 10,
         search: 'test',
         status: 'active',
       };

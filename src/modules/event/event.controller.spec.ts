@@ -62,7 +62,7 @@ describe('find', () => {
   it('should return LegacyPaginated events', async () => {
     const query: QueryEventDto = {
       page: 1,
-      per_page: 10,
+      limit: 10,
       search: 'test',
       status: 'active',
     };
@@ -78,7 +78,7 @@ describe('find', () => {
       ],
       meta: {
         page: 1,
-        per_page: 10,
+        limit: 10,
         total_count: 1,
         total_pages: 1,
       },
