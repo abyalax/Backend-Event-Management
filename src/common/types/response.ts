@@ -17,6 +17,8 @@ export enum EMessage {
   DATABASE_ERROR = 'Database Error',
   DATABASE_QUERY_FAILED = 'Database Query Failed',
 
+  VALIDATION_FAIL = 'Validation fail',
+
   ENTITY_NOT_FOUND = 'Entity Not Found',
   ENTITY_CONFLICT = 'Entity Conflict',
   ENTITY_PROPERTY_NOT_FOUND = 'Entity Property Was Not Found.',

@@ -4,31 +4,30 @@ import { PERMISSIONS } from '~/common/constants/permissions';
 import { Permissions } from '~/common/decorators/permissions.decorator';
 import { JwtGuard } from '~/common/guards/jwt.guard';
 import { PermissionsGuard } from '~/common/guards/permission.guard';
+import { ParseUUIDPipe } from '~/common/pipes/parse-uuid.pipe';
 import { Paginated } from '~/common/types/meta';
 import { TResponse } from '~/common/types/response';
 import { CreateUserDto } from './dto/create-user.dto';
 import { QueryUserDto } from './dto/query-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserDto } from './dto/user.dto';
+import { UserCacheService } from './user-cache.service';
 import { UserService } from './user.service';
 
 @UseGuards(JwtGuard, PermissionsGuard)
 @Controller('users')
 export class UserController {
-  constructor(private readonly userService: UserService) {}
+  constructor(
+    private readonly userService: UserService,
+    private readonly userCacheService: UserCacheService,
+  ) {}
 
-  @Permissions(PERMISSIONS.USER.READ, PERMISSIONS.USER.CREATE) // example guard
+  @Permissions(PERMISSIONS.USER.READ)
   @HttpCode(HttpStatus.OK)
   @Get('')
-  async get(@Query() query: QueryUserDto): Promise<TResponse<Paginated<UserDto>>> {
-    const sortBy: [string, string][] = query.sort_by && query.sort_order ? [[query.sort_by, query.sort_order]] : [['updatedAt', 'DESC']];
-    const paginatedUsers = await this.userService.list({
-      page: query.page,
-      limit: query.limit,
-      search: query.search,
-      sortBy,
-      path: '',
-    });
+  async list(@Query() query: QueryUserDto): Promise<TResponse<Paginated<UserDto>>> {
+    const paginatedUsers = await this.userCacheService.getList(query);
+
     return {
       message: 'get data user successfully',
       data: {
@@ -41,32 +40,56 @@ export class UserController {
     };
   }
 
-  @Post()
-  create(@Body() createUserDto: CreateUserDto) {
-    console.log({ createUserDto });
-    return this.userService.create(createUserDto);
-  }
+  @Permissions(PERMISSIONS.USER.CREATE)
+  @Post('')
+  async create(@Body() createUserDto: CreateUserDto) {
+    const user = await this.userService.create(createUserDto);
+    await this.userCacheService.invalidateList();
 
-  @Get()
-  findAll() {
-    return this.userService.findAll();
-  }
-
-  @Get(':id')
-  findOne(@Param('id') id: string) {
-    return this.userService.findOneBy({ id });
-  }
-
-  @Patch(':id')
-  update(@Param('id') id: string, @Body() updateUserDto: UpdateUserDto) {
-    return this.userService.update(id, updateUserDto);
-  }
-
-  @Delete(':id')
-  async remove(@Param('id') id: string): Promise<TResponse<boolean>> {
-    const removed = await this.userService.remove(id);
     return {
-      message: 'delete data user successfully',
+      message: 'user created successfully',
+      data: plainToInstance(UserDto, user, {
+        excludeExtraneousValues: true,
+      }),
+    };
+  }
+
+  @Permissions(PERMISSIONS.USER.DELETE)
+  @HttpCode(HttpStatus.OK)
+  @Get(':id')
+  async getById(@Param('id', ParseUUIDPipe) id: string): Promise<TResponse<UserDto>> {
+    const user = await this.userCacheService.getById(id);
+
+    return {
+      message: 'get user successfully',
+      data: plainToInstance(UserDto, user, {
+        excludeExtraneousValues: true,
+      }),
+    };
+  }
+
+  @Permissions(PERMISSIONS.USER.UPDATE)
+  @Patch(':id')
+  async update(@Param('id', ParseUUIDPipe) id: string, @Body() updateUserDto: UpdateUserDto) {
+    await this.userService.update(id, updateUserDto);
+    await this.userCacheService.invalidateOnMutation(id);
+
+    return {
+      message: 'user updated successfully',
+      data: plainToInstance(UserDto, updateUserDto, {
+        excludeExtraneousValues: true,
+      }),
+    };
+  }
+
+  @Permissions(PERMISSIONS.USER.DELETE)
+  @Delete(':id')
+  async remove(@Param('id', ParseUUIDPipe) id: string): Promise<TResponse<boolean>> {
+    const removed = await this.userService.remove(id);
+    await this.userCacheService.invalidateOnMutation(id);
+
+    return {
+      message: 'user deleted successfully',
       data: removed.affected ? removed.affected > 0 : false,
     };
   }

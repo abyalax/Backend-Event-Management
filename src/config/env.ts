@@ -1,5 +1,5 @@
-import z from 'zod';
 import 'dotenv/config';
+import z from 'zod';
 
 export const envSchema = z.object({
   PORT: z.string({ message: 'PORT Aplication is required' }),
@@ -11,23 +11,15 @@ export const envSchema = z.object({
   JWT_REFRESH_EXPIRATION: z.string({
     message: 'JWT refresh expiration is required',
   }),
-  /**Database Config */
+
   DATABASE_URL: z.string({ message: 'Required Database URL' }),
   DATABASE_TYPE: z.string({ message: 'Required Database Type' }),
+
+  REDIS_HOST: z.string({ message: 'REDIS_HOST is required' }),
+  REDIS_PORT: z.coerce.number({ message: 'REDIS_PORT is required' }),
+  REDIS_PASSWORD: z.string({ message: 'REDIS_PASSWORD is required' }),
 
   COOKIE_SECRET: z.string({ message: 'Cookie secret is required' }),
 });
 
-type Environment = z.infer<typeof envSchema>;
-
-let cachedEnv: Environment | undefined;
-
-const getEnvironment = (): Environment => {
-  if (cachedEnv === undefined) {
-    cachedEnv = envSchema.parse(process.env);
-    return cachedEnv;
-  }
-  return cachedEnv;
-};
-
-export const env = getEnvironment();
+export type Environment = z.infer<typeof envSchema>;

@@ -1,14 +1,14 @@
 import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import * as cookieParser from 'cookie-parser';
-import { AppModule } from './app.module';
-
 import { setupGracefulShutdown } from 'nestjs-graceful-shutdown';
 import 'reflect-metadata';
+import { AppModule } from './app.module';
 import { GlobalExceptionFilter } from './common/filters/global.filter';
-import { env } from './config/env';
+import { envSchema } from './config/env';
 
 async function bootstrap() {
+  const env = envSchema.parse(process.env);
   const app = await NestFactory.create(AppModule);
   const globalException = new GlobalExceptionFilter();
 
@@ -36,7 +36,7 @@ async function bootstrap() {
   });
 
   await app.listen(env.PORT);
+  console.log(`Nest Application running on http://localhost:${env.PORT}`);
 }
-bootstrap()
-  .then(() => console.log(`Nest Aplication running on http://localhost:${env.PORT}`))
-  .catch((err) => console.log(err));
+
+bootstrap().catch((err) => console.error(err));

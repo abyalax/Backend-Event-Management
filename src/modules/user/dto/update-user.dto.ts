@@ -1,17 +1,4 @@
-import { Exclude, Expose } from 'class-transformer';
-import { IsEmail, IsString } from 'class-validator';
+import { PartialType } from '@nestjs/mapped-types';
+import { CreateUserDto } from './create-user.dto';
 
-@Exclude()
-export class UpdateUserDto {
-  @Expose()
-  @IsString()
-  name: string;
-
-  @Expose()
-  @IsEmail()
-  email: string;
-
-  @Expose()
-  @IsString()
-  password: string;
-}
+export class UpdateUserDto extends PartialType(CreateUserDto) {}

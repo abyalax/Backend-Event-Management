@@ -5,7 +5,7 @@ import { TestingModule } from '@nestjs/testing';
 import * as request from 'supertest';
 import { App } from 'supertest/types';
 import { validateDto } from '~/common/helpers/validation';
-import { env } from '~/config/env';
+import { envSchema } from '~/config/env';
 import { SignUpDto } from '~/modules/auth/dto/sign-up.dto';
 import { UserDto } from '~/modules/user/dto/user.dto';
 import { setupApplication } from '~/test/setup_e2e';
@@ -16,6 +16,8 @@ describe('Module Authentication', () => {
   let app: INestApplication<App>;
   let moduleFixture: TestingModule;
   let jwtService: JwtService;
+
+  const env = envSchema.parse(process.env);
 
   beforeAll(async () => {
     [app, moduleFixture] = await setupApplication();

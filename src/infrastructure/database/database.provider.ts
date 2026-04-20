@@ -1,5 +1,4 @@
 import { DataSource, type DataSourceOptions } from 'typeorm';
-import { env } from '~/config/env';
 import { Permission } from '~/modules/auth/entity/permission.entity';
 import { Role } from '~/modules/auth/entity/role.entity';
 import { EventCategory } from '~/modules/event-category/entity/event-category.entity';
@@ -11,16 +10,17 @@ import { Payment } from '~/modules/payment/entity/payment.entity';
 import { GeneratedEventTicket } from '~/modules/ticket/entity/generated-event-ticket.entity';
 import { Ticket } from '~/modules/ticket/entity/ticket.entity';
 import { User } from '~/modules/user/entity/user.entity';
+import { CONFIG_SERVICE, ConfigService } from '../config/config.provider';
 
 let dataSource: DataSource;
 
 export const PostgreeConnection = {
   provide: 'psql_connection',
-  inject: [],
-  useFactory: async () => {
+  inject: [CONFIG_SERVICE],
+  useFactory: async (configService: ConfigService) => {
     dataSource = new DataSource({
       type: 'postgres',
-      url: env.DATABASE_URL,
+      url: configService.get('DATABASE_URL'),
       entities: [User, Role, Permission, Ticket, Event, Order, Payment, Notification, EventCategory, OrderItem, GeneratedEventTicket],
       synchronize: false,
     });

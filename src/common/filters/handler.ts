@@ -3,6 +3,7 @@ import { JsonWebTokenError, NotBeforeError, TokenExpiredError } from '@nestjs/jw
 import { EntityNotFoundError, EntityPropertyNotFoundError, QueryFailedError } from 'typeorm';
 import { ZodError } from 'zod';
 import { EMessage } from '../types/response';
+import { ClassValidatorFail } from './exception';
 
 type ErrorConstructor<T extends Error = Error> = new (...args: unknown[]) => T;
 type ExceptionHandler<T = unknown> = (e: T) => {
@@ -53,6 +54,18 @@ export const handlers = new Map<ErrorConstructor, ExceptionHandler>([
         statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
         message: EMessage.DATABASE_QUERY_FAILED,
         error: e.message,
+      };
+    },
+  ],
+  [
+    ClassValidatorFail,
+    (e: ClassValidatorFail) => {
+      console.log('ClassValidatorFail: ', e);
+      const details = e.details as Array<{ message: string }>;
+      return {
+        statusCode: HttpStatus.BAD_REQUEST,
+        message: details?.[0]?.message ?? EMessage.VALIDATION_FAIL,
+        error: details,
       };
     },
   ],

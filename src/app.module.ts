@@ -1,13 +1,13 @@
 import { Module } from '@nestjs/common';
 import { APP_GUARD } from '@nestjs/core';
-import { JwtModule, JwtService } from '@nestjs/jwt';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { GracefulShutdownModule } from 'nestjs-graceful-shutdown';
-import { env } from '~/config/env';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { EnvValidator } from './infrastructure/config/config.provider';
+import { ConfigModule } from './infrastructure/config/config.module';
+import { CONFIG_SERVICE, ConfigService } from './infrastructure/config/config.provider';
 import { closeConnection } from './infrastructure/database/database.provider';
+import { RedisModule } from './infrastructure/redis/redis.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { EventCategoryModule } from './modules/event-category/event-category.module';
 import { EventModule } from './modules/event/event.module';
@@ -31,15 +31,19 @@ const gracefulShutdownImports =
 
 @Module({
   imports: [
-    ...gracefulShutdownImports,
+    ConfigModule,
     ThrottlerModule.forRoot({
-      throttlers: [{ ttl: 60000, limit: 20 }], // max 20 request/menit
+      throttlers: [{ ttl: 60000, limit: 20 }],
     }),
-    JwtModule.register({
-      secret: env.JWT_SECRET,
-      privateKey: env.JWT_PRIVATE_KEY,
-      publicKey: env.JWT_PUBLIC_KEY,
+    RedisModule.forRootAsync({
+      useFactory: (configService: ConfigService) => ({
+        host: configService.get('REDIS_HOST'),
+        port: configService.get('REDIS_PORT'),
+        password: configService.get('REDIS_PASSWORD'),
+      }),
+      inject: [CONFIG_SERVICE],
     }),
+    ...gracefulShutdownImports,
     AuthModule,
     UserModule,
     EventModule,
@@ -48,9 +52,7 @@ const gracefulShutdownImports =
   ],
   controllers: [AppController],
   providers: [
-    EnvValidator,
     AppService,
-    JwtService,
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,

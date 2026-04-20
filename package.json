@@ -46,6 +46,7 @@
     "dotenv": "^17.2.1",
     "env-cmd": "^10.1.0",
     "http-terminator": "^3.2.0",
+    "ioredis": "^5.10.1",
     "nestjs-graceful-shutdown": "^1.0.3",
     "nestjs-paginate": "^12.10.1",
     "pg": "^8.16.3",

@@ -1,9 +1,9 @@
-import { BadRequestException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { plainToInstance } from 'class-transformer';
 import { UserPayload } from '~/common/types/global';
-import { env } from '~/config/env';
+import { CONFIG_SERVICE, ConfigService } from '~/infrastructure/config/config.provider';
 import { UserDto } from '../user/dto/user.dto';
 import { UserService } from '../user/user.service';
 import { PermissionsDto } from './dto/permission/get-permission.dto';
@@ -14,6 +14,8 @@ export class AuthService {
   constructor(
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
+    @Inject(CONFIG_SERVICE)
+    private readonly configService: ConfigService,
   ) {}
 
   async signUp(signUpDto: SignUpDto): Promise<UserDto> {
@@ -58,8 +60,8 @@ export class AuthService {
     };
 
     const [access_token, refresh_token] = await Promise.all([
-      this.jwtService.signAsync(payload, { expiresIn: '30m', secret: env.JWT_SECRET }),
-      this.jwtService.signAsync(payload, { expiresIn: '1d', secret: env.JWT_REFRESH_SECRET }),
+      this.jwtService.signAsync(payload, { expiresIn: '30m', secret: this.configService.get('JWT_SECRET') }),
+      this.jwtService.signAsync(payload, { expiresIn: '1d', secret: this.configService.get('JWT_REFRESH_SECRET') }),
     ]);
 
     return { access_token, refresh_token, user };
@@ -68,7 +70,7 @@ export class AuthService {
   async refreshToken(refresh_token?: string): Promise<{ access_token: string }> {
     if (refresh_token === undefined) throw new UnauthorizedException();
     const verifyToken = this.jwtService.verify(refresh_token, {
-      secret: env.JWT_REFRESH_SECRET,
+      secret: this.configService.get('JWT_REFRESH_SECRET'),
     });
     if (!verifyToken) throw new UnauthorizedException();
     const payload = { email: verifyToken.email, sub: verifyToken.sub };

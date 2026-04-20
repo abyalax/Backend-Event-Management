@@ -29,6 +29,9 @@ export class ClassValidatorFail extends ValidationFail {
   constructor(errors: ValidationError[], message: string = 'Class validation failed') {
     const formatted = errors.map((error) => {
       const constraints = error.constraints ?? {};
+
+      console.log('constraints: ', constraints);
+
       return Object.keys(constraints).reduce(
         (acc, key) => {
           acc[key] = constraints[key];
