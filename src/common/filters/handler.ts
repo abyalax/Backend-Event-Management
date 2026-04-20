@@ -1,12 +1,16 @@
 import { HttpException, HttpStatus } from '@nestjs/common';
 import { JsonWebTokenError, NotBeforeError, TokenExpiredError } from '@nestjs/jwt';
+import { PinoLogger } from 'nestjs-pino';
 import { EntityNotFoundError, EntityPropertyNotFoundError, QueryFailedError } from 'typeorm';
 import { ZodError } from 'zod';
 import { EMessage } from '../types/response';
 import { ClassValidatorFail } from './exception';
 
 type ErrorConstructor<T extends Error = Error> = new (...args: unknown[]) => T;
-type ExceptionHandler<T = unknown> = (e: T) => {
+type ExceptionHandler<T = unknown> = (
+  e: T,
+  logger: PinoLogger,
+) => {
   statusCode: number;
   message: unknown;
   error: unknown;
@@ -15,8 +19,8 @@ type ExceptionHandler<T = unknown> = (e: T) => {
 export const handlers = new Map<ErrorConstructor, ExceptionHandler>([
   [
     NotBeforeError,
-    (e: NotBeforeError) => {
-      console.log('NotBeforeError: ', e.message);
+    (e: NotBeforeError, logger: PinoLogger) => {
+      logger.warn({ error: e.message }, 'NotBeforeError');
       return {
         statusCode: HttpStatus.UNAUTHORIZED,
         message: EMessage.TOKEN_NOT_BEFORE,
@@ -26,8 +30,8 @@ export const handlers = new Map<ErrorConstructor, ExceptionHandler>([
   ],
   [
     TokenExpiredError,
-    (e: TokenExpiredError) => {
-      console.log('TokenExpiredError: ', e.message);
+    (e: TokenExpiredError, logger: PinoLogger) => {
+      logger.warn({ error: e.message }, 'TokenExpiredError');
       return {
         statusCode: HttpStatus.UNAUTHORIZED,
         message: EMessage.TOKEN_EXPIRED,
@@ -37,8 +41,8 @@ export const handlers = new Map<ErrorConstructor, ExceptionHandler>([
   ],
   [
     JsonWebTokenError,
-    (e: JsonWebTokenError) => {
-      console.log('JsonWebTokenError: ', e.message);
+    (e: JsonWebTokenError, logger: PinoLogger) => {
+      logger.warn({ error: e.message }, 'JsonWebTokenError');
       return {
         statusCode: HttpStatus.UNAUTHORIZED,
         message: EMessage.TOKEN_ERROR,
@@ -48,8 +52,8 @@ export const handlers = new Map<ErrorConstructor, ExceptionHandler>([
   ],
   [
     QueryFailedError,
-    (e: QueryFailedError) => {
-      console.log('QueryFailedError: ', e.message);
+    (e: QueryFailedError, logger: PinoLogger) => {
+      logger.error({ error: e.message }, 'QueryFailedError');
       return {
         statusCode: HttpStatus.INTERNAL_SERVER_ERROR,
         message: EMessage.DATABASE_QUERY_FAILED,
@@ -59,8 +63,8 @@ export const handlers = new Map<ErrorConstructor, ExceptionHandler>([
   ],
   [
     ClassValidatorFail,
-    (e: ClassValidatorFail) => {
-      console.log('ClassValidatorFail: ', e);
+    (e: ClassValidatorFail, logger: PinoLogger) => {
+      logger.warn({ details: e.details }, 'ClassValidatorFail');
       const details = e.details as Array<{ message: string }>;
       return {
         statusCode: HttpStatus.BAD_REQUEST,
@@ -71,8 +75,8 @@ export const handlers = new Map<ErrorConstructor, ExceptionHandler>([
   ],
   [
     EntityNotFoundError,
-    (e: EntityNotFoundError) => {
-      console.log('EntityNotFoundError: ', e.message);
+    (e: EntityNotFoundError, logger: PinoLogger) => {
+      logger.warn({ error: e.message }, 'EntityNotFoundError');
       return {
         statusCode: HttpStatus.UNPROCESSABLE_ENTITY,
         message: EMessage.ENTITY_NOT_FOUND,
@@ -82,8 +86,8 @@ export const handlers = new Map<ErrorConstructor, ExceptionHandler>([
   ],
   [
     EntityPropertyNotFoundError,
-    (e: EntityPropertyNotFoundError) => {
-      console.log('EntityPropertyNotFoundError: ', e.message);
+    (e: EntityPropertyNotFoundError, logger: PinoLogger) => {
+      logger.warn({ error: e.message }, 'EntityPropertyNotFoundError');
       return {
         statusCode: HttpStatus.UNPROCESSABLE_ENTITY,
         message: EMessage.ENTITY_PROPERTY_NOT_FOUND,
@@ -93,8 +97,8 @@ export const handlers = new Map<ErrorConstructor, ExceptionHandler>([
   ],
   [
     ZodError,
-    (e: ZodError) => {
-      console.log('ZodError: ', e.issues);
+    (e: ZodError, logger: PinoLogger) => {
+      logger.warn({ issues: e.issues }, 'ZodError');
       return {
         statusCode: HttpStatus.UNPROCESSABLE_ENTITY,
         message: e.issues.map((i) => i.message),
@@ -104,8 +108,8 @@ export const handlers = new Map<ErrorConstructor, ExceptionHandler>([
   ],
   [
     HttpException,
-    (e: HttpException) => {
-      console.log('HttpException: ', e.getResponse());
+    (e: HttpException, logger: PinoLogger) => {
+      logger.warn({ response: e.getResponse() }, 'HttpException');
       const response = e.getResponse();
       return {
         statusCode: e.getStatus(),

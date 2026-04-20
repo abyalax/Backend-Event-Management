@@ -1,9 +1,11 @@
-import { Module } from '@nestjs/common';
-import { APP_GUARD } from '@nestjs/core';
+import { Module, ValidationPipe } from '@nestjs/common';
+import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { GracefulShutdownModule } from 'nestjs-graceful-shutdown';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
+import { GlobalExceptionFilter } from './common/filters/global.filter';
+import { LoggerModule } from './common/logger/logger.module';
 import { ConfigModule } from './infrastructure/config/config.module';
 import { CONFIG_SERVICE, ConfigService } from './infrastructure/config/config.provider';
 import { closeConnection } from './infrastructure/database/database.provider';
@@ -32,6 +34,7 @@ const gracefulShutdownImports =
 @Module({
   imports: [
     ConfigModule,
+    LoggerModule,
     ThrottlerModule.forRoot({
       throttlers: [{ ttl: 60000, limit: 20 }],
     }),
@@ -56,6 +59,22 @@ const gracefulShutdownImports =
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,
+    },
+    {
+      provide: APP_FILTER,
+      useClass: GlobalExceptionFilter,
+    },
+    {
+      provide: APP_PIPE,
+      useValue: new ValidationPipe({
+        transform: true,
+        whitelist: true,
+        forbidNonWhitelisted: true,
+        transformOptions: {
+          excludeExtraneousValues: true,
+          enableImplicitConversion: true,
+        },
+      }),
     },
   ],
 })
