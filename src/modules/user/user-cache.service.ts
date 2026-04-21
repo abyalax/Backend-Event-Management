@@ -4,6 +4,8 @@ import { CacheService } from '~/infrastructure/cache/cache.service';
 import { QueryUserDto } from './dto/query-user.dto';
 import { User } from './entity/user.entity';
 import { UserService } from './user.service';
+import { CreateUserDto } from './dto/create-user.dto';
+import { UpdateUserDto } from './dto/update-user.dto';
 
 @Injectable()
 export class UserCacheService {
@@ -15,26 +17,16 @@ export class UserCacheService {
     private readonly userService: UserService,
   ) {}
 
-  /**
-   * Generate cache key for user by ID
-   */
   private keyById(id: string): string {
     return `${this.KEY_PREFIX}:by-id:${id}`;
   }
 
-  /**
-   * Generate cache key for user list
-   */
   private keyList(query: QueryUserDto): string {
     const searchKey = query.search ? `:search:${query.search}` : '';
     const sortKey = query.sort_by && query.sort_order ? `:sort:${query.sort_by}:${query.sort_order}` : '';
     return `${this.KEY_PREFIX}:list:page:${query.page}:limit:${query.limit}${searchKey}${sortKey}`;
   }
 
-  /**
-   * Get user by ID with cache
-   * Uses distributed lock to prevent cache stampede
-   */
   async getById(id: string): Promise<User | null> {
     return this.cache.getOrSet(
       this.keyById(id),
@@ -46,9 +38,6 @@ export class UserCacheService {
     );
   }
 
-  /**
-   * Get user list with pagination and cache
-   */
   async getList(query: QueryUserDto) {
     const sortBy: [string, string][] = query.sort_by && query.sort_order ? [[query.sort_by, query.sort_order]] : [['updatedAt', 'DESC']];
     const mappedQuery: PaginateQuery = {
@@ -65,34 +54,34 @@ export class UserCacheService {
     );
   }
 
-  /**
-   * Invalidate user cache by ID
-   */
+  async create(createUserDto: CreateUserDto) {
+    const user = await this.userService.create(createUserDto);
+    await this.invalidateList();
+    return user;
+  }
+
+  async update(id: string, updateUserDto: UpdateUserDto) {
+    const user = await this.userService.update(id, updateUserDto);
+    await this.invalidateOnMutation(id);
+    return user;
+  }
+
+  async delete(id: string) {
+    const removed = await this.userService.remove(id);
+    await this.invalidateOnMutation(id);
+    return removed;
+  }
+
   async invalidateById(id: string): Promise<void> {
     await this.cache.clear(this.keyById(id));
   }
 
-  /**
-   * Invalidate all user list caches
-   */
   async invalidateList(): Promise<void> {
     await this.cache.clearByPattern(`${this.KEY_PREFIX}:list:*`);
   }
 
-  /**
-   * Invalidate all user caches (both by-id and list)
-   */
-  async invalidateAll(): Promise<void> {
-    await this.cache.clearByPattern(`${this.KEY_PREFIX}:*`);
-  }
-
-  /**
-   * Invalidate user and related caches
-   * Call this after create/update/delete operations
-   */
   async invalidateOnMutation(userId?: string): Promise<void> {
     if (userId) await this.invalidateById(userId);
-
     await this.invalidateList();
   }
 }

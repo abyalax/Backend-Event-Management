@@ -1,4 +1,4 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { REPOSITORY } from '~/common/constants/database';
 import { Permission } from '../auth/entity/permission.entity';
 import { User } from './entity/user.entity';
@@ -75,7 +75,13 @@ export class UserService {
   }
 
   async update(id: string, updateUserDto: UpdateUserDto) {
-    return await this.userRepository.update(id, updateUserDto);
+    const user = await this.userRepository.preload({
+      id: id,
+      ...updateUserDto,
+    });
+
+    if (!user) throw new NotFoundException(`User with ID ${id} not found`);
+    return await this.userRepository.save(user);
   }
 
   async remove(id: string) {

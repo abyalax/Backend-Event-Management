@@ -40,22 +40,23 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   async onModuleDestroy() {
     const closeConnection = async (redis: Redis | null, name: string) => {
       if (!redis) return;
+      redis.removeAllListeners('error');
 
       try {
-        if (redis.status === 'end') {
-          // Connection already closed, nothing to do
+        if (redis.status === 'reconnecting') {
+          console.log(`Forcing disconnect for ${name} due to reconnecting status`);
+          redis.disconnect();
           return;
         }
 
-        if (redis.status === 'connect' || redis.status === 'ready' || redis.status === 'reconnecting') {
-          await redis.quit();
+        if (['connect', 'ready'].includes(redis.status)) {
+          // Beri timeout pada quit() agar tidak menggantung jika server Redis bermasalah
+          const quitWithTimeout = Promise.race([redis.quit(), new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), 1000))]);
+
+          await quitWithTimeout;
         }
-      } catch (error: unknown) {
-        // Ignore errors if connection is already closed
-        const errorMessage = error instanceof Error ? error.message : String(error);
-        if (!errorMessage.includes('Connection is closed')) {
-          console.warn(`Error closing ${name}:`, error);
-        }
+      } catch {
+        redis.disconnect();
       }
     };
 

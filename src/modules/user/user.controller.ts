@@ -12,15 +12,11 @@ import { QueryUserDto } from './dto/query-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { UserDto } from './dto/user.dto';
 import { UserCacheService } from './user-cache.service';
-import { UserService } from './user.service';
 
 @UseGuards(JwtGuard, PermissionsGuard)
 @Controller('users')
 export class UserController {
-  constructor(
-    private readonly userService: UserService,
-    private readonly userCacheService: UserCacheService,
-  ) {}
+  constructor(private readonly userCacheService: UserCacheService) {}
 
   @Permissions(PERMISSIONS.USER.READ)
   @HttpCode(HttpStatus.OK)
@@ -43,8 +39,7 @@ export class UserController {
   @Permissions(PERMISSIONS.USER.CREATE)
   @Post('')
   async create(@Body() createUserDto: CreateUserDto) {
-    const user = await this.userService.create(createUserDto);
-    await this.userCacheService.invalidateList();
+    const user = await this.userCacheService.create(createUserDto);
 
     return {
       message: 'user created successfully',
@@ -71,12 +66,11 @@ export class UserController {
   @Permissions(PERMISSIONS.USER.UPDATE)
   @Patch(':id')
   async update(@Param('id', ParseUUIDPipe) id: string, @Body() updateUserDto: UpdateUserDto) {
-    await this.userService.update(id, updateUserDto);
-    await this.userCacheService.invalidateOnMutation(id);
+    const user = await this.userCacheService.update(id, updateUserDto);
 
     return {
       message: 'user updated successfully',
-      data: plainToInstance(UserDto, updateUserDto, {
+      data: plainToInstance(UserDto, user, {
         excludeExtraneousValues: true,
       }),
     };
@@ -85,8 +79,7 @@ export class UserController {
   @Permissions(PERMISSIONS.USER.DELETE)
   @Delete(':id')
   async remove(@Param('id', ParseUUIDPipe) id: string): Promise<TResponse<boolean>> {
-    const removed = await this.userService.remove(id);
-    await this.userCacheService.invalidateOnMutation(id);
+    const removed = await this.userCacheService.delete(id);
 
     return {
       message: 'user deleted successfully',

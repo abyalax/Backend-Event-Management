@@ -25,7 +25,7 @@ describe('Module User', () => {
     let access_token: string;
     let refresh_token: string;
 
-    beforeEach(async () => {
+    beforeAll(async () => {
       const credentials = {
         email: USER.email,
         password: USER.password,
