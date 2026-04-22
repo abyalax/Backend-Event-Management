@@ -1,7 +1,7 @@
 import type { DataSource } from 'typeorm';
 import type { Seeder } from 'typeorm-extension';
 
-import { Order } from '~/modules/order/entity/order.entity';
+import { Order } from '~/modules/orders/entity/order.entity';
 
 import { mockOrders } from '../mock/order.mock';
 

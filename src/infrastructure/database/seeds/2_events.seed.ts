@@ -1,9 +1,9 @@
 import type { DataSource } from 'typeorm';
 import type { Seeder } from 'typeorm-extension';
 
-import { Event } from '~/modules/event/entity/event.entity';
+import { Event } from '~/modules/events/entity/event.entity';
 
-import { EventCategory } from '~/modules/event-category/entity/event-category.entity';
+import { EventCategory } from '~/modules/event-categories/entity/event-category.entity';
 import { mockEventCategories } from '../mock/event-category.mock';
 import { mockEvents } from '../mock/event.mock';
 

@@ -1,5 +1,5 @@
 import { Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
-import type { Order } from '~/modules/order/entity/order.entity';
+import type { Order } from '~/modules/orders/entity/order.entity';
 
 @Entity({ name: 'payments' })
 @Index('idx_payments_order_id', ['orderId'])

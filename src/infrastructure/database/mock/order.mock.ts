@@ -1,4 +1,4 @@
-import type { Order } from "~/modules/order/entity/order.entity";
+import type { Order } from "~/modules/orders/entity/order.entity";
 
 export const mockOrders = (): Partial<Order>[] => {
   const now = new Date();

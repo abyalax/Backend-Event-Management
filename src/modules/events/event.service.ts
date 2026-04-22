@@ -2,7 +2,7 @@ import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { paginate, PaginateQuery } from 'nestjs-paginate';
 import { Repository } from 'typeorm';
 import { REPOSITORY } from '~/common/constants/database';
-import { EventCategory } from '../event-category/entity/event-category.entity';
+import { EventCategory } from '../event-categories/entity/event-category.entity';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { Event } from './entity/event.entity';

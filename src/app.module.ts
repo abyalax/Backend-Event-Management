@@ -11,8 +11,8 @@ import { CONFIG_SERVICE, ConfigService } from './infrastructure/config/config.pr
 import { closeConnection } from './infrastructure/database/database.provider';
 import { RedisModule } from './infrastructure/redis/redis.module';
 import { AuthModule } from './modules/auth/auth.module';
-import { EventCategoryModule } from './modules/event-category/event-category.module';
-import { EventModule } from './modules/event/event.module';
+import { EventCategoryModule } from './modules/event-categories/event-category.module';
+import { EventModule } from './modules/events/event.module';
 import { TicketModule } from './modules/ticket/ticket.module';
 import { UserModule } from './modules/user/user.module';
 

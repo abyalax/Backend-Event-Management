@@ -2,7 +2,7 @@ import { Provider } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { REPOSITORY } from '~/common/constants/database';
 import { PostgreeConnection } from '~/infrastructure/database/database.provider';
-import { EventCategory } from '../event-category/entity/event-category.entity';
+import { EventCategory } from '../event-categories/entity/event-category.entity';
 import { Event } from './entity/event.entity';
 
 export const eventProvider: Provider[] = [

@@ -1,4 +1,4 @@
-import type { Event } from "~/modules/event/entity/event.entity";
+import type { Event } from "~/modules/events/entity/event.entity";
 
 export const mockEvents = (): Event[] => {
   const now = new Date();

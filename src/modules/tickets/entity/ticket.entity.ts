@@ -10,8 +10,8 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import type { Event } from '~/modules/event/entity/event.entity';
-import type { OrderItem } from '~/modules/order/entity/order-item.entity';
+import type { Event } from '~/modules/events/entity/event.entity';
+import type { OrderItem } from '~/modules/orders/entity/order-item.entity';
 import type { GeneratedEventTicket } from './generated-event-ticket.entity';
 
 @Entity({ name: 'tickets' })
