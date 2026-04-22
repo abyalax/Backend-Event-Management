@@ -1,5 +1,5 @@
 import { Exclude, Expose, Type } from 'class-transformer';
-import { UserDto } from '~/modules/user/dto/user.dto';
+import { UserDto } from '~/modules/users/dto/user.dto';
 import { PermissionsDto } from '../permission/get-permission.dto';
 
 @Exclude()

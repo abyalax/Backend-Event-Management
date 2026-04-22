@@ -6,7 +6,7 @@ import { CONFIG_SERVICE, ConfigService } from '~/infrastructure/config/config.pr
 import { REDIS_CLIENT } from '~/infrastructure/redis/redis.constant';
 import { RedisService } from '~/infrastructure/redis/redis.service';
 import { mockRedis, mockRepository } from '~/test/common/mock';
-import { UserService } from '../user/user.service';
+import { UserService } from '../users/user.service';
 import { EventCategoryController } from './event-category.controller';
 import { EventCategoryService } from './event-category.service';
 

@@ -1,5 +1,5 @@
 import * as bcrypt from "bcryptjs";
-import type { User } from "~/modules/user/entity/user.entity";
+import type { User } from "~/modules/users/entity/user.entity";
 
 export const mockUser = async (): Promise<User[]> => {
   const plaintextPassword = "password";

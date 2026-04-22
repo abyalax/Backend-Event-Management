@@ -1,4 +1,4 @@
-import type { Ticket } from "~/modules/ticket/entity/ticket.entity";
+import type { Ticket } from "~/modules/tickets/entity/ticket.entity";
 
 export const mockTickets = (): Partial<Ticket>[] => {
   return [

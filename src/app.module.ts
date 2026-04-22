@@ -13,8 +13,8 @@ import { RedisModule } from './infrastructure/redis/redis.module';
 import { AuthModule } from './modules/auth/auth.module';
 import { EventCategoryModule } from './modules/event-categories/event-category.module';
 import { EventModule } from './modules/events/event.module';
-import { TicketModule } from './modules/ticket/ticket.module';
-import { UserModule } from './modules/user/user.module';
+import { TicketModule } from './modules/tickets/ticket.module';
+import { UserModule } from './modules/users/user.module';
 
 const gracefulShutdownImports =
   process.env.NODE_ENV === 'test'

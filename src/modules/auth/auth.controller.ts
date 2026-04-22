@@ -4,7 +4,7 @@ import { JwtGuard } from '~/common/guards/jwt.guard';
 import { PermissionsGuard } from '~/common/guards/permission.guard';
 import { TResponse } from '~/common/types/response';
 import { AuthGuard } from '../../common/guards/auth.guard';
-import { UserDto } from '../user/dto/user.dto';
+import { UserDto } from '../users/dto/user.dto';
 import { AuthService } from './auth.service';
 import { PermissionsDto } from './dto/permission/get-permission.dto';
 import { SignInDto } from './dto/sign-in.dto';

@@ -11,7 +11,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import type { Payment } from '~/modules/payments/entity/payment.entity';
-import type { User } from '~/modules/user/entity/user.entity';
+import type { User } from '~/modules/users/entity/user.entity';
 import type { OrderItem } from './order-item.entity';
 
 @Entity({ name: 'orders' })

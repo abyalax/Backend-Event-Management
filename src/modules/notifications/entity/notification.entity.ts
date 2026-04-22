@@ -1,5 +1,5 @@
 import { Column, CreateDateColumn, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
-import type { User } from '~/modules/user/entity/user.entity';
+import type { User } from '~/modules/users/entity/user.entity';
 
 @Entity({ name: 'notifications' })
 @Index('idx_notifications_user_id', ['userId'])

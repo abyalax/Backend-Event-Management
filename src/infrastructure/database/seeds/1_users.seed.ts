@@ -3,7 +3,7 @@ import type { Seeder } from 'typeorm-extension';
 
 import { Permission } from '~/modules/auth/entity/permission.entity';
 import { Role } from '~/modules/auth/entity/role.entity';
-import { User } from '~/modules/user/entity/user.entity';
+import { User } from '~/modules/users/entity/user.entity';
 
 import { mockPermissions } from '../mock/permission.mock';
 import { mockRoles } from '../mock/role.mock';

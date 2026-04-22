@@ -1,4 +1,4 @@
-import { User } from '~/modules/user/entity/user.entity';
+import { User } from '~/modules/users/entity/user.entity';
 
 export interface UserPayload extends Omit<User, 'roles' | 'password'> {
   permissions: string[];

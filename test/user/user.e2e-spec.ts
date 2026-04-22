@@ -4,7 +4,7 @@ import * as request from 'supertest';
 import { App } from 'supertest/types';
 import z from 'zod';
 import { validateSchema } from '~/common/helpers/validation';
-import { QueryUserDto } from '~/modules/user/dto/query-user.dto';
+import { QueryUserDto } from '~/modules/users/dto/query-user.dto';
 import { setupApplication } from '~/test/setup_e2e';
 import { extractHttpOnlyCookie } from '~/test/utils';
 

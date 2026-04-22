@@ -11,7 +11,7 @@ import {
   UpdateDateColumn,
 } from 'typeorm';
 import { EventCategory } from '~/modules/event-categories/entity/event-category.entity';
-import type { Ticket } from '~/modules/ticket/entity/ticket.entity';
+import type { Ticket } from '~/modules/tickets/entity/ticket.entity';
 
 export enum EEventStatus {
   AVAILABLE = 'Available',

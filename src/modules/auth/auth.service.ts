@@ -4,8 +4,8 @@ import * as bcrypt from 'bcrypt';
 import { plainToInstance } from 'class-transformer';
 import { UserPayload } from '~/common/types/global';
 import { CONFIG_SERVICE, ConfigService } from '~/infrastructure/config/config.provider';
-import { UserDto } from '../user/dto/user.dto';
-import { UserService } from '../user/user.service';
+import { UserDto } from '../users/dto/user.dto';
+import { UserService } from '../users/user.service';
 import { PermissionsDto } from './dto/permission/get-permission.dto';
 import { SignUpDto } from './dto/sign-up.dto';
 

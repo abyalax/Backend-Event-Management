@@ -9,9 +9,9 @@ import { Notification } from '~/modules/notifications/entity/notification.entity
 import { OrderItem } from '~/modules/orders/entity/order-item.entity';
 import { Order } from '~/modules/orders/entity/order.entity';
 import { Payment } from '~/modules/payments/entity/payment.entity';
-import { GeneratedEventTicket } from '~/modules/ticket/entity/generated-event-ticket.entity';
-import { Ticket } from '~/modules/ticket/entity/ticket.entity';
-import { User } from '~/modules/user/entity/user.entity';
+import { GeneratedEventTicket } from '~/modules/tickets/entity/generated-event-ticket.entity';
+import { Ticket } from '~/modules/tickets/entity/ticket.entity';
+import { User } from '~/modules/users/entity/user.entity';
 
 configDotenv();
 
