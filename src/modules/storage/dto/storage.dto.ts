@@ -11,17 +11,11 @@ export enum BucketType {
  * DTO for file upload response
  */
 export class UploadResponseDto {
-  success: boolean;
-
-  data?: {
-    filename: string;
-    bucket: string;
-    size: number;
-    url: string;
-    duration: number;
-  };
-
-  error?: string;
+  filename: string;
+  bucket: string;
+  size: number;
+  url: string;
+  duration: number;
 }
 
 /**

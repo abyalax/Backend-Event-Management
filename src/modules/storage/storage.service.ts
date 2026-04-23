@@ -1,9 +1,34 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
-import { Inject, Injectable, Logger, BadRequestException, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, BadRequestException, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import * as crypto from 'node:crypto';
 import { Readable } from 'node:stream';
 import { MinioProvider } from './providers/minio.provider';
 import { RetryStrategy } from './strategies/retry.strategy';
+import { PinoLogger } from 'nestjs-pino';
+
+export interface StorageConfig {
+  buckets: {
+    [key: string]: string;
+  };
+  maxFileSize: number;
+  allowedMimeTypes?: string[];
+}
+
+export interface UploadFileParams {
+  bucket: string;
+  file: Buffer;
+  metadata: {
+    originalname: string;
+    mimetype: string;
+  };
+}
+
+export interface UploadStreamParams {
+  bucket: string;
+  filename: string;
+  stream: Readable;
+  size: number;
+  contentType: string;
+}
 
 export interface FileMetadata {
   bucket: string;
@@ -37,9 +62,9 @@ export interface BucketStatistics {
 }
 
 /**
- * Storage Service - Business logic untuk MinIO operations
+ * Storage Service - Business logic for MinIO operations
  *
- * Menyediakan:
+ * serve:
  * - File upload/download dengan validation
  * - Bucket management
  * - File metadata operations
@@ -50,12 +75,11 @@ export interface BucketStatistics {
  * Architecture:
  * 1. Validate request (MIME type, file size)
  * 2. Generate unique filename
- * 3. Execute operation dengan retry
- * 4. Log dan return result
+ * 3. Execute operation with retry mechannism
+ * 4. Log and return result
  */
 @Injectable()
 export class StorageService {
-  private readonly logger = new Logger('StorageService');
   private readonly metrics = {
     uploadCount: 0,
     uploadFailedCount: 0,
@@ -65,50 +89,41 @@ export class StorageService {
   };
 
   constructor(
-    private minioProvider: MinioProvider,
-    private retryStrategy: RetryStrategy,
-    @Inject('STORAGE_CONFIG') private config: any,
+    private readonly minioProvider: MinioProvider,
+    private readonly retryStrategy: RetryStrategy,
+    private readonly logger: PinoLogger,
+
+    @Inject('STORAGE_CONFIG')
+    private readonly config: StorageConfig,
   ) {
-    this.logger.log('StorageService initialized');
+    this.logger.info('StorageService initialized');
   }
 
   /**
    * Upload file dengan automatic retry
-   *
-   * @param bucket - Bucket name
-   * @param file - File buffer
-   * @param metadata - Original filename dan content type
-   * @returns File metadata
    */
-  async uploadFile(
-    bucket: string,
-    file: Buffer,
-    metadata: {
-      originalname: string;
-      mimetype: string;
-    },
-  ): Promise<FileOperationResult> {
+  async uploadFile(params: UploadFileParams): Promise<FileOperationResult> {
     const startTime = Date.now();
-    const uniqueFilename = this.generateUniqueFilename(metadata.originalname);
+    const uniqueFilename = this.generateUniqueFilename(params.metadata.originalname);
 
     try {
       // Validate bucket exists
-      this.validateBucket(bucket);
+      this.validateBucket(params.bucket);
 
       // Validate file
-      this.validateFile(file, metadata.mimetype);
+      this.validateFile(params.file, params.metadata.mimetype);
 
       // Get client
       const client = await this.minioProvider.getClient();
 
       // Execute upload dengan retry
       const result = await this.retryStrategy.execute(async () => {
-        return await client.putObject(bucket, uniqueFilename, file, file.length, {
-          'Content-Type': metadata.mimetype,
-          'X-Original-Filename': this.encodeMetadata(metadata.originalname),
+        return await client.putObject(params.bucket, uniqueFilename, params.file, params.file.length, {
+          'Content-Type': params.metadata.mimetype,
+          'X-Original-Filename': this.encodeMetadata(params.metadata.originalname),
           'X-Upload-Time': new Date().toISOString(),
         });
-      }, `Upload ${uniqueFilename} to ${bucket}`);
+      }, `Upload ${uniqueFilename} to ${params.bucket}`);
 
       if (!result.success) {
         this.metrics.uploadFailedCount++;
@@ -117,12 +132,12 @@ export class StorageService {
 
       const duration = Date.now() - startTime;
       this.metrics.uploadCount++;
-      this.metrics.totalUploadedSize += file.length;
+      this.metrics.totalUploadedSize += params.file.length;
 
-      this.logger.log(`File uploaded successfully`, {
-        bucket,
+      this.logger.info(`File uploaded successfully`, {
+        bucket: params.bucket,
         filename: uniqueFilename,
-        size: file.length,
+        size: params.file.length,
         duration,
         attempts: result.attempts,
       });
@@ -130,9 +145,9 @@ export class StorageService {
       return {
         success: true,
         filename: uniqueFilename,
-        bucket,
-        size: file.length,
-        url: `/${bucket}/${uniqueFilename}`,
+        bucket: params.bucket,
+        size: params.file.length,
+        url: `/${params.bucket}/${uniqueFilename}`,
         duration,
       };
     } catch (error) {
@@ -140,38 +155,34 @@ export class StorageService {
       const duration = Date.now() - startTime;
 
       this.logger.error('File upload failed', {
-        bucket,
-        originalFilename: metadata.originalname,
-        error: error.message,
+        bucket: params.bucket,
+        originalFilename: params.metadata.originalname,
+        error: (error as Error).message,
         duration,
       });
 
       return {
         success: false,
-        filename: metadata.originalname,
-        bucket,
-        error: error.message,
+        filename: params.metadata.originalname,
+        bucket: params.bucket,
+        error: (error as Error).message,
         duration,
       };
     }
   }
 
-  /**
-   * Upload dari stream (untuk large files)
-   * Memory efficient karena tidak buffer seluruh file
-   */
-  async uploadStream(bucket: string, filename: string, stream: Readable, size: number, contentType: string): Promise<FileOperationResult> {
+  async uploadStream(params: UploadStreamParams): Promise<FileOperationResult> {
     const startTime = Date.now();
-    const uniqueFilename = this.generateUniqueFilename(filename);
+    const uniqueFilename = this.generateUniqueFilename(params.filename);
 
     try {
-      this.validateBucket(bucket);
+      this.validateBucket(params.bucket);
       const client = await this.minioProvider.getClient();
 
       const result = await this.retryStrategy.execute(async () => {
-        return await client.putObject(bucket, uniqueFilename, stream, size, {
-          'Content-Type': contentType,
-          'X-Original-Filename': this.encodeMetadata(filename),
+        return await client.putObject(params.bucket, uniqueFilename, params.stream, params.size, {
+          'Content-Type': params.contentType,
+          'X-Original-Filename': this.encodeMetadata(params.filename),
         });
       }, `Stream upload ${uniqueFilename}`);
 
@@ -182,13 +193,13 @@ export class StorageService {
 
       const duration = Date.now() - startTime;
       this.metrics.uploadCount++;
-      this.metrics.totalUploadedSize += size;
+      this.metrics.totalUploadedSize += params.size;
 
       return {
         success: true,
         filename: uniqueFilename,
-        bucket,
-        size,
+        bucket: params.bucket,
+        size: params.size,
         duration,
       };
     } catch (error) {
@@ -197,9 +208,9 @@ export class StorageService {
 
       return {
         success: false,
-        filename,
-        bucket,
-        error: error.message,
+        filename: params.filename,
+        bucket: params.bucket,
+        error: (error as Error).message,
         duration,
       };
     }
@@ -209,7 +220,7 @@ export class StorageService {
    * Download file
    * Return stream untuk memory efficiency
    */
-  async downloadFile(bucket: string, filename: string): Promise<{ stream: Readable; metadata: any }> {
+  async downloadFile(bucket: string, filename: string): Promise<{ stream: Readable; metadata: unknown }> {
     try {
       this.validateBucket(bucket);
       const client = await this.minioProvider.getClient();
@@ -234,7 +245,7 @@ export class StorageService {
         this.logger.warn(lastError ?? 'Failed to get file metadata');
       }
 
-      this.logger.log(`File downloaded: ${filename}`, { bucket });
+      this.logger.info(`File downloaded: ${filename}`, { bucket });
 
       return {
         stream: result.data as Readable,
@@ -246,9 +257,6 @@ export class StorageService {
     }
   }
 
-  /**
-   * Get file metadata tanpa download
-   */
   async getFileMetadata(bucket: string, filename: string): Promise<FileMetadata> {
     try {
       this.validateBucket(bucket);
@@ -258,9 +266,7 @@ export class StorageService {
         return await client.statObject(bucket, filename);
       }, `Get metadata ${filename}`);
 
-      if (!result.success) {
-        throw new NotFoundException(`File not found: ${filename}`);
-      }
+      if (!result.success) throw new NotFoundException(`File not found: ${filename}`);
 
       const stat = result.data;
       if (!stat) {
@@ -279,13 +285,10 @@ export class StorageService {
       if (error instanceof NotFoundException) {
         throw error;
       }
-      throw new InternalServerErrorException(`Failed to get metadata: ${error.message}`);
+      throw new InternalServerErrorException(`Failed to get metadata: ${(error as Error).message}`);
     }
   }
 
-  /**
-   * Delete file
-   */
   async deleteFile(bucket: string, filename: string): Promise<boolean> {
     try {
       this.validateBucket(bucket);
@@ -300,55 +303,42 @@ export class StorageService {
         throw new InternalServerErrorException(result.error?.message);
       }
 
-      this.logger.log(`File deleted: ${filename}`, { bucket });
+      this.logger.info(`File deleted: ${filename}`, { bucket });
       return true;
     } catch (error) {
       this.logger.error('File deletion failed', {
         bucket,
         filename,
-        error: error.message,
+        error: (error as Error).message,
       });
       throw error;
     }
   }
 
-  /**
-   * Generate presigned URL untuk download
-   * Berguna untuk client-side operations
-   */
   async getPresignedUrl(bucket: string, filename: string, expirySeconds: number = 3600): Promise<string> {
     try {
       this.validateBucket(bucket);
       const client = await this.minioProvider.getClient();
-
       const url = await client.presignedGetObject(bucket, filename, expirySeconds);
 
-      this.logger.debug(`Presigned URL generated for ${filename}`);
+      this.logger.info(`Presigned URL generated for ${filename}`);
       return url;
     } catch (error) {
-      throw new InternalServerErrorException(`Failed to generate presigned URL: ${error.message}`);
+      throw new InternalServerErrorException(`Failed to generate presigned URL: ${(error as Error).message}`);
     }
   }
 
-  /**
-   * Generate presigned PUT URL untuk client-side upload
-   */
   async getPresignedPutUrl(bucket: string, filename: string, expirySeconds: number = 3600): Promise<string> {
     try {
       this.validateBucket(bucket);
       const client = await this.minioProvider.getClient();
-
       const url = await client.presignedPutObject(bucket, filename, expirySeconds);
-
       return url;
     } catch (error) {
-      throw new InternalServerErrorException(`Failed to generate presigned PUT URL: ${error.message}`);
+      throw new InternalServerErrorException(`Failed to generate presigned PUT URL: ${(error as Error).message}`);
     }
   }
 
-  /**
-   * List files dalam bucket
-   */
   async listFiles(bucket: string, prefix: string = ''): Promise<Array<{ name: string; size: number; lastModified: Date }>> {
     try {
       this.validateBucket(bucket);
@@ -358,7 +348,7 @@ export class StorageService {
       return new Promise((resolve, reject) => {
         const stream = client.listObjects(bucket, prefix, true);
 
-        stream.on('data', (obj: any) => {
+        stream.on('data', (obj: { name: string; size: number; lastModified: Date }) => {
           files.push({
             name: obj.name,
             size: obj.size,
@@ -366,7 +356,7 @@ export class StorageService {
           });
         });
 
-        stream.on('error', (error: any) => {
+        stream.on('error', (error: Error) => {
           this.logger.error('Failed to list files', error);
           reject(new InternalServerErrorException(error.message));
         });
@@ -376,13 +366,10 @@ export class StorageService {
         });
       });
     } catch (error) {
-      throw new InternalServerErrorException(`Failed to list files: ${error.message}`);
+      throw new InternalServerErrorException(`Failed to list files: ${(error as Error).message}`);
     }
   }
 
-  /**
-   * Get bucket statistics
-   */
   async getBucketStats(bucket: string): Promise<BucketStatistics> {
     try {
       const objects = await this.listFiles(bucket);
@@ -396,13 +383,10 @@ export class StorageService {
         objects,
       };
     } catch (error) {
-      throw new InternalServerErrorException(`Failed to get bucket stats: ${error.message}`);
+      throw new InternalServerErrorException(`Failed to get bucket stats: ${(error as Error).message}`);
     }
   }
 
-  /**
-   * Copy file antara buckets
-   */
   async copyFile(sourceBucket: string, sourceFilename: string, destinationBucket: string, destinationFilename?: string): Promise<boolean> {
     try {
       this.validateBucket(sourceBucket);
@@ -420,7 +404,7 @@ export class StorageService {
         throw new InternalServerErrorException(result.error?.message);
       }
 
-      this.logger.log('File copied successfully', {
+      this.logger.info('File copied successfully', {
         sourceBucket,
         sourceFilename,
         destinationBucket,
@@ -429,7 +413,7 @@ export class StorageService {
 
       return true;
     } catch (error) {
-      throw new InternalServerErrorException(`Copy failed: ${error.message}`);
+      throw new InternalServerErrorException(`Copy failed: ${(error as Error).message}`);
     }
   }
 
@@ -449,9 +433,7 @@ export class StorageService {
 
   private validateBucket(bucket: string): void {
     const validBuckets = Object.values(this.config.buckets);
-    if (!validBuckets.includes(bucket)) {
-      throw new BadRequestException(`Invalid bucket: ${bucket}. Valid buckets: ${validBuckets.join(', ')}`);
-    }
+    if (!validBuckets.includes(bucket)) throw new BadRequestException(`Invalid bucket: ${bucket}. Valid buckets: ${validBuckets.join(', ')}`);
   }
 
   private validateFile(file: Buffer, mimetype: string): void {
@@ -461,7 +443,7 @@ export class StorageService {
     }
 
     // Check MIME type
-    if (this.config.allowedMimeTypes?.length > 0) {
+    if (this.config.allowedMimeTypes && this.config.allowedMimeTypes.length > 0) {
       if (!this.config.allowedMimeTypes.includes(mimetype)) {
         throw new BadRequestException(`MIME type not allowed: ${mimetype}. Allowed: ${this.config.allowedMimeTypes.join(', ')}`);
       }

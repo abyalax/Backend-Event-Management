@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { INestApplication } from '@nestjs/common';
 import * as request from 'supertest';
 import * as fs from 'node:fs';
@@ -59,7 +61,7 @@ describe('Storage E2E Tests', () => {
   afterAll(async () => {
     // Cleanup uploaded test files
     if (moduleFixture) {
-      const config = (moduleFixture as any).get('STORAGE_CONFIG') || {
+      const config = moduleFixture.get('STORAGE_CONFIG') || {
         minio: {
           endpoint: 'localhost',
           port: 9000,
@@ -82,9 +84,7 @@ describe('Storage E2E Tests', () => {
     }
 
     // Close application
-    if (app) {
-      await cleanupApplication(app);
-    }
+    if (app) await cleanupApplication(app);
   });
 
   describe('Health Check', () => {
@@ -328,7 +328,7 @@ describe('Storage E2E Tests', () => {
         expect(response.body.data).toHaveProperty('files');
         // Verify prefix filtering if files exist
         if (response.body.data.files.length > 0) {
-          response.body.data.files.forEach((file: any) => {
+          response.body.data.files.forEach((file: File) => {
             expect(file.name).toMatch(/^17/);
           });
         }

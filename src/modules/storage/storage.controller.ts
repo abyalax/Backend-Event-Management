@@ -17,6 +17,7 @@ import { Response } from 'express';
 import { StorageService } from './storage.service';
 import { MinioProvider } from './providers/minio.provider';
 import { UploadResponseDto } from './dto/storage.dto';
+import { TResponse } from '~/common/types/response';
 
 /**
  * Storage Controller - REST API untuk file operations
@@ -55,29 +56,34 @@ export class StorageController {
    */
   @Post('upload/:bucket')
   @UseInterceptors(FileInterceptor('file'))
-  async uploadFile(@Param('bucket') bucket: string, @UploadedFile() file: Express.Multer.File): Promise<UploadResponseDto> {
-    if (!file) {
-      throw new BadRequestException('No file provided');
-    }
+  async uploadFile(@Param('bucket') bucket: string, @UploadedFile() file: Express.Multer.File): Promise<TResponse<UploadResponseDto>> {
+    if (!file) throw new BadRequestException('No file provided');
 
-    const result = await this.storageService.uploadFile(bucket, file.buffer, {
-      originalname: file.originalname,
-      mimetype: file.mimetype,
+    const result = await this.storageService.uploadFile({
+      bucket,
+      file: file.buffer,
+      metadata: {
+        originalname: file.originalname,
+        mimetype: file.mimetype,
+      },
     });
 
+    if (!result.success) {
+      return {
+        message: 'Upload failed',
+        error: result.error,
+      };
+    }
+
     return {
-      success: result.success,
-      data:
-        result.success && result.size && result.url
-          ? {
-              filename: result.filename,
-              bucket: result.bucket,
-              size: result.size,
-              url: result.url,
-              duration: result.duration,
-            }
-          : undefined,
-      error: result.error,
+      message: 'Upload files successfully',
+      data: {
+        filename: result.filename || '',
+        bucket: result.bucket || '',
+        size: result.size || 0,
+        url: result.url || '',
+        duration: result.duration || 0,
+      },
     };
   }
 
@@ -97,19 +103,20 @@ export class StorageController {
     try {
       const { stream, metadata } = await this.storageService.downloadFile(bucket, filename);
 
-      // Set response headers
-      res.setHeader('Content-Type', metadata?.metaData?.['content-type'] || 'application/octet-stream');
+      const metadataObj = metadata as Record<string, unknown>;
+      const contentType = (metadataObj.metaData as Record<string, string>)?.['content-type'] || 'application/octet-stream';
+      const size = metadataObj.size as number;
+
+      res.setHeader('Content-Type', contentType);
       res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
 
-      if (metadata?.size) {
-        res.setHeader('Content-Length', metadata.size);
-      }
+      if (size) res.setHeader('Content-Length', size);
 
       // Pipe stream to response
       stream.pipe(res);
     } catch (error) {
       res.status(HttpStatus.NOT_FOUND).json({
-        success: false,
+        message: 'Download failed',
         error: (error as Error).message,
       });
     }
@@ -131,20 +138,20 @@ export class StorageController {
       const metadata = await this.storageService.getFileMetadata(bucket, filename);
 
       return {
-        success: true,
+        message: 'File metadata retrieved successfully',
         data: metadata,
       };
     } catch (error) {
       return {
-        success: false,
+        message: 'Failed to retrieve file metadata',
         error: (error as Error).message,
       };
     }
   }
 
   /**
-   * Get presigned URL untuk download
-   * Berguna untuk client-side operations atau sharing
+   * Get presigned URL for download
+   * Used for client-side operations or sharing
    *
    * @param bucket - Bucket name
    * @param filename - File name
@@ -160,7 +167,7 @@ export class StorageController {
       const url = await this.storageService.getPresignedUrl(bucket, filename, expirySeconds);
 
       return {
-        success: true,
+        message: 'Presigned URL generated successfully',
         data: {
           url,
           expirySeconds,
@@ -168,7 +175,7 @@ export class StorageController {
       };
     } catch (error) {
       return {
-        success: false,
+        message: 'Failed to generate presigned URL',
         error: (error as Error).message,
       };
     }
@@ -190,19 +197,19 @@ export class StorageController {
       const success = await this.storageService.deleteFile(bucket, filename);
 
       return {
-        success,
         message: `File deleted: ${filename}`,
+        data: { success },
       };
     } catch (error) {
       return {
-        success: false,
+        message: 'Failed to delete file',
         error: (error as Error).message,
       };
     }
   }
 
   /**
-   * List files dalam bucket
+   * List files in bucket
    *
    * @param bucket - Bucket name
    * @param prefix - Optional prefix filter
@@ -218,7 +225,7 @@ export class StorageController {
       const files = await this.storageService.listFiles(bucket, prefix);
 
       return {
-        success: true,
+        message: 'Files listed successfully',
         data: {
           bucket,
           count: files.length,
@@ -227,7 +234,7 @@ export class StorageController {
       };
     } catch (error) {
       return {
-        success: false,
+        message: 'Failed to list files',
         error: (error as Error).message,
       };
     }
@@ -248,12 +255,12 @@ export class StorageController {
       const stats = await this.storageService.getBucketStats(bucket);
 
       return {
-        success: true,
+        message: 'Bucket statistics retrieved successfully',
         data: stats,
       };
     } catch (error) {
       return {
-        success: false,
+        message: 'Failed to retrieve bucket statistics',
         error: (error as Error).message,
       };
     }
@@ -277,20 +284,18 @@ export class StorageController {
     @Query('destination') destination: string,
     @Query('destFile') destFile?: string,
   ) {
-    if (!source || !sourceFile || !destination) {
-      throw new BadRequestException('Required parameters: source, sourceFile, destination');
-    }
+    if (!source || !sourceFile || !destination) throw new BadRequestException('Required parameters: source, sourceFile, destination');
 
     try {
       const success = await this.storageService.copyFile(source, sourceFile, destination, destFile);
 
       return {
-        success,
         message: `File copied from ${source}/${sourceFile} to ${destination}/${destFile || sourceFile}`,
+        data: { success },
       };
     } catch (error) {
       return {
-        success: false,
+        message: 'Failed to copy file',
         error: (error as Error).message,
       };
     }
@@ -310,18 +315,21 @@ export class StorageController {
     const metrics = this.storageService.getMetrics();
 
     return {
-      status: healthCheck.status,
-      timestamp: new Date().toISOString(),
-      minio: {
-        ...providerStatus,
-        latency: `${healthCheck.latency}ms`,
-      },
-      metrics: {
-        uploads: metrics.uploadCount,
-        downloads: metrics.downloadCount,
-        failedUploads: metrics.uploadFailedCount,
-        totalUploadedSize: `${(metrics.totalUploadedSize / 1024 / 1024).toFixed(2)} MB`,
-        successRate: `${(metrics.successRate * 100).toFixed(2)}%`,
+      message: 'Health check completed',
+      data: {
+        status: healthCheck.status,
+        timestamp: new Date().toISOString(),
+        minio: {
+          ...providerStatus,
+          latency: `${healthCheck.latency}ms`,
+        },
+        metrics: {
+          uploads: metrics.uploadCount,
+          downloads: metrics.downloadCount,
+          failedUploads: metrics.uploadFailedCount,
+          totalUploadedSize: `${(metrics.totalUploadedSize / 1024 / 1024).toFixed(2)} MB`,
+          successRate: `${(metrics.successRate * 100).toFixed(2)}%`,
+        },
       },
     };
   }
@@ -338,7 +346,7 @@ export class StorageController {
     const status = this.minioProvider.getStatus();
 
     return {
-      success: true,
+      message: 'Metrics retrieved successfully',
       data: {
         timestamp: new Date().toISOString(),
         buckets: status.buckets,
