@@ -5,7 +5,7 @@ import { TestingModule } from '@nestjs/testing';
 import * as request from 'supertest';
 import { App } from 'supertest/types';
 import { validateDto } from '~/common/helpers/validation';
-import { envSchema } from '~/config/env';
+import { envSchema } from '~/infrastructure/config/config.schema';
 import { SignUpDto } from '~/modules/auth/dto/sign-up.dto';
 import { UserDto } from '~/modules/users/dto/user.dto';
 import { setupApplication } from '~/test/setup_e2e';

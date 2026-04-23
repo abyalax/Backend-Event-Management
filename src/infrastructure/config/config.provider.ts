@@ -1,4 +1,4 @@
-import { Environment, envSchema } from '~/config/env';
+import { Environment, envSchema } from '~/infrastructure/config/config.schema';
 
 export const ENV = 'ENV';
 export const CONFIG_SERVICE = 'CONFIG_SERVICE';

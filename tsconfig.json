@@ -18,8 +18,19 @@
     "strictBindCallApply": false,
     "noFallthroughCasesInSwitch": false,
     "paths": {
-      "~/test/*": ["test/*"],
-      "~/*": ["src/*"]
+      "~/test/*": [
+        "test/*"
+      ],
+      "~/*": [
+        "src/*"
+      ]
     }
-  }
+  },
+  "exclude": [
+    "node_modules",
+    "dist",
+    "test/scripts/*.js",
+    "**/*.spec.ts",
+    "**/*.test.ts"
+  ]
 }

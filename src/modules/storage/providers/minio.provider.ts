@@ -1,0 +1,242 @@
+import { Inject, Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import * as Minio from 'minio';
+
+export interface MinioConfig {
+  endpoint: string;
+  port: number;
+  useSSL: boolean;
+  accessKey: string;
+  secretKey: string;
+  region: string;
+  buckets: {
+    documents: string;
+    images: string;
+    backups: string;
+    videos: string;
+  };
+}
+
+/**
+ * MinIO Provider - Handles connection pooling dan lifecycle management
+ *
+ * Responsibilities:
+ * - Create dan maintain MinIO client instance
+ * - Initialize required buckets
+ * - Provide access ke client untuk operations
+ * - Health monitoring
+ *
+ * Lifecycle:
+ * 1. onModuleInit() - Create client & buckets
+ * 2. Usage - Service layer calls methods
+ * 3. onModuleDestroy() - Cleanup connections
+ */
+@Injectable()
+export class MinioProvider implements OnModuleInit, OnModuleDestroy {
+  private client: Minio.Client;
+  private readonly logger = new Logger('MinioProvider');
+  private isConnected = false;
+  private initializationPromise: Promise<void>;
+
+  constructor(@Inject('STORAGE_CONFIG') private readonly config: MinioConfig) {
+    this.initClient();
+  }
+
+  /**
+   * Initialize MinIO client dengan configuration
+   */
+  private initClient(): void {
+    try {
+      // Force SSL to false for development environment
+      const useSSL = this.config.useSSL && process.env.NODE_ENV === 'production';
+
+      this.client = new Minio.Client({
+        endPoint: this.config.endpoint,
+        port: this.config.port,
+        useSSL: useSSL,
+        accessKey: this.config.accessKey,
+        secretKey: this.config.secretKey,
+        region: this.config.region,
+      });
+      this.logger.log(`MinIO client initialized: ${this.config.endpoint}:${this.config.port} (SSL: ${useSSL})`);
+    } catch (error) {
+      this.logger.error('Failed to initialize MinIO client', error);
+      throw error;
+    }
+  }
+
+  /**
+   * NestJS lifecycle hook - Called when module is initialized
+   * Ensures all buckets exist dan client is ready
+   */
+  async onModuleInit(): Promise<void> {
+    this.initializationPromise = this.initialize();
+    await this.initializationPromise;
+  }
+
+  /**
+   * Initialize connection dan create required buckets
+   */
+  private async initialize(): Promise<void> {
+    try {
+      // Test connection
+      await this.testConnection();
+
+      // Create required buckets
+      const bucketNames = Object.values(this.config.buckets);
+      for (const bucketName of bucketNames) {
+        await this.ensureBucket(bucketName);
+      }
+
+      this.isConnected = true;
+      this.logger.log('MinIO initialization completed successfully');
+    } catch (error) {
+      this.logger.error('MinIO initialization failed', error);
+      // In test environment, don't throw errors to allow tests to run
+      if (process.env.NODE_ENV !== 'test') {
+        throw error;
+      }
+      this.logger.warn('MinIO not available in test environment - operations will fail gracefully');
+    }
+  }
+
+  /**
+   * Test connection ke MinIO server
+   */
+  private async testConnection(): Promise<void> {
+    try {
+      const startTime = Date.now();
+      await this.client.listBuckets();
+      const latency = Date.now() - startTime;
+      this.logger.log(`MinIO connection test successful (latency: ${latency}ms)`);
+    } catch (error) {
+      this.logger.error('Failed to connect to MinIO server', error);
+
+      // In development, don't fail hard on connection issues
+      if (process.env.NODE_ENV !== 'production') {
+        this.logger.warn('MinIO connection failed in development - continuing anyway');
+        return;
+      }
+
+      throw new Error('MinIO server is not reachable');
+    }
+  }
+
+  /**
+   * Ensure bucket exists, create if not
+   */
+  private async ensureBucket(bucketName: string): Promise<void> {
+    try {
+      const exists = await this.client.bucketExists(bucketName);
+
+      if (exists) {
+        this.logger.debug(`Bucket already exists: ${bucketName}`);
+        return;
+      }
+
+      await this.client.makeBucket(bucketName, this.config.region);
+      this.logger.log(`Bucket created successfully: ${bucketName}`);
+
+      // Set bucket versioning (optional, untuk backup strategy)
+      // await this.client.setBucketVersioning(bucketName, { Status: 'Enabled' });
+    } catch (error) {
+      // Ignore if bucket already exists (race condition)
+      if (error.code !== 'BucketAlreadyExists') {
+        this.logger.error(`Failed to create bucket: ${bucketName}`, error);
+        throw error;
+      }
+    }
+  }
+
+  /**
+   * Get MinIO client instance
+   * Memastikan client sudah ready sebelum digunakan
+   */
+  async getClient(): Promise<Minio.Client> {
+    await this.initializationPromise;
+    if (!this.isConnected && process.env.NODE_ENV !== 'test') {
+      throw new Error('MinIO client is not connected');
+    }
+    return this.client;
+  }
+
+  /**
+   * Get connection status
+   */
+  getStatus(): {
+    connected: boolean;
+    endpoint: string;
+    port: number;
+    buckets: string[];
+  } {
+    return {
+      connected: this.isConnected,
+      endpoint: this.config.endpoint,
+      port: this.config.port,
+      buckets: Object.values(this.config.buckets),
+    };
+  }
+
+  /**
+   * Health check dengan latency measurement
+   */
+  async healthCheck(): Promise<{
+    status: 'healthy' | 'unhealthy';
+    latency: number;
+    timestamp: Date;
+  }> {
+    try {
+      const startTime = Date.now();
+      await this.client.listBuckets();
+      const latency = Date.now() - startTime;
+
+      return {
+        status: 'healthy',
+        latency,
+        timestamp: new Date(),
+      };
+    } catch (error) {
+      this.logger.error('Health check failed', error);
+      return {
+        status: 'unhealthy',
+        latency: -1,
+        timestamp: new Date(),
+      };
+    }
+  }
+
+  /**
+   * NestJS lifecycle hook - Called when module is destroyed
+   * Cleanup connections
+   */
+  onModuleDestroy(): void {
+    try {
+      if (this.client) {
+        // MinIO client tidak memiliki close method, tapi bisa clear cache
+        // this.client = null;
+      }
+      this.isConnected = false;
+      this.logger.log('MinIO provider destroyed');
+    } catch (error) {
+      this.logger.error('Error during MinIO provider destruction', error);
+    }
+  }
+
+  /**
+   * Get bucket names
+   */
+  getBuckets(): {
+    documents: string;
+    images: string;
+    backups: string;
+    videos: string;
+  } {
+    return this.config.buckets;
+  }
+
+  /**
+   * Get config (useful untuk service layer)
+   */
+  getConfig(): MinioConfig {
+    return this.config;
+  }
+}

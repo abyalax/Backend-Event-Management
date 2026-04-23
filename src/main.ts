@@ -3,7 +3,7 @@ import * as cookieParser from 'cookie-parser';
 import { setupGracefulShutdown } from 'nestjs-graceful-shutdown';
 import 'reflect-metadata';
 import { AppModule } from './app.module';
-import { envSchema } from './config/env';
+import { envSchema } from './infrastructure/config/config.schema';
 
 async function bootstrap() {
   const env = envSchema.parse(process.env);
