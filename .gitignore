@@ -37,7 +37,7 @@ lerna-debug.log*
 !.vscode/extensions.json
 
 # dotenv environment variable files
-# .env
+.env
 .env.development.local
 .env.test.local
 .env.production.local
@@ -55,14 +55,3 @@ pids
 
 # Diagnostic reports (https://nodejs.org/api/report.html)
 report.[0-9]*.[0-9]*.[0-9]*.[0-9]*.json
-
-node_modules
-.git
-.gitignore
-dist
-build
-coverage
-# .env
-*.log
-Dockerfile*
-docker-compose*

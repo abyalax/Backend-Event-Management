@@ -2,7 +2,7 @@ services:
   # MinIO - Object Storage Server
   minio:
     image: minio/minio:latest
-    container_name: minio_server
+    container_name: event_management_minio_server
     hostname: minio
     ports:
       - "9000:9000"  # MinIO API
@@ -11,7 +11,7 @@ services:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
       MINIO_REGION: ${MINIO_REGION:-us-east-1}
-      MINIO_BROWSER_REDIRECT_URL: http://localhost:9001
+      MINIO_BROWSER_REDIRECT_URL: ${MINIO_BROWSER_REDIRECT_URL:-http://localhost:9001}
       # Performance tuning
       MINIO_API_MAX_CONCURRENT_STREAMS: 16
       MINIO_CLUSTER_REPLICATION_ENABLED: "true"
@@ -34,7 +34,7 @@ services:
   # MinIO Client (mc) - For bucket creation and management
   minio_mc:
     image: minio/mc:latest
-    container_name: minio_mc
+    container_name: event_management_minio_mc
     depends_on:
       minio:
         condition: service_healthy
@@ -68,12 +68,12 @@ services:
   # PostgreSQL - For application data (optional)
   postgres:
     image: postgres:16
-    container_name: object_storage_postgres
+    container_name: event_management_postgres
     restart: always
     environment:
-      POSTGRES_USER: root
-      POSTGRES_PASSWORD: postgress_pass
-      POSTGRES_DB: db_event_management
+      POSTGRES_USER: ${POSTGRES_USER:-root}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgress_pass}
+      POSTGRES_DB: ${POSTGRES_DB:-db_event_management}
     ports:
       - '5433:5432'
     volumes:
@@ -81,13 +81,13 @@ services:
 
   redis:
     image: redis:7-alpine
-    container_name: object_storage_redis
+    container_name: event_management_redis
     restart: always
     ports:
       - '6380:6379'
     volumes:
       - redis_data:/data
-    command: redis-server --requirepass redis_password
+    command: redis-server --requirepass ${REDIS_PASSWORD:-redis_password}
 
 networks:
   storage_network:
