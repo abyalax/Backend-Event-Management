@@ -178,6 +178,7 @@ After running the command, a new seeder file will be created in:
 ```
 src/infrastructure/database/seeds/
 ```
+
 ```
 └── 📁src
     └── 📁infrastructure
@@ -206,18 +207,23 @@ import { DataSource } from 'typeorm';
 import { Seeder, SeederFactoryManager } from 'typeorm-extension';
 
 export class CreatedSeed1776390677780 implements Seeder {
-    track = false;
+  track = false;
 
-    public async run(
-        dataSource: DataSource,
-        factoryManager: SeederFactoryManager
-    ): Promise<any> {
-        // Add your seeding logic here
-    }
+  public async run(dataSource: DataSource, factoryManager: SeederFactoryManager): Promise<any> {
+    // Add your seeding logic here
+  }
 }
 ```
 
 > **IMPORTANT**: Set the `track` property to `true` to enable tracking in the database. This ensures that when you create new seeders, old seeders will be ignored.
+
+### Docker Command
+
+FLush Manual Cache Redis
+
+```bash
+docker exec -it event_management_redis redis-cli -a redis_password FLUSHALL
+```
 
 ## Stay in touch
 

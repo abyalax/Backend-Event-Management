@@ -4,7 +4,7 @@ import { Permission } from '../auth/entity/permission.entity';
 import { User } from './entity/user.entity';
 
 import { paginate, PaginateQuery } from 'nestjs-paginate';
-import type { FindOneOptions, FindOptionsWhere, Repository } from 'typeorm';
+import type { FindOneOptions, Repository } from 'typeorm';
 import type { CreateUserDto } from './dto/create-user.dto';
 import type { UpdateUserDto } from './dto/update-user.dto';
 import { USER_PAGINATION_CONFIG } from './user-pagination.config';
@@ -47,10 +47,6 @@ export class UserService {
     return await this.userRepository.update(userId, { refreshToken: null });
   }
 
-  async findAll(): Promise<User[]> {
-    return await this.userRepository.find();
-  }
-
   async create(createUserDto: CreateUserDto): Promise<User> {
     const user = this.userRepository.create(createUserDto);
     return await this.userRepository.save(user);
@@ -59,19 +55,15 @@ export class UserService {
   async findByEmail(email: string): Promise<User | null> {
     return await this.userRepository.findOne({
       where: { email },
-      relations: ['roles'],
-    });
-  }
-
-  async findOneBy(params: FindOptionsWhere<User> | FindOptionsWhere<User>[]) {
-    return await this.userRepository.findOneOrFail({
-      where: params,
-      relations: ['roles'],
+      relations: ['roles', 'roles.permissions'],
     });
   }
 
   async findOne(params: FindOneOptions<User>) {
-    return await this.userRepository.findOne(params);
+    return await this.userRepository.findOne({
+      ...params,
+      relations: ['roles', 'roles.permissions'],
+    });
   }
 
   async update(id: string, updateUserDto: UpdateUserDto) {

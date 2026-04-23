@@ -1,6 +1,6 @@
 import { Column, CreateDateColumn, DeleteDateColumn, Entity, JoinTable, ManyToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 import type { User } from '~/modules/users/entity/user.entity';
-import type { Permission } from './permission.entity';
+import type { Permission } from '../../auth/entity/permission.entity';
 
 @Entity('roles')
 export class Role {
@@ -13,7 +13,7 @@ export class Role {
   @ManyToMany('User', 'roles')
   users: User[];
 
-  @ManyToMany('Permission', 'roles', { eager: true })
+  @ManyToMany('Permission', 'roles')
   @JoinTable({
     name: 'role_permissions',
     joinColumn: { name: 'id_role', referencedColumnName: 'id' },

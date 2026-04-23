@@ -15,6 +15,7 @@ import { EventCategoryModule } from './modules/event-categories/event-category.m
 import { EventModule } from './modules/events/event.module';
 import { TicketModule } from './modules/tickets/ticket.module';
 import { UserModule } from './modules/users/user.module';
+import { RoleModule } from './modules/roles/role.module';
 
 const gracefulShutdownImports =
   process.env.NODE_ENV === 'test'
@@ -49,6 +50,7 @@ const gracefulShutdownImports =
     ...gracefulShutdownImports,
     AuthModule,
     UserModule,
+    RoleModule,
     EventModule,
     EventCategoryModule,
     TicketModule,

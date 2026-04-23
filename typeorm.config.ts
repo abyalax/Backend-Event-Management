@@ -2,7 +2,7 @@ import { configDotenv } from 'dotenv';
 import { join } from 'node:path';
 import { DataSource } from 'typeorm';
 import { Permission } from '~/modules/auth/entity/permission.entity';
-import { Role } from '~/modules/auth/entity/role.entity';
+import { Role } from '~/modules/roles/entity/role.entity';
 import { EventCategory } from '~/modules/event-categories/entity/event-category.entity';
 import { Event } from '~/modules/events/entity/event.entity';
 import { Notification } from '~/modules/notifications/entity/notification.entity';

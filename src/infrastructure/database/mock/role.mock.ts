@@ -1,4 +1,4 @@
-import type { Role } from "~/modules/auth/entity/role.entity";
+import type { Role } from "~/modules/roles/entity/role.entity";
 
 export const mockRoles: Role[] = [
   { id: 1, name: "Admin", users: [], permissions: [] },

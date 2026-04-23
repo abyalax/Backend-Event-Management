@@ -1,0 +1,16 @@
+meta {
+  name: Get Role By ID
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{base_url}}/roles/5
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

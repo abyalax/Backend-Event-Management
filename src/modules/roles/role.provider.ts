@@ -2,10 +2,10 @@ import type { DataSource } from 'typeorm';
 import { REPOSITORY } from '~/common/constants/database';
 import { PostgreeConnection } from '~/infrastructure/database/database.provider';
 import { Permission } from '../auth/entity/permission.entity';
-import { Role } from '../roles/entity/role.entity';
-import { User } from './entity/user.entity';
+import { Role } from './entity/role.entity';
+import { User } from '../users/entity/user.entity';
 
-export const userProvider = [
+export const roleProvider = [
   {
     provide: REPOSITORY.USER,
     useFactory: (dataSource: DataSource) => dataSource.getRepository(User),

@@ -1,11 +1,11 @@
 meta {
-  name: Get User By ID
+  name: Delete Role By ID
   type: http
   seq: 4
 }
 
-get {
-  url: {{base_url}}/users/550e8400-e29b-41d4-a716-446655440000
+delete {
+  url: {{base_url}}/roles/4
   body: none
   auth: inherit
 }
@@ -16,12 +16,12 @@ settings {
 }
 
 docs {
-  # Get User by ID
+  # Delete User
   
-  Retrieves a specific user by their ID.
+  Deletes a user from the system.
   
   ## Request
-  - **Method**: GET
+  - **Method**: DELETE
   - **Endpoint**: `/api/v1/users/:id`
   
   ## URL Parameters
@@ -29,14 +29,8 @@ docs {
   |-----------|------|----------|-------------|
   | id | integer | Yes | The user's unique identifier |
   
-  ## Response (200 OK)
-  ```json
-  {
-    "id": 1,
-    "name": "John Doe",
-    "email": "john@example.com"
-  }
-  ```
+  ## Response (204 No Content)
+  Returns no body on successful deletion.
   
   ## Error Responses
   - **400 Bad Request**: Invalid user ID format
