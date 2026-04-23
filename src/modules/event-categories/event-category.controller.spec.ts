@@ -1,8 +1,9 @@
 import { JwtModule } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
 import { REPOSITORY } from '~/common/constants/database';
-import { ConfigModule } from '~/infrastructure/config/config.module';
 import { CONFIG_SERVICE, ConfigService } from '~/infrastructure/config/config.provider';
+import { ConfigModule } from '~/infrastructure/config/config.module';
+import { LoggerModule } from '~/common/logger/logger.module';
 import { REDIS_CLIENT } from '~/infrastructure/redis/redis.constant';
 import { RedisService } from '~/infrastructure/redis/redis.service';
 import { mockRedis, mockRepository } from '~/test/common/mock';
@@ -18,6 +19,7 @@ describe('EventCategoryController', () => {
     const module: TestingModule = await Test.createTestingModule({
       imports: [
         ConfigModule,
+        LoggerModule,
         JwtModule.registerAsync({
           inject: [CONFIG_SERVICE],
           useFactory: (configService: ConfigService) => ({

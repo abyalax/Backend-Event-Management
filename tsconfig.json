@@ -29,8 +29,5 @@
   "exclude": [
     "node_modules",
     "dist",
-    "test/scripts/*.js",
-    "**/*.spec.ts",
-    "**/*.test.ts"
   ]
 }

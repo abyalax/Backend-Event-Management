@@ -1,10 +1,10 @@
 import { JwtModule } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
 import { REPOSITORY } from '~/common/constants/database';
-import { PermissionsGuard } from '~/common/guards/permission.guard';
-import { CacheService } from '~/infrastructure/cache/cache.service';
-import { ConfigModule } from '~/infrastructure/config/config.module';
 import { CONFIG_SERVICE, ConfigService } from '~/infrastructure/config/config.provider';
+import { ConfigModule } from '~/infrastructure/config/config.module';
+import { LoggerModule } from '~/common/logger/logger.module';
+import { CacheService } from '~/infrastructure/cache/cache.service';
 import { REDIS_CLIENT } from '~/infrastructure/redis/redis.constant';
 import { RedisService } from '~/infrastructure/redis/redis.service';
 import { mockRedis, mockRepository } from '~/test/common/mock';
@@ -19,6 +19,7 @@ describe('RoleController', () => {
     const module: TestingModule = await Test.createTestingModule({
       imports: [
         ConfigModule,
+        LoggerModule,
         JwtModule.registerAsync({
           inject: [CONFIG_SERVICE],
           useFactory: (configService: ConfigService) => ({
@@ -34,7 +35,6 @@ describe('RoleController', () => {
         RedisService,
         RoleCacheService,
         RoleService,
-        PermissionsGuard,
         {
           provide: REPOSITORY.USER,
           useValue: mockRepository,

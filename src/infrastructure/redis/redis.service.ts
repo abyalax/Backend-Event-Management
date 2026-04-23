@@ -1,13 +1,17 @@
 import { Inject, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import Redis from 'ioredis';
 import { REDIS_CLIENT } from './redis.constant';
+import { PinoLogger } from 'nestjs-pino';
 
 @Injectable()
 export class RedisService implements OnModuleInit, OnModuleDestroy {
   private publisher: Redis | null = null;
   private subscriber: Redis | null = null;
 
-  constructor(@Inject(REDIS_CLIENT) private readonly client: Redis) {}
+  constructor(
+    private readonly logger: PinoLogger,
+    @Inject(REDIS_CLIENT) private readonly client: Redis,
+  ) {}
 
   async onModuleInit() {
     try {
@@ -15,9 +19,9 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       this.subscriber = new Redis(this.client.options);
 
       await this.client.ping();
-      console.log('RedisService initialized');
+      this.logger.info('RedisService initialized');
     } catch (error) {
-      console.error('Failed to initialize RedisService:', error);
+      this.logger.error('Failed to initialize RedisService:', error);
       throw error;
     }
   }
@@ -44,7 +48,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
       try {
         if (redis.status === 'reconnecting') {
-          console.log(`Forcing disconnect for ${name} due to reconnecting status`);
+          this.logger.info(`Forcing disconnect for ${name} due to reconnecting status`);
           redis.disconnect();
           return;
         }
@@ -66,7 +70,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
       closeConnection(this.client, 'main client'),
     ]);
 
-    console.log('Redis connections cleanup completed');
+    this.logger.info('Redis connections cleanup completed');
   }
 
   async get<T>(key: string): Promise<T | null> {

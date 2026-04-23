@@ -1,10 +1,12 @@
 import { Module } from '@nestjs/common';
+import { TerminusModule } from '@nestjs/terminus';
 import { CONFIG_SERVICE, ConfigService } from '~/infrastructure/config/config.provider';
 import { StorageController } from './storage.controller';
 import { StorageService } from './storage.service';
 import { MinioProvider } from './providers/minio.provider';
 import { RetryStrategy } from './strategies/retry.strategy';
 import { StorageHealthIndicator } from './indicators/health.indicator';
+import { CONFIG_PROVIDER } from '~/common/constants/provider';
 
 /**
  * Isolated Storage Module untuk MinIO integration
@@ -25,6 +27,7 @@ import { StorageHealthIndicator } from './indicators/health.indicator';
  * StorageModule.forRoot({ endpoint: 'minio.example.com' })
  */
 @Module({
+  imports: [TerminusModule],
   controllers: [StorageController],
   providers: [
     MinioProvider,
@@ -32,7 +35,7 @@ import { StorageHealthIndicator } from './indicators/health.indicator';
     RetryStrategy,
     StorageHealthIndicator,
     {
-      provide: 'STORAGE_CONFIG',
+      provide: CONFIG_PROVIDER.STORAGE,
       useFactory: (configService: ConfigService) => ({
         endpoint: configService.get('MINIO_ENDPOINT'),
         port: configService.get('MINIO_PORT'),
@@ -61,12 +64,12 @@ import { StorageHealthIndicator } from './indicators/health.indicator';
       inject: [CONFIG_SERVICE],
     },
   ],
-  exports: [StorageService, MinioProvider],
+  exports: [StorageService, MinioProvider, StorageHealthIndicator],
 })
 export class StorageModule {
   /**
-   * Untuk use case dengan custom configuration
-   * Contoh:
+   * For use case with custom configuration
+   * For Example:
    * StorageModule.forRoot({
    *   endpoint: 'custom-minio.example.com',
    *   port: 9000,
@@ -83,11 +86,11 @@ export class StorageModule {
         RetryStrategy,
         StorageHealthIndicator,
         {
-          provide: 'STORAGE_CONFIG',
+          provide: CONFIG_PROVIDER.STORAGE,
           useValue: { ...options },
         },
       ],
-      exports: [StorageService, MinioProvider],
+      exports: [StorageService, MinioProvider, StorageHealthIndicator],
     };
   }
 }

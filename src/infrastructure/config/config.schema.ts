@@ -21,6 +21,15 @@ export const envSchema = z.object({
 
   COOKIE_SECRET: z.string({ message: 'Cookie secret is required' }),
 
+  // Mailpit Configuration
+  MAILPIT_HOST: z.string({ message: 'MAILPIT_HOST is required' }),
+  MAILPIT_PORT: z.string({ message: 'MAILPIT_PORT is required' }),
+  MAILPIT_SECURE: z.string({ message: 'MAILPIT_SECURE is required' }),
+  MAILPIT_USER: z.string({ message: 'MAILPIT_USER is required' }),
+  MAILPIT_PASSWORD: z.string({ message: 'MAILPIT_PASSWORD is required' }),
+  MAILPIT_FROM_EMAIL: z.string({ message: 'MAILPIT_FROM_EMAIL is required' }),
+  MAILPIT_FROM_NAME: z.string({ message: 'MAILPIT_FROM_NAME is required' }),
+
   // MinIO Configuration
   MINIO_ENDPOINT: z.string({ message: 'MinIO endpoint is required' }),
   MINIO_PORT: z.coerce.number().default(9000),

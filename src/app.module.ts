@@ -2,6 +2,7 @@ import { Module, ValidationPipe } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { GracefulShutdownModule } from 'nestjs-graceful-shutdown';
+import { TerminusModule } from '@nestjs/terminus';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { GlobalExceptionFilter } from './common/filters/global.filter';
@@ -16,7 +17,8 @@ import { EventModule } from './modules/events/event.module';
 import { TicketModule } from './modules/tickets/ticket.module';
 import { UserModule } from './modules/users/user.module';
 import { RoleModule } from './modules/roles/role.module';
-import { StorageModule } from './modules/storage/storage.module';
+import { StorageModule } from './infrastructure/storage/storage.module';
+import { EmailModule } from './infrastructure/email/email.module';
 
 const gracefulShutdownImports =
   process.env.NODE_ENV === 'test'
@@ -40,6 +42,7 @@ const gracefulShutdownImports =
     ThrottlerModule.forRoot({
       throttlers: [{ ttl: 60000, limit: 20 }],
     }),
+    TerminusModule,
     RedisModule.forRootAsync({
       useFactory: (configService: ConfigService) => ({
         host: configService.get('REDIS_HOST'),
@@ -56,6 +59,7 @@ const gracefulShutdownImports =
     EventCategoryModule,
     TicketModule,
     StorageModule,
+    EmailModule,
   ],
   controllers: [AppController],
   providers: [

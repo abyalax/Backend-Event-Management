@@ -12,4 +12,5 @@ export const jestConfig: Config = {
     '^~/test/(.*)$': '<rootDir>/test/$1',
     '^~/(.*)$': '<rootDir>/src/$1',
   },
+  testTimeout: 60000,
 };

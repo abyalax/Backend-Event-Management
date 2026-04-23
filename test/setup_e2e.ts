@@ -95,6 +95,9 @@ export const setupApplication = async (): Promise<[NestExpressApplication, Testi
     return [cachedApp, cachedModule, config];
   }
 
+  // Set test environment
+  process.env.NODE_ENV = 'test';
+
   const env = envSchema.parse(process.env);
 
   const moduleFixture: TestingModule = await Test.createTestingModule({
@@ -104,6 +107,9 @@ export const setupApplication = async (): Promise<[NestExpressApplication, Testi
   const app: NestExpressApplication = moduleFixture.createNestApplication();
   app.use(cookieParser(env.COOKIE_SECRET));
   await app.init();
+
+  // Seed test data using real database
+  await seedTestData();
 
   cachedApp = app;
   cachedModule = moduleFixture;
@@ -116,4 +122,17 @@ export const setupApplication = async (): Promise<[NestExpressApplication, Testi
   };
 
   return [app, moduleFixture, config];
+};
+
+const seedTestData = async (): Promise<void> => {
+  try {
+    // Run database seeds using the existing seed command
+    const { execSync } = await import('node:child_process');
+    console.log('🌱 Running database seeds for tests...');
+    execSync('pnpm seed:run', { stdio: 'inherit' });
+    console.log('✅ Database seeds completed successfully');
+  } catch (error) {
+    console.error('❌ Failed to run database seeds:', error);
+    // Don't throw error - tests can still run even if seeding fails
+  }
 };

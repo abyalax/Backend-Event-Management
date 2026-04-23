@@ -1,18 +1,15 @@
-import { JwtModule } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Repository } from 'typeorm';
 import { REPOSITORY } from '~/common/constants/database';
-import { PermissionsGuard } from '~/common/guards/permission.guard';
-import { CacheService } from '~/infrastructure/cache/cache.service';
 import { ConfigModule } from '~/infrastructure/config/config.module';
-import { CONFIG_SERVICE, ConfigService } from '~/infrastructure/config/config.provider';
+import { LoggerModule } from '~/common/logger/logger.module';
+import { CacheService } from '~/infrastructure/cache/cache.service';
 import { REDIS_CLIENT } from '~/infrastructure/redis/redis.constant';
 import { RedisService } from '~/infrastructure/redis/redis.service';
 import { mockRedis, mockRepository } from '~/test/common/mock';
 import { Permission } from '../auth/entity/permission.entity';
 import { RoleService } from './role.service';
 import { Role } from './entity/role.entity';
-import { RoleController } from './role.controller';
 import { RoleCacheService } from './role-cache.service';
 
 describe('RoleService', () => {
@@ -23,24 +20,12 @@ describe('RoleService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      imports: [
-        ConfigModule,
-        JwtModule.registerAsync({
-          inject: [CONFIG_SERVICE],
-          useFactory: (configService: ConfigService) => ({
-            secret: configService.get('JWT_SECRET'),
-            privateKey: configService.get('JWT_PRIVATE_KEY'),
-            publicKey: configService.get('JWT_PUBLIC_KEY'),
-          }),
-        }),
-      ],
-      controllers: [RoleController],
+      imports: [ConfigModule, LoggerModule],
       providers: [
-        RedisService,
         CacheService,
+        RedisService,
         RoleCacheService,
         RoleService,
-        PermissionsGuard,
         {
           provide: REPOSITORY.ROLE,
           useValue: mockRepository,
@@ -62,7 +47,7 @@ describe('RoleService', () => {
 
     service = module.get<RoleService>(RoleService);
     serviceCache = module.get<RoleCacheService>(RoleCacheService);
-    repository = module.get<Repository<Role>>(REPOSITORY.USER);
+    repository = module.get<Repository<Role>>(REPOSITORY.ROLE);
     permission = module.get<Repository<Permission>>(REPOSITORY.PERMISSION);
   });
 

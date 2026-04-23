@@ -88,6 +88,45 @@ services:
     volumes:
       - redis_data:/data
     command: redis-server --requirepass ${REDIS_PASSWORD:-redis_password}
+  
+  mailpit:
+    image: axllent/mailpit:latest
+    container_name: event_management_mailpit
+    ports:
+      - "${MAILPIT_SMTP_PORT:-1025}:1025"
+      - "${MAILPIT_UI_PORT:-8025}:8025"
+    environment:
+      - MP_MAX_MESSAGES=${MAILPIT_MAX_MESSAGES:-1000}
+      - MP_SMTP_AUTH_ACCEPT_ANY=${MAILPIT_SMTP_AUTH_ACCEPT_ANY:-true}
+      - MP_SMTP_AUTH_USERNAME=${MAILPIT_USER:-evenic-mailpit}
+      - MP_SMTP_AUTH_PASSWORD=${MAILPIT_PASSWORD:-evenic-mailpit}
+      - MP_OUTGOING_HOST=${MAILPIT_HOST:-localhost}
+      - MP_OUTGOING_PORT=${MAILPIT_PORT:-1025}
+      - MP_OUTGOING_SECURE=${MAILPIT_SECURE:-false}
+      - MP_DEFAULT_FROM_EMAIL=${MAILPIT_FROM_EMAIL:-evenics@vest.com}
+      - MP_DEFAULT_FROM_NAME=${MAILPIT_FROM_NAME:-Evenics}
+    volumes:
+      - mailpit_data:/var/lib/mailpit/data
+    command: ["--smtp-auth-allow-insecure"]
+
+  dbgate:
+    image: dbgate/dbgate
+    container_name: event_management_dbms
+    restart: always
+    ports:
+      - 8080:4000
+    volumes:
+      - dbgate-data:/root/.dbgate
+    environment:
+      CONNECTIONS: POSTGRES
+
+      LABEL_POSTGRES: Postgres
+      SERVER_POSTGRES: postgres
+      USER_POSTGRES: root
+      PASSWORD_POSTGRES: postgress_pass
+      PORT_POSTGRES: 5432
+      ENGINE_POSTGRES: postgres@dbgate-plugin-postgres
+      DATABASE_POSTGRES: db_event_management
 
 networks:
   storage_network:
@@ -102,14 +141,17 @@ volumes:
     driver: local
   dbgate-data:
     driver: local
+  mailpit_data:
+    driver: local
 
 # Usage:
 # 1. Create .env file dengan required variables
 # 2. Run: docker-compose up -d
 # 3. Access MinIO Console: http://localhost:9001
 # 4. Access Application: http://localhost:3000
-# 5. Access PostgreSQL: localhost:5432
-# 6. Access Redis: localhost:6379
+# 5. Access Mailpit: http://localhost:8025
+# 6. Access PostgreSQL: localhost:5432
+# 7. Access Redis: localhost:6379
 #
 # Helpful commands:
 # - View logs: docker-compose logs -f
