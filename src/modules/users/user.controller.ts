@@ -24,14 +24,29 @@ export class UserController {
   async list(@Query() query: QueryUserDto): Promise<TResponse<Paginated<UserDto>>> {
     const paginatedUsers = await this.userCacheService.getList(query);
 
+    const users = plainToInstance(UserDto, paginatedUsers.data, {
+      excludeExtraneousValues: true,
+    });
+
+    // Manually set permissions for each user's roles
+    users.forEach((user) => {
+      const originalUser = paginatedUsers.data.find((u) => u.id === user.id);
+      if (originalUser?.roles) {
+        user.roles.forEach((role) => {
+          const originalRole = originalUser.roles.find((r) => r.id === role.id);
+          if (originalRole?.rolePermissions) {
+            role.permissions = originalRole.rolePermissions.map((rp) => rp.permission);
+          }
+        });
+      }
+    });
+
     return {
       message: 'get data user successfully',
       data: {
         meta: paginatedUsers.meta,
         links: paginatedUsers.links,
-        data: plainToInstance(UserDto, paginatedUsers.data, {
-          excludeExtraneousValues: true,
-        }),
+        data: users,
       },
     };
   }
@@ -49,17 +64,29 @@ export class UserController {
     };
   }
 
-  @Permissions(PERMISSIONS.USER.DELETE)
+  @Permissions(PERMISSIONS.USER.READ)
   @HttpCode(HttpStatus.OK)
   @Get(':id')
   async getById(@Param('id', ParseUUIDPipe) id: string): Promise<TResponse<UserDto>> {
     const user = await this.userCacheService.getById(id);
 
+    const userDto = plainToInstance(UserDto, user, {
+      excludeExtraneousValues: true,
+    });
+
+    // Manually set permissions for the user's roles
+    if (user?.roles) {
+      userDto.roles.forEach((role) => {
+        const originalRole = user.roles.find((r) => r.id === role.id);
+        if (originalRole?.rolePermissions) {
+          role.permissions = originalRole.rolePermissions.map((rp) => rp.permission);
+        }
+      });
+    }
+
     return {
       message: 'get user successfully',
-      data: plainToInstance(UserDto, user, {
-        excludeExtraneousValues: true,
-      }),
+      data: userDto,
     };
   }
 

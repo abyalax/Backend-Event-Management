@@ -11,6 +11,6 @@ export const USER_PAGINATION_CONFIG: PaginateConfig<User> = {
   defaultSortBy: [['createdAt', 'DESC']],
   defaultLimit: 15,
   maxLimit: 100,
-  relations: ['roles', 'roles.permissions'],
+  relations: ['roles', 'roles.rolePermissions', 'roles.rolePermissions.permission'],
   multiWordSearch: true,
 };

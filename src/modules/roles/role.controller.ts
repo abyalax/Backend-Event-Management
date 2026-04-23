@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, NotFoundException, Param, Patch, Post, Query, UseGuards } from '@nestjs/common';
 import { plainToInstance } from 'class-transformer';
 import { PERMISSIONS } from '~/common/constants/permissions';
 import { Permissions } from '~/common/decorators/permissions.decorator';
@@ -11,7 +11,6 @@ import { QueryRoleDto } from './dto/query-role.dto';
 import { RoleDto } from './dto/role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
 import { RoleCacheService } from './role-cache.service';
-import { UserDto } from '../users/dto/user.dto';
 
 @UseGuards(JwtGuard, PermissionsGuard)
 @Controller('roles')
@@ -22,16 +21,14 @@ export class RoleController {
   @HttpCode(HttpStatus.OK)
   @Get('')
   async list(@Query() query: QueryRoleDto): Promise<TResponse<Paginated<RoleDto>>> {
-    const paginatedUsers = await this.roleCacheService.getList(query);
+    const paginatedRoles = await this.roleCacheService.getList(query);
 
     return {
-      message: 'get data roles successfully',
+      message: 'get roles successfully',
       data: {
-        meta: paginatedUsers.meta,
-        links: paginatedUsers.links,
-        data: plainToInstance(RoleDto, paginatedUsers.data, {
-          excludeExtraneousValues: true,
-        }),
+        meta: paginatedRoles.meta,
+        links: paginatedRoles.links,
+        data: paginatedRoles.data,
       },
     };
   }
@@ -39,38 +36,40 @@ export class RoleController {
   @Permissions(PERMISSIONS.ROLE.CREATE)
   @Post('')
   async create(@Body() createRoleDtoCreateRoleDto: CreateRoleDto) {
-    const user = await this.roleCacheService.create(createRoleDtoCreateRoleDto);
+    const role = await this.roleCacheService.create(createRoleDtoCreateRoleDto);
 
     return {
       message: 'role created successfully',
-      data: plainToInstance(UserDto, user, {
-        excludeExtraneousValues: true,
-      }),
-    };
-  }
-
-  @Permissions(PERMISSIONS.ROLE.DELETE)
-  @HttpCode(HttpStatus.OK)
-  @Get(':id')
-  async getById(@Param('id') id: number): Promise<TResponse<RoleDto>> {
-    const role = await this.roleCacheService.getById(id);
-
-    return {
-      message: 'get role successfully',
       data: plainToInstance(RoleDto, role, {
         excludeExtraneousValues: true,
       }),
     };
   }
 
+  @Permissions(PERMISSIONS.ROLE.READ)
+  @HttpCode(HttpStatus.OK)
+  @Get(':id')
+  async getById(@Param('id') id: number): Promise<TResponse<RoleDto>> {
+    const role = await this.roleCacheService.getById(id);
+
+    if (!role) {
+      throw new NotFoundException(`Role with ID ${id} not found`);
+    }
+
+    return {
+      message: 'get role successfully',
+      data: role,
+    };
+  }
+
   @Permissions(PERMISSIONS.ROLE.UPDATE)
   @Patch(':id')
   async update(@Param('id') id: number, @Body() UpdateRoleDto: UpdateRoleDto) {
-    const user = await this.roleCacheService.update(id, UpdateRoleDto);
+    const role = await this.roleCacheService.update(id, UpdateRoleDto);
 
     return {
       message: 'role updated successfully',
-      data: plainToInstance(UserDto, user, {
+      data: plainToInstance(RoleDto, role, {
         excludeExtraneousValues: true,
       }),
     };

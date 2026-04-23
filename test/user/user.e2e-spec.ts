@@ -41,19 +41,49 @@ describe('Module User', () => {
       expect(access_token).toBeDefined();
     });
 
-    test('GET /users + QueryProductDto', async () => {
-      const query: QueryUserDto = { page: 1, limit: 2 };
+    test('GET /users + QueryProductDto - Verify Eager Loading', async () => {
+      const query: QueryUserDto = { page: 1, limit: 10 };
       const res = await request(app.getHttpServer())
         .get('/users')
         .query(query)
         .set('Cookie', [`access_token=s:${access_token}`]);
 
-      const body = await res.body;
-      const data = body.data?.data?.[0];
-      expect(data).toBeDefined();
+      expect(res.status).toBe(200);
+      expect(res.body.message).toBe('get data user successfully');
+      expect(res.body.data).toBeDefined();
+      expect(res.body.data.data).toBeDefined();
+      expect(Array.isArray(res.body.data.data)).toBe(true);
 
-      const meta = body.data?.meta;
+      // Verify eager loading - check if roles are loaded with permissions
+      const users = res.body.data.data;
+      if (users.length > 0) {
+        const firstUser = users[0];
+        expect(firstUser).toHaveProperty('id');
+        expect(firstUser).toHaveProperty('name');
+        expect(firstUser).toHaveProperty('email');
+        expect(firstUser).toHaveProperty('roles');
+        expect(Array.isArray(firstUser.roles)).toBe(true);
 
+        // Verify roles with permissions structure
+        if (firstUser.roles.length > 0) {
+          const firstRole = firstUser.roles[0];
+          expect(firstRole).toHaveProperty('id');
+          expect(firstRole).toHaveProperty('name');
+          expect(firstRole).toHaveProperty('permissions');
+          expect(Array.isArray(firstRole.permissions)).toBe(true);
+
+          // Verify permission structure
+          if (firstRole.permissions.length > 0) {
+            const firstPermission = firstRole.permissions[0];
+            expect(firstPermission).toHaveProperty('id');
+            expect(firstPermission).toHaveProperty('key');
+            expect(firstPermission).toHaveProperty('name');
+          }
+        }
+      }
+
+      // Verify meta structure
+      const meta = res.body.data?.meta;
       const MetaResponseSchema = z.object({
         currentPage: z.number(),
         itemsPerPage: z.number(),
@@ -88,7 +118,7 @@ describe('Module User', () => {
       createdUserId = res.body.data.id;
     });
 
-    test('GET /users/:id (Get User By ID)', async () => {
+    test('GET /users/:id (Get User By ID) - Verify Eager Loading', async () => {
       expect(createdUserId).toBeDefined();
 
       const res = await request(app.getHttpServer())
@@ -99,6 +129,18 @@ describe('Module User', () => {
       expect(res.body.message).toBe('get user successfully');
       expect(res.body.data.id).toBe(createdUserId);
       expect(res.body.data.password).toBeUndefined(); // Make sure excludeExtraneousValues works proper
+
+      // Verify eager loading - roles should be loaded with permissions
+      expect(res.body.data).toHaveProperty('roles');
+      expect(Array.isArray(res.body.data.roles)).toBe(true);
+
+      if (res.body.data.roles.length > 0) {
+        const firstRole = res.body.data.roles[0];
+        expect(firstRole).toHaveProperty('id');
+        expect(firstRole).toHaveProperty('name');
+        expect(firstRole).toHaveProperty('permissions');
+        expect(Array.isArray(firstRole.permissions)).toBe(true);
+      }
     });
 
     test('PATCH /users/:id (Update User)', async () => {

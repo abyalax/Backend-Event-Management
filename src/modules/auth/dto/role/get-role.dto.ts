@@ -1,6 +1,6 @@
-import { Exclude, Expose, Type } from 'class-transformer';
+import { Exclude, Expose } from 'class-transformer';
 import { UserDto } from '~/modules/users/dto/user.dto';
-import { PermissionsDto } from '../permission/get-permission.dto';
+import type { Permission } from '../../entity/permission.entity';
 
 @Exclude()
 export class RoleDto {
@@ -11,10 +11,8 @@ export class RoleDto {
   name: string;
 
   @Expose()
-  @Type(() => PermissionsDto)
-  permissions: PermissionsDto[];
+  permissions: Permission[];
 
   @Exclude()
-  @Type(() => UserDto)
   users: UserDto[];
 }

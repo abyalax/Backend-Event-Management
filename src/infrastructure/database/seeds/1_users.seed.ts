@@ -3,6 +3,7 @@ import type { Seeder } from 'typeorm-extension';
 
 import { Permission } from '~/modules/auth/entity/permission.entity';
 import { Role } from '~/modules/roles/entity/role.entity';
+import { RolePermission } from '~/modules/role-permissions/entity/role-permissions.entity';
 import { User } from '~/modules/users/entity/user.entity';
 
 import { mockPermissions } from '../mock/permission.mock';
@@ -17,6 +18,7 @@ export default class UserSeeder implements Seeder {
     const userRepo = dataSource.getRepository(User);
     const roleRepo = dataSource.getRepository(Role);
     const permRepo = dataSource.getRepository(Permission);
+    const rolePermissionRepo = dataSource.getRepository(RolePermission);
 
     const dataUser = await mockUser();
 
@@ -29,9 +31,11 @@ export default class UserSeeder implements Seeder {
     await permRepo.insert(mockPermissions);
     console.log('✅ Seeded: permissions successfully');
 
-    for (const { id_role, id_permission } of mockRolePermissions) {
-      await dataSource.query('INSERT INTO role_permissions (id_role, id_permission) VALUES ($1, $2)', [id_role, id_permission]);
-    }
+    const rolePermissionsData = mockRolePermissions.map((rp) => ({
+      idRole: rp.id_role,
+      idPermission: rp.id_permission,
+    }));
+    await rolePermissionRepo.insert(rolePermissionsData);
 
     console.log('✅ Seeded: role_permissions successfully');
 

@@ -12,13 +12,14 @@ import { Payment } from '~/modules/payments/entity/payment.entity';
 import { GeneratedEventTicket } from '~/modules/tickets/entity/generated-event-ticket.entity';
 import { Ticket } from '~/modules/tickets/entity/ticket.entity';
 import { User } from '~/modules/users/entity/user.entity';
+import { RolePermission } from '~/modules/role-permissions/entity/role-permissions.entity';
 
 configDotenv();
 
 export const dataSource = new DataSource({
   type: 'postgres',
   url: process.env.DATABASE_URL,
-  entities: [EventCategory, Event, Ticket, Order, OrderItem, Payment, GeneratedEventTicket, Notification, User, Role, Permission],
+  entities: [EventCategory, Event, Ticket, Order, OrderItem, Payment, GeneratedEventTicket, Notification, User, Role, Permission, RolePermission],
   migrations: [join(__dirname, '/migrations/**/*{.js,.ts}')],
   synchronize: false,
   migrationsRun: false,

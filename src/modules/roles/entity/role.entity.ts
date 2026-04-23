@@ -1,6 +1,6 @@
-import { Column, CreateDateColumn, DeleteDateColumn, Entity, JoinTable, ManyToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import { Column, CreateDateColumn, DeleteDateColumn, Entity, ManyToMany, OneToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 import type { User } from '~/modules/users/entity/user.entity';
-import type { Permission } from '../../auth/entity/permission.entity';
+import type { RolePermission } from '~/modules/role-permissions/entity/role-permissions.entity';
 
 @Entity('roles')
 export class Role {
@@ -13,13 +13,8 @@ export class Role {
   @ManyToMany('User', 'roles')
   users: User[];
 
-  @ManyToMany('Permission', 'roles')
-  @JoinTable({
-    name: 'role_permissions',
-    joinColumn: { name: 'id_role', referencedColumnName: 'id' },
-    inverseJoinColumn: { name: 'id_permission', referencedColumnName: 'id' },
-  })
-  permissions: Permission[];
+  @OneToMany('RolePermission', 'role', { eager: true })
+  rolePermissions: RolePermission[];
 
   @CreateDateColumn({ type: 'timestamp with time zone', name: 'created_at' })
   createdAt?: string;

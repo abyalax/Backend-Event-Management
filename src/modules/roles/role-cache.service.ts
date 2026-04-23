@@ -1,11 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { PaginateQuery } from 'nestjs-paginate';
+import { plainToInstance } from 'class-transformer';
 import { CacheService } from '~/infrastructure/cache/cache.service';
 import { QueryRoleDto } from './dto/query-role.dto';
 import { RoleService } from './role.service';
 import { Role } from './entity/role.entity';
 import { CreateRoleDto } from './dto/create-role.dto';
 import { UpdateRoleDto } from './dto/update-role.dto';
+import { RoleDto } from './dto/role.dto';
 
 @Injectable()
 export class RoleCacheService {
@@ -27,16 +29,30 @@ export class RoleCacheService {
     return `${this.KEY_PREFIX}:list:page:${query.page}:limit:${query.limit}${searchKey}${sortKey}`;
   }
 
-  async getById(id: number): Promise<Role | null> {
-    return this.cache.getOrSet(
+  async getById(id: number): Promise<RoleDto | null> {
+    const role = await this.cache.getOrSet(
       this.keyById(id),
       () =>
         this.roleService.findOne({
           where: { id },
-          relations: ['permissions'],
+          relations: ['rolePermissions'],
         }),
       this.TTL_BY_ID,
     );
+
+    if (!role) return null;
+
+    // Transform role with manual permission mapping
+    const roleDto = plainToInstance(RoleDto, role, {
+      excludeExtraneousValues: true,
+    });
+
+    // Manually set permissions for the role
+    if (role?.rolePermissions) {
+      roleDto.permissions = role.rolePermissions.map((rp) => rp.permission);
+    }
+
+    return roleDto;
   }
 
   async getList(query: QueryRoleDto) {
@@ -55,16 +71,16 @@ export class RoleCacheService {
     );
   }
 
-  async create(createUserDto: CreateRoleDto) {
-    const user = await this.roleService.create(createUserDto);
+  async create(createRoleDto: CreateRoleDto) {
+    const role = await this.roleService.create(createRoleDto);
     await this.invalidateList();
-    return user;
+    return role;
   }
 
   async update(id: number, updateRoleDto: UpdateRoleDto) {
-    const user = await this.roleService.update(id, updateRoleDto);
+    const role = await this.roleService.update(id, updateRoleDto);
     await this.invalidateOnMutation(id);
-    return user;
+    return role;
   }
 
   async delete(id: number) {
@@ -81,8 +97,8 @@ export class RoleCacheService {
     await this.cache.clearByPattern(`${this.KEY_PREFIX}:list:*`);
   }
 
-  async invalidateOnMutation(userId?: number): Promise<void> {
-    if (userId) await this.invalidateById(userId);
+  async invalidateOnMutation(roleId?: number): Promise<void> {
+    if (roleId) await this.invalidateById(roleId);
     await this.invalidateList();
   }
 }

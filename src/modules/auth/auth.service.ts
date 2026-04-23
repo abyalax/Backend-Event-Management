@@ -44,11 +44,18 @@ export class AuthService {
       excludeExtraneousValues: true,
     });
 
+    // Manually set permissions for the API response
+    if (user.roles) {
+      user.roles.forEach((role) => {
+        role.permissions = userEntity.roles?.find((r) => r.id === role.id)?.rolePermissions?.map((rp) => rp.permission) || [];
+      });
+    }
+
     // Extract permissions from all roles
     const permissions: string[] = [];
     userEntity.roles?.forEach((role) => {
-      role.permissions?.forEach((permission) => {
-        if (permission.key) permissions.push(permission.key);
+      role.rolePermissions?.forEach((rolePermission) => {
+        if (rolePermission.permission.key) permissions.push(rolePermission.permission.key);
       });
     });
 

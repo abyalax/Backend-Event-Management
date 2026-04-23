@@ -1,6 +1,7 @@
 import { DataSource, type DataSourceOptions } from 'typeorm';
 import { Permission } from '~/modules/auth/entity/permission.entity';
 import { Role } from '~/modules/roles/entity/role.entity';
+import { RolePermission } from '~/modules/role-permissions/entity/role-permissions.entity';
 import { EventCategory } from '~/modules/event-categories/entity/event-category.entity';
 import { Event } from '~/modules/events/entity/event.entity';
 import { Notification } from '~/modules/notifications/entity/notification.entity';
@@ -21,7 +22,7 @@ export const PostgreeConnection = {
     dataSource = new DataSource({
       type: 'postgres',
       url: configService.get('DATABASE_URL'),
-      entities: [User, Role, Permission, Ticket, Event, Order, Payment, Notification, EventCategory, OrderItem, GeneratedEventTicket],
+      entities: [User, Role, Permission, RolePermission, Ticket, Event, Order, Payment, Notification, EventCategory, OrderItem, GeneratedEventTicket],
       synchronize: false,
     });
     return dataSource.initialize();

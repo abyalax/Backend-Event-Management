@@ -32,7 +32,8 @@ export class UserService {
     const permissions = await this.permissionRepository
       .createQueryBuilder('permission')
       .distinct(true)
-      .innerJoin('permission.roles', 'role')
+      .innerJoin('permission.rolePermissions', 'rolePermission')
+      .innerJoin('rolePermission.role', 'role')
       .innerJoin('role.users', 'user')
       .where('user.id = :userId', { userId })
       .getMany();
@@ -55,14 +56,14 @@ export class UserService {
   async findByEmail(email: string): Promise<User | null> {
     return await this.userRepository.findOne({
       where: { email },
-      relations: ['roles', 'roles.permissions'],
+      relations: ['roles', 'roles.rolePermissions', 'roles.rolePermissions.permission'],
     });
   }
 
   async findOne(params: FindOneOptions<User>) {
     return await this.userRepository.findOne({
       ...params,
-      relations: ['roles', 'roles.permissions'],
+      relations: ['roles', 'roles.rolePermissions', 'roles.rolePermissions.permission'],
     });
   }
 
