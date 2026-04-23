@@ -7,6 +7,7 @@ import { StorageHealthIndicator } from './indicators/health.indicator';
 import { CONFIG_SERVICE, ConfigService } from '~/infrastructure/config/config.provider';
 import { PinoLogger } from 'nestjs-pino';
 import { HealthIndicatorService } from '@nestjs/terminus';
+import { CONFIG_PROVIDER } from '~/common/constants/provider';
 
 describe('StorageController', () => {
   let controller: StorageController;
@@ -54,7 +55,7 @@ describe('StorageController', () => {
           },
         },
         {
-          provide: 'STORAGE_CONFIG',
+          provide: CONFIG_PROVIDER.STORAGE,
           useFactory: (configService: ConfigService) => ({
             endpoint: configService.get('MINIO_ENDPOINT'),
             port: configService.get('MINIO_PORT'),

@@ -1,7 +1,7 @@
 import { Inject, Injectable, OnModuleDestroy, OnModuleInit } from '@nestjs/common';
 import Redis from 'ioredis';
-import { REDIS_CLIENT } from './redis.constant';
 import { PinoLogger } from 'nestjs-pino';
+import { CONFIG_PROVIDER } from '~/common/constants/provider';
 
 @Injectable()
 export class RedisService implements OnModuleInit, OnModuleDestroy {
@@ -10,7 +10,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
 
   constructor(
     private readonly logger: PinoLogger,
-    @Inject(REDIS_CLIENT) private readonly client: Redis,
+    @Inject(CONFIG_PROVIDER.REDIS_CLIENT) private readonly client: Redis,
   ) {}
 
   async onModuleInit() {

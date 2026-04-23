@@ -19,6 +19,8 @@ async function bootstrap() {
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
   });
 
+  app.enableShutdownHooks();
+
   await app.listen(env.PORT);
   console.log(`Nest Application running on http://localhost:${env.PORT}`);
 }

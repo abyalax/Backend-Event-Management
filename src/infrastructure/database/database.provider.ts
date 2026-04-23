@@ -12,17 +12,35 @@ import { GeneratedEventTicket } from '~/modules/tickets/entity/generated-event-t
 import { Ticket } from '~/modules/tickets/entity/ticket.entity';
 import { User } from '~/modules/users/entity/user.entity';
 import { CONFIG_SERVICE, ConfigService } from '../config/config.provider';
+import { MediaObject } from '../storage/entitiy/media-objects.entity';
+import { EventMedia } from '~/modules/events/entity/event-media.entity';
+import { CONFIG_PROVIDER } from '~/common/constants/provider';
 
 let dataSource: DataSource;
 
 export const PostgreeConnection = {
-  provide: 'psql_connection',
+  provide: CONFIG_PROVIDER.PSQL_CONNECTION,
   inject: [CONFIG_SERVICE],
   useFactory: async (configService: ConfigService) => {
     dataSource = new DataSource({
       type: 'postgres',
       url: configService.get('DATABASE_URL'),
-      entities: [User, Role, Permission, RolePermission, Ticket, Event, Order, Payment, Notification, EventCategory, OrderItem, GeneratedEventTicket],
+      entities: [
+        User,
+        Role,
+        Permission,
+        RolePermission,
+        Ticket,
+        Event,
+        Order,
+        Payment,
+        Notification,
+        EventCategory,
+        OrderItem,
+        GeneratedEventTicket,
+        MediaObject,
+        EventMedia,
+      ],
       synchronize: false,
     });
     return dataSource.initialize();

@@ -1,0 +1,38 @@
+meta {
+  name: Pre Signed
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{base_url}}/media/presigned
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "filename": "banner.jpg",
+    "mimeType": "image/jpeg",
+    "size": 1024000
+  }
+}
+
+docs {
+  # Health Check
+  
+  Checks if the API server is running and healthy.
+  
+  ## Request
+  - **Method**: GET
+  - **Endpoint**: `/api/v1/health`
+  
+  ## Response (200 OK)
+  ```json
+  {
+    "status": "healthy"
+  }
+  ```
+  
+  This endpoint always returns a 200 status if the server is running.
+}

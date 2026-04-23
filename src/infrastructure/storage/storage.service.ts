@@ -4,6 +4,7 @@ import { Readable } from 'node:stream';
 import { MinioProvider } from './providers/minio.provider';
 import { RetryStrategy } from './strategies/retry.strategy';
 import { PinoLogger } from 'nestjs-pino';
+import { CONFIG_PROVIDER } from '~/common/constants/provider';
 
 export interface StorageConfig {
   buckets: {
@@ -93,15 +94,12 @@ export class StorageService {
     private readonly retryStrategy: RetryStrategy,
     private readonly logger: PinoLogger,
 
-    @Inject('STORAGE_CONFIG')
+    @Inject(CONFIG_PROVIDER.STORAGE)
     private readonly config: StorageConfig,
   ) {
     this.logger.info('StorageService initialized');
   }
 
-  /**
-   * Upload file dengan automatic retry
-   */
   async uploadFile(params: UploadFileParams): Promise<FileOperationResult> {
     const startTime = Date.now();
     const uniqueFilename = this.generateUniqueFilename(params.metadata.originalname);
@@ -216,10 +214,6 @@ export class StorageService {
     }
   }
 
-  /**
-   * Download file
-   * Return stream untuk memory efficiency
-   */
   async downloadFile(bucket: string, filename: string): Promise<{ stream: Readable; metadata: unknown }> {
     try {
       this.validateBucket(bucket);
@@ -417,19 +411,12 @@ export class StorageService {
     }
   }
 
-  /**
-   * Get service metrics
-   */
   getMetrics() {
     return {
       ...this.metrics,
       successRate: this.metrics.uploadCount / (this.metrics.uploadCount + this.metrics.uploadFailedCount) || 0,
     };
   }
-
-  /**
-   * PRIVATE HELPERS
-   */
 
   private validateBucket(bucket: string): void {
     const validBuckets = Object.values(this.config.buckets);

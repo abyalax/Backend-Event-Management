@@ -1,11 +1,16 @@
-import { Module } from '@nestjs/common';
+import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { TerminusModule } from '@nestjs/terminus';
 import { CONFIG_SERVICE, ConfigService } from '~/infrastructure/config/config.provider';
+import { DatabaseModule } from '~/infrastructure/database/database.module';
 import { StorageController } from './storage.controller';
+import { MediaController } from './media/media.controller';
 import { StorageService } from './storage.service';
+import { UrlGenerationService } from './url-generation.service';
+import { MediaRepository } from './media/media.repository';
 import { MinioProvider } from './providers/minio.provider';
 import { RetryStrategy } from './strategies/retry.strategy';
 import { StorageHealthIndicator } from './indicators/health.indicator';
+import { FileValidationMiddleware } from './middleware/file-validation.middleware';
 import { CONFIG_PROVIDER } from '~/common/constants/provider';
 
 /**
@@ -27,13 +32,16 @@ import { CONFIG_PROVIDER } from '~/common/constants/provider';
  * StorageModule.forRoot({ endpoint: 'minio.example.com' })
  */
 @Module({
-  imports: [TerminusModule],
-  controllers: [StorageController],
+  imports: [TerminusModule, DatabaseModule],
+  controllers: [StorageController, MediaController],
   providers: [
     MinioProvider,
     StorageService,
+    UrlGenerationService,
+    MediaRepository,
     RetryStrategy,
     StorageHealthIndicator,
+    FileValidationMiddleware,
     {
       provide: CONFIG_PROVIDER.STORAGE,
       useFactory: (configService: ConfigService) => ({
@@ -50,7 +58,7 @@ import { CONFIG_PROVIDER } from '~/common/constants/provider';
           videos: configService.get('STORAGE_BUCKET_VIDEOS'),
         },
         maxFileSize: configService.get('MAX_FILE_SIZE'),
-        allowedMimeTypes: configService.get('ALLOWED_MIME_TYPES')?.split(',') || [],
+        allowedMimeTypes: configService.get('ALLOWED_MIME_TYPES')?.split(',') ?? [],
         retry: {
           maxAttempts: configService.get('RETRY_MAX_ATTEMPTS'),
           initialDelayMs: configService.get('RETRY_INITIAL_DELAY_MS'),
@@ -64,9 +72,13 @@ import { CONFIG_PROVIDER } from '~/common/constants/provider';
       inject: [CONFIG_SERVICE],
     },
   ],
-  exports: [StorageService, MinioProvider, StorageHealthIndicator],
+  exports: [StorageService, MinioProvider, StorageHealthIndicator, UrlGenerationService],
 })
-export class StorageModule {
+export class StorageModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(FileValidationMiddleware).forRoutes('media/upload');
+  }
+
   /**
    * For use case with custom configuration
    * For Example:
@@ -79,18 +91,20 @@ export class StorageModule {
   static forRoot(options: Record<string, unknown>) {
     return {
       module: StorageModule,
-      controllers: [StorageController],
+      controllers: [StorageController, MediaController],
       providers: [
         MinioProvider,
         StorageService,
+        UrlGenerationService,
         RetryStrategy,
         StorageHealthIndicator,
+        FileValidationMiddleware,
         {
           provide: CONFIG_PROVIDER.STORAGE,
           useValue: { ...options },
         },
       ],
-      exports: [StorageService, MinioProvider, StorageHealthIndicator],
+      exports: [StorageService, MinioProvider, StorageHealthIndicator, UrlGenerationService],
     };
   }
 }

@@ -13,13 +13,30 @@ import { GeneratedEventTicket } from '~/modules/tickets/entity/generated-event-t
 import { Ticket } from '~/modules/tickets/entity/ticket.entity';
 import { User } from '~/modules/users/entity/user.entity';
 import { RolePermission } from '~/modules/role-permissions/entity/role-permissions.entity';
+import { MediaObject } from '~/infrastructure/storage/entitiy/media-objects.entity';
+import { EventMedia } from '~/modules/events/entity/event-media.entity';
 
 configDotenv();
 
 export const dataSource = new DataSource({
   type: 'postgres',
   url: process.env.DATABASE_URL,
-  entities: [EventCategory, Event, Ticket, Order, OrderItem, Payment, GeneratedEventTicket, Notification, User, Role, Permission, RolePermission],
+  entities: [
+    EventCategory,
+    Event,
+    Ticket,
+    Order,
+    OrderItem,
+    Payment,
+    GeneratedEventTicket,
+    Notification,
+    User,
+    Role,
+    Permission,
+    RolePermission,
+    MediaObject,
+    EventMedia,
+  ],
   migrations: [join(__dirname, '/migrations/**/*{.js,.ts}')],
   synchronize: false,
   migrationsRun: false,

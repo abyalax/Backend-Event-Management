@@ -51,4 +51,8 @@ export class CreateEventDto {
   @Expose()
   @IsUUID()
   createdBy: string;
+
+  @Expose()
+  @IsUUID()
+  bannerMediaId: string;
 }

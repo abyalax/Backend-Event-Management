@@ -44,18 +44,18 @@ export class FileValidationMiddleware implements NestMiddleware {
     '.sql',
   ];
 
-  constructor(@Inject(CONFIG_SERVICE) private configService: ConfigService) {
+  constructor(@Inject(CONFIG_SERVICE) private readonly configService: ConfigService) {
     this.allowedMimeTypes = this.configService.get('ALLOWED_MIME_TYPES')?.split(',') || [];
     this.maxFileSize = Number.parseInt(String(this.configService.get('MAX_FILE_SIZE') || '52428800')); // 50MB default
   }
 
-  async use(req: Request, res: Response, next: NextFunction) {
+  use(req: Request, res: Response, next: NextFunction) {
     // Only validate for upload endpoints
     if (!req.path.includes('/upload/') || !req.file) {
       return next();
     }
 
-    const file = req.file as Express.Multer.File;
+    const file = req.file;
 
     try {
       // Validate file size
@@ -75,7 +75,7 @@ export class FileValidationMiddleware implements NestMiddleware {
       // Remove uploaded file if validation fails
       if (file.buffer) {
         // Clear the buffer reference
-        (file as any).buffer = undefined;
+        file.buffer = undefined as unknown as Buffer<ArrayBufferLike>;
       }
 
       next(error);
@@ -125,6 +125,7 @@ export class FileValidationMiddleware implements NestMiddleware {
     }
 
     // Check for suspicious characters in filename
+    // eslint-disable-next-line no-control-regex
     const suspiciousChars = /[<>:"|?*\x00-\x1f]/;
     if (suspiciousChars.test(filename)) {
       throw new BadRequestException('Filename contains invalid characters');

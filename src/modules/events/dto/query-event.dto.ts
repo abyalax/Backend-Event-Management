@@ -1,7 +1,6 @@
 import { Exclude, Expose, Transform } from 'class-transformer';
-import { IsEnum, IsNumber, IsOptional } from 'class-validator';
+import { IsNumber, IsOptional, IsString } from 'class-validator';
 import { MetaRequestDto } from '~/common/dto/meta-request.dto';
-import { EEventStatus } from '../entity/event.entity';
 
 @Exclude()
 export class QueryEventDto extends MetaRequestDto {
@@ -19,8 +18,8 @@ export class QueryEventDto extends MetaRequestDto {
 
   @Expose()
   @IsOptional()
-  @IsEnum(EEventStatus)
-  status?: EEventStatus;
+  @IsString()
+  status: string;
 
   @Expose()
   @IsOptional()

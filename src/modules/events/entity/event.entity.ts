@@ -12,11 +12,7 @@ import {
 } from 'typeorm';
 import { EventCategory } from '~/modules/event-categories/entity/event-category.entity';
 import type { Ticket } from '~/modules/tickets/entity/ticket.entity';
-
-export enum EEventStatus {
-  AVAILABLE = 'Available',
-  UNAVAILABLE = 'UnAvailable',
-}
+import { EventMedia } from './event-media.entity';
 
 @Entity({ name: 'events' })
 @Index('idx_events_title', ['title'])
@@ -72,6 +68,9 @@ export class Event {
 
   @OneToMany('Ticket', 'event')
   tickets?: Ticket[];
+
+  @OneToMany('EventMedia', 'event')
+  media?: EventMedia[];
 
   @CreateDateColumn({ type: 'timestamp with time zone', name: 'created_at' })
   createdAt?: string;

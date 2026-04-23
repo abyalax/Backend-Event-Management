@@ -1,0 +1,43 @@
+meta {
+  name: Post Signed
+  type: http
+  seq: 2
+}
+
+put {
+  url: http://localhost:9000/images/1776940970631_q4c3g2c6a5n.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=minioadmin%2F20260423%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260423T104250Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=0fea8e9b29f9ca83160c59722439ac16ffc4098b7d066c46f3a4ad52a90f39cd
+  body: file
+  auth: none
+}
+
+params:query {
+  X-Amz-Algorithm: AWS4-HMAC-SHA256
+  X-Amz-Credential: minioadmin%2F20260423%2Fus-east-1%2Fs3%2Faws4_request
+  X-Amz-Date: 20260423T104250Z
+  X-Amz-Expires: 3600
+  X-Amz-SignedHeaders: host
+  X-Amz-Signature: 0fea8e9b29f9ca83160c59722439ac16ffc4098b7d066c46f3a4ad52a90f39cd
+}
+
+body:file {
+  file: @file(C:\Users\abya\Downloads\banner.jpg) @contentType(image/jpeg)
+}
+
+docs {
+  # Health Check
+  
+  Checks if the API server is running and healthy.
+  
+  ## Request
+  - **Method**: GET
+  - **Endpoint**: `/api/v1/health`
+  
+  ## Response (200 OK)
+  ```json
+  {
+    "status": "healthy"
+  }
+  ```
+  
+  This endpoint always returns a 200 status if the server is running.
+}

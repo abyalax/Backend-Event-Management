@@ -1,4 +1,5 @@
 import { Inject, Injectable, Logger } from '@nestjs/common';
+import { CONFIG_PROVIDER } from '~/common/constants/provider';
 
 export interface RetryConfig {
   maxAttempts: number;
@@ -33,11 +34,11 @@ export class RetryStrategy {
   private readonly logger = new Logger('RetryStrategy');
   private readonly config: RetryConfig;
 
-  constructor(@Inject('STORAGE_CONFIG') private readonly storageConfig: any) {
+  constructor(@Inject(CONFIG_PROVIDER.STORAGE) private readonly storageConfig: RetryConfig) {
     this.config = {
-      maxAttempts: storageConfig.retry?.maxAttempts || 3,
-      initialDelayMs: storageConfig.retry?.initialDelayMs || 100,
-      maxDelayMs: storageConfig.retry?.maxDelayMs || 5000,
+      maxAttempts: storageConfig.maxAttempts || 3,
+      initialDelayMs: storageConfig.initialDelayMs || 100,
+      maxDelayMs: storageConfig.maxDelayMs || 5000,
     };
   }
 

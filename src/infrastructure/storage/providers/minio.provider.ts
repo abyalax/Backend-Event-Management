@@ -1,5 +1,7 @@
-import { Inject, Injectable, Logger, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
+import { Inject, Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
 import * as Minio from 'minio';
+import { PinoLogger } from 'nestjs-pino';
+import { CONFIG_PROVIDER } from '~/common/constants/provider';
 
 export interface MinioConfig {
   endpoint: string;
@@ -33,11 +35,13 @@ export interface MinioConfig {
 @Injectable()
 export class MinioProvider implements OnModuleInit, OnModuleDestroy {
   private client: Minio.Client;
-  private readonly logger = new Logger('MinioProvider');
   private isConnected = false;
   private initializationPromise: Promise<void>;
 
-  constructor(@Inject('STORAGE_CONFIG') private readonly config: MinioConfig) {
+  constructor(
+    private readonly logger: PinoLogger,
+    @Inject(CONFIG_PROVIDER.STORAGE) private readonly config: MinioConfig,
+  ) {
     this.initClient();
   }
 
@@ -57,7 +61,7 @@ export class MinioProvider implements OnModuleInit, OnModuleDestroy {
         secretKey: this.config.secretKey,
         region: this.config.region,
       });
-      this.logger.log(`MinIO client initialized: ${this.config.endpoint}:${this.config.port} (SSL: ${useSSL})`);
+      this.logger.info(`MinIO client initialized: ${this.config.endpoint}:${this.config.port} (SSL: ${useSSL})`);
     } catch (error) {
       this.logger.error('Failed to initialize MinIO client', error);
       throw error;
@@ -88,7 +92,7 @@ export class MinioProvider implements OnModuleInit, OnModuleDestroy {
       }
 
       this.isConnected = true;
-      this.logger.log('MinIO initialization completed successfully');
+      this.logger.info('MinIO initialization completed successfully');
     } catch (error) {
       this.logger.error('MinIO initialization failed', error);
       // In test environment, don't throw errors to allow tests to run
@@ -107,7 +111,7 @@ export class MinioProvider implements OnModuleInit, OnModuleDestroy {
       const startTime = Date.now();
       await this.client.listBuckets();
       const latency = Date.now() - startTime;
-      this.logger.log(`MinIO connection test successful (latency: ${latency}ms)`);
+      this.logger.info(`MinIO connection test successful (latency: ${latency}ms)`);
     } catch (error) {
       this.logger.error('Failed to connect to MinIO server', error);
 
@@ -134,7 +138,7 @@ export class MinioProvider implements OnModuleInit, OnModuleDestroy {
       }
 
       await this.client.makeBucket(bucketName, this.config.region);
-      this.logger.log(`Bucket created successfully: ${bucketName}`);
+      this.logger.info(`Bucket created successfully: ${bucketName}`);
 
       // Set bucket versioning (optional, untuk backup strategy)
       // await this.client.setBucketVersioning(bucketName, { Status: 'Enabled' });
@@ -208,14 +212,22 @@ export class MinioProvider implements OnModuleInit, OnModuleDestroy {
    * NestJS lifecycle hook - Called when module is destroyed
    * Cleanup connections
    */
-  onModuleDestroy(): void {
+  async onModuleDestroy(): Promise<void> {
     try {
       if (this.client) {
-        // MinIO client tidak memiliki close method, tapi bisa clear cache
-        // this.client = null;
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const agent = (this.client as any).agent;
+        if (agent && typeof agent.destroy === 'function') {
+          // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+          agent.destroy(); // remove socket connection
+          this.logger.info('MinIO HTTP Agent destroyed');
+          await new Promise((resolve) => setTimeout(resolve, 100));
+        }
       }
       this.isConnected = false;
-      this.logger.log('MinIO provider destroyed');
+      this.logger.info('MinIO provider destroyed');
+      this.isConnected = false;
+      this.logger.info('MinIO provider destroyed');
     } catch (error) {
       this.logger.error('Error during MinIO provider destruction', error);
     }
