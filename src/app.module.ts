@@ -19,6 +19,7 @@ import { UserModule } from './modules/users/user.module';
 import { RolePermissionModule } from './modules/role-permissions/role-permission.module';
 import { StorageModule } from './infrastructure/storage/storage.module';
 import { EmailModule } from './infrastructure/email/email.module';
+import { QueueModule } from './infrastructure/queue/queue.module';
 
 const gracefulShutdownImports =
   process.env.NODE_ENV === 'test'
@@ -60,6 +61,7 @@ const gracefulShutdownImports =
     TicketModule,
     StorageModule,
     EmailModule,
+    QueueModule,
   ],
   controllers: [AppController],
   providers: [

@@ -41,12 +41,10 @@ export class EmailService {
       host: this.emailConfig.host,
       port: this.emailConfig.port,
       secure: this.emailConfig.secure,
-      auth: this.emailConfig.auth?.user
-        ? {
-            user: this.emailConfig.auth.user,
-            pass: this.emailConfig.auth.pass,
-          }
-        : undefined,
+      auth: {
+        user: this.emailConfig.auth.user,
+        pass: this.emailConfig.auth.pass,
+      },
     });
 
     this.logger.info(`Email transporter initialized for ${this.emailConfig.host}:${this.emailConfig.port}`);

@@ -2,7 +2,7 @@ import { Controller, Get } from '@nestjs/common';
 import { HealthCheck, HealthCheckService } from '@nestjs/terminus';
 import { AppService } from './app.service';
 import { StorageHealthIndicator } from './infrastructure/storage/indicators/health.indicator';
-import { MailPitHealthIndicator } from './infrastructure/email/indicators/health.indicator';
+import { MailPitHealthIndicator } from './infrastructure/email/email.health';
 
 @Controller()
 export class AppController {

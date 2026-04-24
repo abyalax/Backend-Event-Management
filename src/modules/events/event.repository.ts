@@ -14,7 +14,7 @@ export class EventRepository {
    * Create event with banner upload in a transaction
    * If banner upload or relation creation fails, the entire operation is rolled back
    */
-  async createWithBanner(payloadEvent: CreateEventDto): Promise<Event> {
+  async create(payloadEvent: CreateEventDto): Promise<Event> {
     const queryRunner = this.dataSource.createQueryRunner();
     await queryRunner.connect();
     await queryRunner.startTransaction();

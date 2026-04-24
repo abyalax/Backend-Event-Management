@@ -1,29 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { HealthIndicatorService } from '@nestjs/terminus';
-import { EmailService } from '../email.service';
+import { EmailService } from './email.service';
 
-/**
- * MailPit Health Indicator untuk NestJS Terminus
- *
- * Integration dengan NestJS health check system
- * Memungkinkan monitoring MailPit/SMTP status sebagai bagian dari overall application health
- *
- * Usage dalam health check module:
- * @Module({
- *   imports: [TerminusModule],
- *   providers: [MailPitHealthIndicator],
- *   controllers: [HealthController]
- * })
- *
- * Dalam controller:
- * @Get('health')
- * @HealthCheck()
- * check() {
- *   return this.health.check([
- *     () => this.mailPitHealth.isHealthy('mailpit'),
- *   ]);
- * }
- */
 @Injectable()
 export class MailPitHealthIndicator {
   constructor(
@@ -31,11 +9,6 @@ export class MailPitHealthIndicator {
     private readonly healthIndicatorService: HealthIndicatorService,
   ) {}
 
-  /**
-   * Check MailPit/SMTP health
-   * @param key - Indicator key (default: 'mailpit')
-   * @returns Health check result
-   */
   async isHealthy(key: string = 'mailpit') {
     const indicator = this.healthIndicatorService.check(key);
     const startTime = Date.now();

@@ -8,6 +8,9 @@ import { UpdateEventDto } from './dto/update-event.dto';
 import { Event } from './entity/event.entity';
 import { EventRepository } from './event.repository';
 import { EVENT_PAGINATION_CONFIG } from './event-pagination.config';
+import { QueueService } from '~/infrastructure/queue/queue.service';
+import { PinoLogger } from 'nestjs-pino';
+import { UserService } from '../users/user.service';
 
 @Injectable()
 export class EventService {
@@ -18,6 +21,9 @@ export class EventService {
     @Inject(REPOSITORY.EVENT_CATEGORY)
     private readonly categoryRepository: Repository<EventCategory>,
     private readonly eventRepositoryCustom: EventRepository,
+    private readonly queueService: QueueService,
+    private readonly logger: PinoLogger,
+    private readonly userService: UserService,
   ) {}
 
   async list(query: PaginateQuery) {
@@ -25,7 +31,36 @@ export class EventService {
   }
 
   async create(payloadEvent: CreateEventDto): Promise<Event> {
-    return this.eventRepositoryCustom.createWithBanner(payloadEvent);
+    const event = await this.eventRepositoryCustom.create(payloadEvent);
+
+    try {
+      // Get user information for email notification
+      const user = await this.userService.findOne({ where: { id: payloadEvent.createdBy } });
+
+      if (user?.email) {
+        // Queue email notification job
+        await this.queueService.addJob('event-notifications', 'send-event-creation-email', {
+          eventId: event.id,
+          userEmail: user.email,
+          eventTitle: event.title,
+        });
+
+        this.logger.info({ eventId: event.id, userEmail: user.email, eventTitle: event.title }, 'Event creation email notification queued');
+      } else {
+        this.logger.warn(
+          { eventId: event.id, createdBy: payloadEvent.createdBy },
+          'User not found or email not available for event creation notification',
+        );
+      }
+    } catch (error) {
+      // Log error but don't fail the event creation
+      this.logger.error(
+        { eventId: event.id, error: error instanceof Error ? error.message : 'Unknown error' },
+        'Failed to queue event creation email notification',
+      );
+    }
+
+    return event;
   }
 
   async findOneByID(id: string): Promise<Event> {

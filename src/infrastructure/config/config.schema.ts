@@ -56,6 +56,9 @@ export const envSchema = z.object({
   // Monitoring Configuration
   ENABLE_STORAGE_METRICS: z.coerce.boolean().default(true),
   STORAGE_HEALTH_CHECK_INTERVAL: z.coerce.number().default(30000),
+
+  // Queue Configuration
+  QUEUE_CONCURRENCY: z.coerce.number().default(5),
 });
 
 export type Environment = z.infer<typeof envSchema>;

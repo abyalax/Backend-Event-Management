@@ -3,7 +3,7 @@ import { TerminusModule } from '@nestjs/terminus';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { StorageHealthIndicator } from './infrastructure/storage/indicators/health.indicator';
-import { MailPitHealthIndicator } from './infrastructure/email/indicators/health.indicator';
+import { MailPitHealthIndicator } from './infrastructure/email/email.health';
 import { MinioProvider } from './infrastructure/storage/providers/minio.provider';
 import { EmailService } from './infrastructure/email/email.service';
 
