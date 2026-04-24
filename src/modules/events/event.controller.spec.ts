@@ -6,6 +6,7 @@ import { mockRepository } from '~/test/common/mock';
 import { UserService } from '../users/user.service';
 import { EventController } from './event.controller';
 import { EventService } from './event.service';
+import { EventRepository } from './event.repository';
 
 describe('EventController', () => {
   let controller: EventController;
@@ -34,6 +35,15 @@ describe('EventController', () => {
               email: 'test@example.com',
               roles: [],
             }),
+          },
+        },
+        {
+          provide: EventRepository,
+          useValue: {
+            createEventWithBanner: jest.fn(),
+            createEventWithoutBanner: jest.fn(),
+            updateEventWithBanner: jest.fn(),
+            updateEventWithoutBanner: jest.fn(),
           },
         },
       ],

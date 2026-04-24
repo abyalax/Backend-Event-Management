@@ -5,14 +5,14 @@ import { CONFIG_SERVICE, ConfigService } from '~/infrastructure/config/config.pr
 import { ConfigModule } from '~/infrastructure/config/config.module';
 import { LoggerModule } from '~/common/logger/logger.module';
 import { CacheService } from '~/infrastructure/cache/cache.service';
-import { REDIS_CLIENT } from '~/infrastructure/redis/redis.constant';
+import { CONFIG_PROVIDER } from '~/common/constants/provider';
 import { RedisService } from '~/infrastructure/redis/redis.service';
 import { mockRedis, mockRepository } from '~/test/common/mock';
-import { RoleCacheService } from './role-cache.service';
-import { RoleController } from './role.controller';
-import { RoleService } from './role.service';
+import { RoleCacheService } from './role-permission-cache.service';
+import { RoleController } from './role-permission.controller';
+import { RoleService } from './role-permission.service';
 
-describe('RoleController', () => {
+describe('RolePermissionController', () => {
   let controller: RoleController;
 
   beforeEach(async () => {
@@ -48,7 +48,7 @@ describe('RoleController', () => {
           useValue: mockRepository,
         },
         {
-          provide: REDIS_CLIENT,
+          provide: CONFIG_PROVIDER.REDIS_CLIENT,
           useValue: mockRedis,
         },
       ],

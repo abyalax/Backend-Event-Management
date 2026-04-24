@@ -6,8 +6,8 @@ import { UserPayload } from '~/common/types/global';
 import { CONFIG_SERVICE, ConfigService } from '~/infrastructure/config/config.provider';
 import { UserDto } from '../users/dto/user.dto';
 import { UserService } from '../users/user.service';
-import { PermissionsDto } from './dto/permission/get-permission.dto';
 import { SignUpDto } from './dto/sign-up.dto';
+import { PermissionsDto } from '../role-permissions/dto/permission.dto';
 
 @Injectable()
 export class AuthService {

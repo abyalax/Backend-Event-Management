@@ -1,5 +1,5 @@
 import { Column, CreateDateColumn, DeleteDateColumn, Entity, JoinTable, ManyToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
-import type { Role } from '~/modules/roles/entity/role.entity';
+import type { Role } from '~/modules/role-permissions/entity/role.entity';
 
 @Entity({ name: 'users' })
 export class User {

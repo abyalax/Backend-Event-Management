@@ -1,0 +1,33 @@
+METHOD endpoint
+Payload JSON
+
+GET /roles
+{}
+
+POST /roles
+{
+  "name": "string",
+  "permissionIds": [number]
+}
+
+GET /roles/:id
+{}
+
+PATCH /roles/:id
+{
+  "name": "string"
+}
+
+DELETE /roles/:id
+{}
+
+GET /roles/:id/permissions
+{}
+
+POST /roles/:id/permissions
+{
+  "permissionIds": [number]
+}
+
+DELETE /roles/:id/permissions/:permissionId
+{}

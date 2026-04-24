@@ -6,9 +6,9 @@ import { TResponse } from '~/common/types/response';
 import { AuthGuard } from '../../common/guards/auth.guard';
 import { UserDto } from '../users/dto/user.dto';
 import { AuthService } from './auth.service';
-import { PermissionsDto } from './dto/permission/get-permission.dto';
 import { SignInDto } from './dto/sign-in.dto';
 import { SignUpDto } from './dto/sign-up.dto';
+import { PermissionsDto } from '../role-permissions/dto/permission.dto';
 
 @Controller('auth')
 export class AuthController {

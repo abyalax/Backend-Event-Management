@@ -6,13 +6,13 @@ import { CONFIG_SERVICE, ConfigService } from '~/infrastructure/config/config.pr
 import { ConfigModule } from '~/infrastructure/config/config.module';
 import { LoggerModule } from '~/common/logger/logger.module';
 import { CacheService } from '~/infrastructure/cache/cache.service';
-import { REDIS_CLIENT } from '~/infrastructure/redis/redis.constant';
 import { RedisService } from '~/infrastructure/redis/redis.service';
 import { mockRedis, mockRepository } from '~/test/common/mock';
 import { Permission } from '../auth/entity/permission.entity';
 import { User } from './entity/user.entity';
 import { UserCacheService } from './user-cache.service';
 import { UserService } from './user.service';
+import { CONFIG_PROVIDER } from '~/common/constants/provider';
 
 describe('UserService', () => {
   let service: UserService;
@@ -47,7 +47,7 @@ describe('UserService', () => {
           useValue: mockRepository,
         },
         {
-          provide: REDIS_CLIENT,
+          provide: CONFIG_PROVIDER.REDIS_CLIENT,
           useValue: mockRedis,
         },
       ],

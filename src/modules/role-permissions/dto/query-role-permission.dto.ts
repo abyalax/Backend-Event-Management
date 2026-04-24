@@ -2,4 +2,4 @@ import { Exclude } from 'class-transformer';
 import { MetaRequestDto } from '~/common/dto/meta-request.dto';
 
 @Exclude()
-export class QueryRoleDto extends MetaRequestDto {}
+export class QueryRolePermissionDto extends MetaRequestDto {}

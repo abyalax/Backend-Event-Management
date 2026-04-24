@@ -1,8 +1,8 @@
 import { Exclude, Expose, Type } from 'class-transformer';
 import { TransformRelation } from '~/common/decorators/transform-relations.decorator';
-import { PermissionsDto } from '~/modules/auth/dto/permission/get-permission.dto';
-import { RolePermission } from '~/modules/role-permissions/entity/role-permissions.entity';
+import { RolePermission } from '../entity/role-permissions.entity';
 import { UserDto } from '~/modules/users/dto/user.dto';
+import { PermissionsDto } from './permission.dto';
 
 @Exclude()
 export class RoleDto {

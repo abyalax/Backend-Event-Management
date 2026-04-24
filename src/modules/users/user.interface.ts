@@ -1,4 +1,4 @@
-import { RoleDto } from '../auth/dto/role/get-role.dto';
+import { RoleDto } from '../role-permissions/dto/role-permission.dto';
 
 export interface IUserPayload {
   id: number;

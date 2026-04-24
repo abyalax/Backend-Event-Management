@@ -16,7 +16,7 @@ import { EventCategoryModule } from './modules/event-categories/event-category.m
 import { EventModule } from './modules/events/event.module';
 import { TicketModule } from './modules/tickets/ticket.module';
 import { UserModule } from './modules/users/user.module';
-import { RoleModule } from './modules/roles/role.module';
+import { RolePermissionModule } from './modules/role-permissions/role-permission.module';
 import { StorageModule } from './infrastructure/storage/storage.module';
 import { EmailModule } from './infrastructure/email/email.module';
 
@@ -54,7 +54,7 @@ const gracefulShutdownImports =
     ...gracefulShutdownImports,
     AuthModule,
     UserModule,
-    RoleModule,
+    RolePermissionModule,
     EventModule,
     EventCategoryModule,
     TicketModule,

@@ -2,12 +2,12 @@ import { Injectable } from '@nestjs/common';
 import { PaginateQuery } from 'nestjs-paginate';
 import { plainToInstance } from 'class-transformer';
 import { CacheService } from '~/infrastructure/cache/cache.service';
-import { QueryRoleDto } from './dto/query-role.dto';
-import { RoleService } from './role.service';
+import { QueryRolePermissionDto } from './dto/query-role-permission.dto';
+import { RoleService } from './role-permission.service';
 import { Role } from './entity/role.entity';
-import { CreateRoleDto } from './dto/create-role.dto';
-import { UpdateRoleDto } from './dto/update-role.dto';
-import { RoleDto } from './dto/role.dto';
+import { CreateRoleDto } from './dto/create-role-permission.dto';
+import { UpdateRoleDto } from './dto/update-role-permission.dto';
+import { RoleDto } from './dto/role-permission.dto';
 
 @Injectable()
 export class RoleCacheService {
@@ -23,7 +23,7 @@ export class RoleCacheService {
     return `${this.KEY_PREFIX}:by-id:${id}`;
   }
 
-  private keyList(query: QueryRoleDto): string {
+  private keyList(query: QueryRolePermissionDto): string {
     const searchKey = query.search ? `:search:${query.search}` : '';
     const sortKey = query.sort_by && query.sort_order ? `:sort:${query.sort_by}:${query.sort_order}` : '';
     return `${this.KEY_PREFIX}:list:page:${query.page}:limit:${query.limit}${searchKey}${sortKey}`;
@@ -55,7 +55,7 @@ export class RoleCacheService {
     return roleDto;
   }
 
-  async getList(query: QueryRoleDto) {
+  async getList(query: QueryRolePermissionDto) {
     const sortBy: [string, string][] = query.sort_by && query.sort_order ? [[query.sort_by, query.sort_order]] : [['updatedAt', 'DESC']];
     const mappedQuery: PaginateQuery = {
       page: query.page,
@@ -100,5 +100,21 @@ export class RoleCacheService {
   async invalidateOnMutation(roleId?: number): Promise<void> {
     if (roleId) await this.invalidateById(roleId);
     await this.invalidateList();
+  }
+
+  async assignPermissions(roleId: number, permissionIds: number[]): Promise<Role> {
+    const role = await this.roleService.assignPermissions(roleId, permissionIds);
+    await this.invalidateOnMutation(roleId);
+    return role;
+  }
+
+  async removePermission(roleId: number, permissionId: number): Promise<Role> {
+    const role = await this.roleService.removePermission(roleId, permissionId);
+    await this.invalidateOnMutation(roleId);
+    return role;
+  }
+
+  async getRolePermissions(roleId: number): Promise<Role> {
+    return this.cache.getOrSet(`${this.KEY_PREFIX}:permissions:${roleId}`, () => this.roleService.getRolePermissions(roleId), this.TTL_BY_ID);
   }
 }

@@ -1,6 +1,6 @@
 import { Column, CreateDateColumn, DeleteDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 import type { Permission } from '~/modules/auth/entity/permission.entity';
-import type { Role } from '~/modules/roles/entity/role.entity';
+import type { Role } from './role.entity';
 
 @Entity('role_permissions')
 export class RolePermission {

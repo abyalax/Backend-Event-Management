@@ -6,6 +6,7 @@ import { LoggerModule } from '~/common/logger/logger.module';
 import { mockRepository } from '~/test/common/mock';
 import { EventCategory } from '../event-categories/entity/event-category.entity';
 import { Event } from './entity/event.entity';
+import { EventRepository } from './event.repository';
 import { EventService } from './event.service';
 
 describe('EventService', () => {
@@ -25,6 +26,15 @@ describe('EventService', () => {
         {
           provide: REPOSITORY.EVENT_CATEGORY,
           useValue: mockRepository,
+        },
+        {
+          provide: EventRepository,
+          useValue: {
+            createEventWithBanner: jest.fn(),
+            createEventWithoutBanner: jest.fn(),
+            updateEventWithBanner: jest.fn(),
+            updateEventWithoutBanner: jest.fn(),
+          },
         },
       ],
     }).compile();

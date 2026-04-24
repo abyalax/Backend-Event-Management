@@ -6,10 +6,10 @@ import { CacheService } from '~/infrastructure/cache/cache.service';
 import { CONFIG_SERVICE, ConfigService } from '~/infrastructure/config/config.provider';
 import { DatabaseModule } from '~/infrastructure/database/database.module';
 import { RedisService } from '~/infrastructure/redis/redis.service';
-import { RoleCacheService } from './role-cache.service';
-import { RoleController } from './role.controller';
-import { roleProvider } from './role.provider';
-import { RoleService } from './role.service';
+import { RoleCacheService } from './role-permission-cache.service';
+import { RoleController } from './role-permission.controller';
+import { roleProvider } from './role-permission.provider';
+import { RoleService } from './role-permission.service';
 
 @Module({
   imports: [
@@ -27,4 +27,4 @@ import { RoleService } from './role.service';
   controllers: [RoleController],
   exports: [RoleService, ...roleProvider],
 })
-export class RoleModule {}
+export class RolePermissionModule {}

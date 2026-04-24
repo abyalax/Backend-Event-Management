@@ -1,6 +1,6 @@
 import { Exclude, Expose, Type } from 'class-transformer';
 import { IsArray, IsOptional, IsString } from 'class-validator';
-import { RoleDto } from '~/modules/auth/dto/role/get-role.dto';
+import { RoleDto } from '~/modules/role-permissions/dto/role-permission.dto';
 
 @Exclude()
 export class UserDto {

@@ -1,6 +1,6 @@
 import { DataSource, type DataSourceOptions } from 'typeorm';
 import { Permission } from '~/modules/auth/entity/permission.entity';
-import { Role } from '~/modules/roles/entity/role.entity';
+import { Role } from '~/modules/role-permissions/entity/role.entity';
 import { RolePermission } from '~/modules/role-permissions/entity/role-permissions.entity';
 import { EventCategory } from '~/modules/event-categories/entity/event-category.entity';
 import { Event } from '~/modules/events/entity/event.entity';
