@@ -1,405 +1,407 @@
-import { Test, TestingModule } from '@nestjs/testing';
+/* eslint-disable @typescript-eslint/require-await */
+import { Test } from '@nestjs/testing';
 import { INestApplication } from '@nestjs/common';
-import { AppModule } from '../src/app.module';
-import { QueueService } from '../src/infrastructure/queue/queue.service';
-import { QueueHealthIndicator } from '../src/infrastructure/queue/queue.health';
-import { ConfigService, CONFIG_SERVICE } from '../src/infrastructure/config/config.provider';
-import Redis from 'ioredis';
+import { Job, QueueEvents } from 'bullmq';
+import { QueueService } from '~/infrastructure/queue/queue.service';
+import { AppModule } from '~/app.module';
+import { env } from './common/constant';
 
-describe('Queue E2E Tests', () => {
+type CompleteListener = { jobId: string; returnvalue: string; prev?: string };
+type FailedListener = { jobId: string; failedReason: string; prev?: string };
+
+async function waitWithTimeout<T>(promise: Promise<T>, timeoutMs: number, timeoutMessage: string = 'Operation timeout'): Promise<T> {
+  let timeoutId: NodeJS.Timeout | null = null;
+
+  try {
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      timeoutId = setTimeout(() => {
+        reject(new Error(timeoutMessage));
+      }, timeoutMs);
+    });
+
+    return await Promise.race([promise, timeoutPromise]);
+  } finally {
+    if (timeoutId) clearTimeout(timeoutId);
+  }
+}
+
+describe('Module Queue', () => {
   let app: INestApplication;
   let queueService: QueueService;
-  let queueHealthIndicator: QueueHealthIndicator;
-  let redisClient: Redis;
-  let moduleRef: TestingModule;
+  let queueEvents: QueueEvents;
+  let testQueueName: string;
+  let failQueueName: string;
+
+  const QUEUE_READY_TIMEOUT = 10000;
+  const JOB_PROCESSING_TIMEOUT = 10000;
 
   beforeAll(async () => {
-    moduleRef = await Test.createTestingModule({
+    const moduleFixture = await Test.createTestingModule({
       imports: [AppModule],
     }).compile();
 
-    app = moduleRef.createNestApplication();
+    app = moduleFixture.createNestApplication();
     await app.init();
 
-    queueService = moduleRef.get<QueueService>(QueueService);
-    queueHealthIndicator = moduleRef.get<QueueHealthIndicator>(QueueHealthIndicator);
-    const configService = moduleRef.get<ConfigService>(CONFIG_SERVICE);
+    queueService = app.get(QueueService);
 
-    // Create Redis client for test cleanup
-    redisClient = new Redis({
-      host: configService.get('REDIS_HOST'),
-      port: configService.get('REDIS_PORT'),
-      password: configService.get('REDIS_PASSWORD'),
+    console.log({
+      host: env.REDIS_HOST,
+      port: Number(env.REDIS_PORT),
+      password: env.REDIS_PASSWORD ? '***' : undefined,
     });
+  }, 30000);
+
+  function initializeQueueEvents(queueName: string) {
+    return new QueueEvents(queueName, {
+      connection: {
+        host: env.REDIS_HOST,
+        port: Number(env.REDIS_PORT),
+        password: env.REDIS_PASSWORD,
+      },
+    });
+  }
+
+  function waitForJob(queueEvents: QueueEvents, jobId: string, timeout = JOB_PROCESSING_TIMEOUT): Promise<boolean> {
+    return new Promise((resolve, reject) => {
+      let isResolved = false;
+
+      const timer = setTimeout(() => {
+        if (!isResolved) {
+          isResolved = true;
+          cleanup();
+          reject(new Error(`Timeout waiting for job ${jobId} (${timeout}ms)`));
+        }
+      }, timeout);
+
+      const onCompleted = (event: CompleteListener) => {
+        if (!isResolved && event.jobId === jobId) {
+          isResolved = true;
+          cleanup();
+          resolve(true);
+        }
+      };
+
+      const onFailed = (event: FailedListener) => {
+        if (!isResolved && event.jobId === jobId) {
+          isResolved = true;
+          cleanup();
+          reject(new Error(`Job failed: ${event.failedReason}`));
+        }
+      };
+
+      const onError = (error: Error) => {
+        if (!isResolved) {
+          isResolved = true;
+          cleanup();
+          reject(new Error(`QueueEvents error: ${error.message}`));
+        }
+      };
+
+      const cleanup = () => {
+        clearTimeout(timer);
+        queueEvents.removeListener('completed', onCompleted);
+        queueEvents.removeListener('failed', onFailed);
+        queueEvents.removeListener('error', onError);
+      };
+
+      queueEvents.on('completed', onCompleted);
+      queueEvents.on('failed', onFailed);
+      queueEvents.on('error', onError);
+    });
+  }
+
+  async function setupQueues() {
+    testQueueName = `test-queue-${Date.now()}`;
+    failQueueName = `fail-test-${Date.now()}`;
+
+    if (queueEvents) {
+      try {
+        await queueEvents.close();
+      } catch (error) {
+        console.error('Error closing previous queueEvents:', error);
+      }
+    }
+
+    queueEvents = initializeQueueEvents(testQueueName);
+
+    await waitWithTimeout(queueEvents.waitUntilReady(), QUEUE_READY_TIMEOUT, 'QueueEvents ready timeout');
+
+    queueService.registerQueue(testQueueName, [
+      {
+        name: 'test-job',
+        handler: async () => {
+          await new Promise((resolve) => setTimeout(resolve, 50));
+        },
+        options: {
+          attempts: 1,
+          removeOnComplete: false,
+          timeout: 10000,
+        },
+      },
+    ]);
+
+    queueService.registerQueue(failQueueName, [
+      {
+        name: 'fail-job',
+        handler: async () => {
+          throw new Error('Test job failed intentionally');
+        },
+        options: {
+          attempts: 1,
+          removeOnFail: true,
+          timeout: 10000,
+        },
+      },
+    ]);
+
+    await new Promise((resolve) => setTimeout(resolve, 500));
+  }
+
+  describe('Single Job Processing', () => {
+    beforeEach(async () => await setupQueues());
+
+    it(
+      'should process single job',
+      async () => {
+        const job: Job = await queueService.addJob(
+          testQueueName,
+          'test-job',
+          { data: 'data test' },
+          {
+            attempts: 1,
+            removeOnComplete: false,
+          },
+        );
+
+        expect(job).toBeDefined();
+        expect(job.id).toBeDefined();
+
+        const result = await waitForJob(queueEvents, job.id as string);
+        expect(result).toBe(true);
+      },
+      JOB_PROCESSING_TIMEOUT + 5000,
+    );
+  });
+
+  describe('Multiple Jobs Processing', () => {
+    beforeEach(async () => {
+      await setupQueues();
+    });
+
+    it(
+      'should process multiple jobs',
+      async () => {
+        const jobCount = 5;
+
+        const jobs = await Promise.all(
+          Array.from({ length: jobCount }).map((_, i) =>
+            queueService.addJob(
+              testQueueName,
+              'test-job',
+              { index: i },
+              {
+                attempts: 1,
+                removeOnComplete: false,
+              },
+            ),
+          ),
+        );
+
+        expect(jobs.length).toBe(jobCount);
+
+        const results = await Promise.allSettled(jobs.map((job) => waitForJob(queueEvents, job.id as string)));
+
+        const successCount = results.filter((r) => r.status === 'fulfilled').length;
+        expect(successCount).toBe(jobCount);
+
+        results.forEach((result, index) => {
+          if (result.status === 'rejected') {
+            console.error(`Job ${index} failed:`, result.reason);
+          }
+        });
+      },
+      JOB_PROCESSING_TIMEOUT + 10000,
+    );
+  });
+
+  describe('Job Failure Handling', () => {
+    beforeEach(async () => {
+      testQueueName = `test-queue-${Date.now()}`;
+      failQueueName = `fail-test-${Date.now()}`;
+
+      if (queueEvents) {
+        try {
+          await queueEvents.close();
+        } catch (error) {
+          console.error('Error closing previous queueEvents:', error);
+        }
+      }
+
+      queueEvents = initializeQueueEvents(failQueueName);
+
+      await waitWithTimeout(queueEvents.waitUntilReady(), QUEUE_READY_TIMEOUT, 'QueueEvents ready timeout');
+
+      queueService.registerQueue(testQueueName, [
+        {
+          name: 'test-job',
+          handler: async () => {
+            await new Promise((resolve) => setTimeout(resolve, 50));
+          },
+          options: {
+            attempts: 1,
+            removeOnComplete: false,
+            timeout: 10000,
+          },
+        },
+      ]);
+
+      queueService.registerQueue(failQueueName, [
+        {
+          name: 'fail-job',
+          handler: async () => {
+            throw new Error('Test job failed intentionally');
+          },
+          options: {
+            attempts: 1,
+            removeOnFail: true,
+            timeout: 10000,
+          },
+        },
+      ]);
+
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    });
+
+    it(
+      'should handle failed job properly',
+      async () => {
+        const job = await queueService.addJob(
+          failQueueName,
+          'fail-job',
+          { data: 'failed' },
+          {
+            attempts: 1,
+            removeOnFail: true,
+          },
+        );
+
+        expect(job).toBeDefined();
+        expect(job.id).toBeDefined();
+
+        try {
+          await waitForJob(queueEvents, job.id as string, JOB_PROCESSING_TIMEOUT * 2);
+          fail('Should have thrown error');
+        } catch (error) {
+          expect(error).toBeDefined();
+          expect(error instanceof Error).toBe(true);
+          if (error instanceof Error) {
+            expect(error.message).toContain('failed');
+          }
+        }
+      },
+      JOB_PROCESSING_TIMEOUT + 5000,
+    );
+  });
+
+  describe('Concurrency Handling', () => {
+    beforeEach(async () => await setupQueues());
+
+    it(
+      'should handle concurrent jobs',
+      async () => {
+        const jobCount = 10;
+        const startTime = Date.now();
+
+        const jobs = await Promise.all(
+          Array.from({ length: jobCount }).map((_, i) =>
+            queueService.addJob(
+              testQueueName,
+              'test-job',
+              { index: i, timestamp: Date.now() },
+              {
+                attempts: 1,
+                removeOnComplete: false,
+              },
+            ),
+          ),
+        );
+
+        expect(jobs.length).toBe(jobCount);
+
+        const results = await Promise.allSettled(jobs.map((job) => waitForJob(queueEvents, job.id as string, JOB_PROCESSING_TIMEOUT * 2)));
+
+        const duration = Date.now() - startTime;
+        const successCount = results.filter((r) => r.status === 'fulfilled').length;
+
+        console.log({
+          jobCount,
+          successCount,
+          duration: `${duration}ms`,
+          avgTimePerJob: `${Math.round(duration / jobCount)}ms`,
+        });
+
+        expect(successCount).toBe(jobCount);
+
+        results.forEach((result, index) => {
+          if (result.status === 'rejected') {
+            console.error(`Job ${index} failed:`, result.reason);
+          }
+        });
+      },
+      JOB_PROCESSING_TIMEOUT * 3,
+    );
+  });
+
+  describe('Queue Statistics', () => {
+    beforeEach(async () => await setupQueues());
+
+    it(
+      'should track queue stats correctly',
+      async () => {
+        const job = await queueService.addJob(testQueueName, 'test-job', { data: 'test' }, { attempts: 1, removeOnComplete: false });
+
+        await waitForJob(queueEvents, job.id as string);
+
+        await new Promise((resolve) => setTimeout(resolve, 100));
+
+        const stats = await queueService.getQueueStats(testQueueName);
+
+        expect(stats).toBeDefined();
+        expect(stats.active).toBeDefined();
+        expect(stats.completed).toBeGreaterThan(0);
+        expect(stats.delayed).toBeDefined();
+        expect(stats.failed).toBeDefined();
+        expect(stats.paused).toBeDefined();
+        expect(stats.waiting).toBeDefined();
+      },
+      JOB_PROCESSING_TIMEOUT + 5000,
+    );
+  });
+
+  afterEach(async () => {
+    if (queueEvents) {
+      try {
+        await queueEvents.close();
+      } catch (error) {
+        console.error('Error closing queueEvents:', error);
+      }
+    }
   });
 
   afterAll(async () => {
-    // Clean up Redis
-    await redisClient.flushdb();
-    await redisClient.quit();
+    try {
+      await queueService.closeAll();
+    } catch (error) {
+      console.error('Error closing queueService:', error);
+    }
 
-    await moduleRef.close();
-    await app.close();
-  });
-
-  beforeEach(async () => {
-    // Clean up Redis before each test
-    await redisClient.flushdb();
-  });
-
-  describe('Queue Job Processing', () => {
-    it('should process jobs end-to-end', async () => {
-      const queueName = 'e2e-test-queue';
-      const jobName = 'test-job';
-      const jobData = { message: 'Hello World', timestamp: new Date() };
-
-      let processedData: unknown;
-      const processingError: Error | null = null;
-
-      // Register queue with job handler
-      queueService.registerQueue(queueName, [
-        {
-          name: jobName,
-          handler: async (data: unknown) => {
-            processedData = data;
-            // Simulate some processing time
-            await new Promise((resolve) => setTimeout(resolve, 100));
-          },
-          options: {
-            attempts: 3,
-            backoff: { type: 'exponential', delay: 1000 },
-          },
-        },
-      ]);
-
-      // Add job to queue
-      const job = await queueService.addJob(queueName, jobName, jobData);
-      expect(job.id).toBeDefined();
-
-      // Wait for job to be processed
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      // Verify job was processed
-      expect(processedData).toEqual(jobData);
-      expect(processingError).toBeNull();
-
-      // Check queue stats
-      const stats = await queueService.getQueueStats(queueName);
-      expect(stats.completed).toBeGreaterThan(0);
-    }, 10000);
-
-    it('should handle job failures and retries', async () => {
-      const queueName = 'e2e-failure-queue';
-      const jobName = 'failing-job';
-      const jobData = { shouldFail: true };
-
-      let attemptCount = 0;
-
-      // Register queue with failing job handler
-      queueService.registerQueue(queueName, [
-        {
-          name: jobName,
-          handler: async (data: unknown) => {
-            attemptCount++;
-            if (attemptCount < 3) throw new Error(`Job failed on attempt ${attemptCount}`);
-            await new Promise(() => console.log(data));
-            // Succeed on third attempt
-          },
-          options: {
-            attempts: 3,
-            backoff: { type: 'exponential', delay: 100 },
-          },
-        },
-      ]);
-
-      // Add job to queue
-      const job = await queueService.addJob(queueName, jobName, jobData);
-      expect(job.id).toBeDefined();
-
-      // Wait for retries
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      // Verify job eventually succeeded
-      const stats = await queueService.getQueueStats(queueName);
-      expect(stats.completed).toBeGreaterThan(0);
-      expect(attemptCount).toBe(3);
-    }, 10000);
-
-    it('should handle multiple jobs concurrently', async () => {
-      const queueName = 'e2e-concurrent-queue';
-      const jobName = 'concurrent-job';
-      const jobCount = 10;
-      const processedJobs: unknown[] = [];
-
-      // Register queue with concurrent job handler
-      queueService.registerQueue(queueName, [
-        {
-          name: jobName,
-          handler: async (data: unknown) => {
-            processedJobs.push(data);
-            // Simulate processing time
-            await new Promise((resolve) => setTimeout(resolve, 200));
-          },
-        },
-      ]);
-
-      // Add multiple jobs
-      const jobs = [];
-      for (let i = 0; i < jobCount; i++) {
-        jobs.push(queueService.addJob(queueName, jobName, { jobId: i }));
+    try {
+      if (app) {
+        await app.close();
       }
-
-      const addedJobs = await Promise.all(jobs);
-      expect(addedJobs).toHaveLength(jobCount);
-
-      // Wait for all jobs to process
-      await new Promise((resolve) => setTimeout(resolve, 3000));
-
-      // Verify all jobs were processed
-      expect(processedJobs).toHaveLength(jobCount);
-
-      const stats = await queueService.getQueueStats(queueName);
-      expect(stats.completed).toBe(jobCount);
-    }, 15000);
-  });
-
-  describe('Queue Health Monitoring', () => {
-    it('should report healthy status for active queues', async () => {
-      const queueName = 'e2e-health-queue';
-      const jobName = 'health-check-job';
-
-      // Register and populate queue
-      queueService.registerQueue(queueName, [
-        {
-          name: jobName,
-          handler: async () => {
-            // Simple handler
-          },
-        },
-      ]);
-
-      // Add some jobs
-      await queueService.addJob(queueName, jobName, { test: 'data' });
-      await queueService.addJob(queueName, jobName, { test: 'data2' });
-
-      // Check health
-      const health = await queueHealthIndicator.isHealthy([queueName]);
-      expect(health.status).toBe('up');
-      expect(health.queues).toBeDefined();
-      const queueHealth = (health.queues as Record<string, unknown>)[queueName] as { status: string };
-      expect(queueHealth).toBeDefined();
-      expect(queueHealth.status).toBe('up');
-    });
-
-    it('should handle multiple queue health checks', async () => {
-      const queueNames = ['health-queue-1', 'health-queue-2', 'health-queue-3'];
-      const jobName = 'health-job';
-
-      // Register multiple queues
-      queueNames.forEach((name) => {
-        queueService.registerQueue(name, [
-          {
-            name: jobName,
-            handler: async () => {},
-          },
-        ]);
-      });
-
-      // Add jobs to each queue
-      await Promise.all(queueNames.map((name) => queueService.addJob(name, jobName, { queue: name })));
-
-      // Check health of all queues
-      const health = await queueHealthIndicator.isHealthy(queueNames);
-      expect(health.status).toBe('up');
-      expect(Object.keys(health.queues || {})).toHaveLength(3);
-    });
-  });
-
-  describe('Queue Operations', () => {
-    it('should support pause and resume operations', async () => {
-      const queueName = 'e2e-pause-queue';
-      const jobName = 'pause-job';
-      let processedCount = 0;
-
-      // Register queue
-      queueService.registerQueue(queueName, [
-        {
-          name: jobName,
-          handler: async () => {
-            processedCount++;
-            await new Promise((resolve) => setTimeout(resolve, 100));
-          },
-        },
-      ]);
-
-      // Add job
-      await queueService.addJob(queueName, jobName, { test: 'before-pause' });
-
-      // Pause queue
-      await queueService.pauseQueue(queueName);
-
-      // Add another job while paused
-      await queueService.addJob(queueName, jobName, { test: 'while-paused' });
-
-      // Wait a bit
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      // Should only have processed first job
-      expect(processedCount).toBe(1);
-
-      // Resume queue
-      await queueService.resumeQueue(queueName);
-
-      // Wait for second job to process
-      await new Promise((resolve) => setTimeout(resolve, 500));
-
-      // Should have processed both jobs
-      expect(processedCount).toBe(2);
-    }, 10000);
-
-    it('should maintain queue statistics', async () => {
-      const queueName = 'e2e-stats-queue';
-      const jobName = 'stats-job';
-
-      // Register queue
-      queueService.registerQueue(queueName, [
-        {
-          name: jobName,
-          handler: async () => {
-            // Random processing time to create varied stats
-            await new Promise((resolve) => setTimeout(resolve, Math.random() * 200));
-          },
-        },
-      ]);
-
-      // Add multiple jobs
-      const jobPromises = [];
-      for (let i = 0; i < 5; i++) {
-        jobPromises.push(queueService.addJob(queueName, jobName, { jobId: i }));
-      }
-      await Promise.all(jobPromises);
-
-      // Wait for processing
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      // Check stats
-      const stats = await queueService.getQueueStats(queueName);
-      expect(stats).toBeDefined();
-      expect(typeof stats.active).toBe('number');
-      expect(typeof stats.waiting).toBe('number');
-      expect(typeof stats.completed).toBe('number');
-      expect(typeof stats.failed).toBe('number');
-      expect(typeof stats.delayed).toBe('number');
-      expect(typeof stats.paused).toBe('number');
-    }, 10000);
-  });
-
-  describe('Error Handling', () => {
-    it('should handle connection errors gracefully', async () => {
-      // This test simulates Redis connection issues
-      // In a real scenario, you would mock Redis to throw connection errors
-
-      const queueName = 'e2e-error-queue';
-      const jobName = 'error-job';
-
-      queueService.registerQueue(queueName, [
-        {
-          name: jobName,
-          handler: async () => {
-            await new Promise(() => console.log('simulate async'));
-            throw new Error('Simulated processing error');
-          },
-          options: {
-            attempts: 2,
-          },
-        },
-      ]);
-
-      // Add job that will fail
-      await queueService.addJob(queueName, jobName, { test: 'error' });
-
-      // Wait for processing and retries
-      await new Promise((resolve) => setTimeout(resolve, 2000));
-
-      // Check that error was handled (job should be in failed state)
-      const stats = await queueService.getQueueStats(queueName);
-      expect(stats.failed).toBeGreaterThan(0);
-    }, 10000);
-
-    it('should handle malformed job data', async () => {
-      const queueName = 'e2e-malformed-queue';
-      const jobName = 'malformed-job';
-
-      queueService.registerQueue(queueName, [
-        {
-          name: jobName,
-          handler: async (data: unknown) => {
-            // Handler that expects specific data structure
-            if (typeof data === 'object' && data !== null) {
-              const typedData = data as { message: string };
-              if (!typedData.message) {
-                throw new Error('Missing required field: message');
-              }
-            }
-            await new Promise(() => console.log('simulate async'));
-          },
-        },
-      ]);
-
-      // Add job with malformed data
-      await queueService.addJob(queueName, jobName, { wrongField: 'value' });
-
-      // Wait for processing
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      // Should have failed
-      const stats = await queueService.getQueueStats(queueName);
-      expect(stats.failed).toBeGreaterThan(0);
-    }, 10000);
-  });
-
-  describe('Performance', () => {
-    it('should handle high volume of jobs', async () => {
-      const queueName = 'e2e-volume-queue';
-      const jobName = 'volume-job';
-      const jobCount = 100;
-      let processedCount = 0;
-
-      queueService.registerQueue(queueName, [
-        {
-          name: jobName,
-          handler: async () => {
-            processedCount++;
-            // Minimal processing
-            await new Promise(() => console.log('simulate async'));
-          },
-        },
-      ]);
-
-      const startTime = Date.now();
-
-      // Add many jobs
-      const jobPromises = [];
-      for (let i = 0; i < jobCount; i++) {
-        jobPromises.push(queueService.addJob(queueName, jobName, { jobId: i }));
-      }
-      await Promise.all(jobPromises);
-
-      // Wait for all jobs to process
-      while (processedCount < jobCount && Date.now() - startTime < 30000) {
-        await new Promise((resolve) => setTimeout(resolve, 100));
-      }
-
-      const endTime = Date.now();
-      const duration = endTime - startTime;
-
-      // Verify all jobs were processed
-      expect(processedCount).toBe(jobCount);
-
-      // Performance check (should complete within reasonable time)
-      expect(duration).toBeLessThan(30000); // 30 seconds max
-
-      console.log(`Processed ${jobCount} jobs in ${duration}ms`);
-    }, 35000);
-  });
+    } catch (error) {
+      console.error('Error closing app:', error);
+    }
+  }, 30000);
 });

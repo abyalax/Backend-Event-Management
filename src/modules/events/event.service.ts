@@ -10,7 +10,6 @@ import { EventRepository } from './event.repository';
 import { EVENT_PAGINATION_CONFIG } from './event-pagination.config';
 import { QueueService } from '~/infrastructure/queue/queue.service';
 import { PinoLogger } from 'nestjs-pino';
-import { UserService } from '../users/user.service';
 
 @Injectable()
 export class EventService {
@@ -23,34 +22,27 @@ export class EventService {
     private readonly eventRepositoryCustom: EventRepository,
     private readonly queueService: QueueService,
     private readonly logger: PinoLogger,
-    private readonly userService: UserService,
   ) {}
 
   async list(query: PaginateQuery) {
     return paginate(query, this.eventRepository, EVENT_PAGINATION_CONFIG);
   }
 
-  async create(payloadEvent: CreateEventDto): Promise<Event> {
+  async create(payloadEvent: CreateEventDto, userEmail: string): Promise<Event> {
     const event = await this.eventRepositoryCustom.create(payloadEvent);
 
     try {
-      // Get user information for email notification
-      const user = await this.userService.findOne({ where: { id: payloadEvent.createdBy } });
-
-      if (user?.email) {
+      if (userEmail) {
         // Queue email notification job
         await this.queueService.addJob('event-notifications', 'send-event-creation-email', {
           eventId: event.id,
-          userEmail: user.email,
+          userEmail: userEmail,
           eventTitle: event.title,
         });
 
-        this.logger.info({ eventId: event.id, userEmail: user.email, eventTitle: event.title }, 'Event creation email notification queued');
+        this.logger.info({ eventId: event.id, userEmail: userEmail, eventTitle: event.title }, 'Event creation email notification queued');
       } else {
-        this.logger.warn(
-          { eventId: event.id, createdBy: payloadEvent.createdBy },
-          'User not found or email not available for event creation notification',
-        );
+        this.logger.warn({ eventId: event.id, createdBy: payloadEvent.createdBy }, 'User email not available for event creation notification');
       }
     } catch (error) {
       // Log error but don't fail the event creation

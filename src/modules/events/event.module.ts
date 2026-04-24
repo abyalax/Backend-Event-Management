@@ -11,9 +11,25 @@ import { EventRepository } from './event.repository';
 import { QueueService } from '~/infrastructure/queue/queue.service';
 import { EmailService } from '~/infrastructure/email/email.service';
 import { PinoLogger } from 'nestjs-pino';
+import { JwtModule } from '@nestjs/jwt';
+import { CONFIG_SERVICE, ConfigService } from '~/infrastructure/config/config.provider';
 
 @Module({
-  imports: [DatabaseModule, AuthModule, UserModule, QueueModule, EmailModule],
+  imports: [
+    DatabaseModule,
+    AuthModule,
+    UserModule,
+    QueueModule,
+    EmailModule,
+    JwtModule.registerAsync({
+      inject: [CONFIG_SERVICE],
+      useFactory: (configService: ConfigService) => ({
+        secret: configService.get('JWT_SECRET'),
+        privateKey: configService.get('JWT_PRIVATE_KEY'),
+        publicKey: configService.get('JWT_PUBLIC_KEY'),
+      }),
+    }),
+  ],
   providers: [...eventProvider, EventService, EventRepository],
   controllers: [EventController],
 })

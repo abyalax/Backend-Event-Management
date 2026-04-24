@@ -1,4 +1,5 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query, BadRequestException } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query, BadRequestException, UseGuards, Req } from '@nestjs/common';
+import '~/common/types/global';
 import { Paginated } from '~/common/types/meta';
 import { TResponse } from '~/common/types/response';
 import { CreateEventDto } from './dto/create-event.dto';
@@ -10,7 +11,13 @@ import { EventService } from './event.service';
 import { EventRepository } from './event.repository';
 import { ParseUUIDPipe } from '~/common/pipes/parse-uuid.pipe';
 import { AttachMediaRequest } from './event.interface';
+import { JwtGuard } from '~/common/guards/jwt.guard';
+import { PermissionsGuard } from '~/common/guards/permission.guard';
+import { Permissions } from '~/common/decorators/permissions.decorator';
+import { PERMISSIONS } from '~/common/constants/permissions';
+import { Request } from 'express';
 
+@UseGuards(JwtGuard, PermissionsGuard)
 @Controller('events')
 export class EventController {
   constructor(
@@ -18,6 +25,7 @@ export class EventController {
     private readonly eventRepository: EventRepository,
   ) {}
 
+  @Permissions(PERMISSIONS.EVENT.READ)
   @HttpCode(HttpStatus.OK)
   @Get()
   async list(@Query() query: QueryEventDto): Promise<TResponse<Paginated<Event>>> {
@@ -35,16 +43,18 @@ export class EventController {
     };
   }
 
+  @Permissions(PERMISSIONS.EVENT.CREATE)
   @HttpCode(HttpStatus.CREATED)
   @Post('')
-  async create(@Body() payload: CreateEventDto): Promise<TResponse<Event>> {
-    const created = await this.eventService.create(payload);
+  async create(@Body() payload: CreateEventDto, @Req() req: Request): Promise<TResponse<Event>> {
+    const created = await this.eventService.create(payload, req.user.email);
     return {
       message: 'create data event successfully',
       data: created,
     };
   }
 
+  @Permissions(PERMISSIONS.EVENT.READ)
   @HttpCode(HttpStatus.OK)
   @Get(':id')
   async findOneByID(@Param('id', ParseUUIDPipe) id: string): Promise<TResponse<Event>> {
@@ -55,6 +65,7 @@ export class EventController {
     };
   }
 
+  @Permissions(PERMISSIONS.EVENT.UPDATE)
   @HttpCode(HttpStatus.NO_CONTENT)
   @Patch(':id')
   async update(@Param('id', ParseUUIDPipe) id: string, @Body() payload: UpdateEventDto): Promise<TResponse<boolean>> {
@@ -65,6 +76,7 @@ export class EventController {
     };
   }
 
+  @Permissions(PERMISSIONS.EVENT.DELETE)
   @HttpCode(HttpStatus.NO_CONTENT)
   @Delete(':id')
   async remove(@Param('id', ParseUUIDPipe) id: string): Promise<TResponse<boolean>> {
@@ -75,13 +87,13 @@ export class EventController {
     };
   }
 
+  @Permissions(PERMISSIONS.EVENT.CREATE)
   @Post(':id/media')
   @HttpCode(HttpStatus.CREATED)
   async attachMedia(@Param('id', ParseUUIDPipe) id: string, @Body() request: AttachMediaRequest): Promise<TResponse<EventMedia>> {
     const { mediaId, type } = request;
 
     if (!mediaId || !type) throw new BadRequestException('mediaId and type are required');
-
     const eventMedia = await this.eventRepository.attachMedia(id, mediaId, type);
 
     return {

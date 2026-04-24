@@ -6,6 +6,6 @@ export interface UserPayload extends Omit<User, 'roles' | 'password'> {
 
 declare module 'express' {
   interface Request {
-    user?: UserPayload;
+    user: UserPayload;
   }
 }

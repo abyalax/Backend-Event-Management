@@ -149,14 +149,10 @@ export class QueueService implements OnModuleDestroy {
   }
 
   async addJob<T = unknown>(queueName: string, jobName: string, data: T, opts?: JobsOptions) {
-    if (this.isShuttingDown) {
-      throw new Error('Cannot add job during shutdown');
-    }
+    if (this.isShuttingDown) throw new Error('Cannot add job during shutdown');
 
     const queue = this.queues.get(queueName);
-    if (!queue) {
-      throw new Error(`Queue ${queueName} not found`);
-    }
+    if (!queue) throw new Error(`Queue ${queueName} not found`);
 
     try {
       const job = await queue.add(jobName, data, opts);
@@ -171,9 +167,7 @@ export class QueueService implements OnModuleDestroy {
 
   async getQueueStats(queueName: string) {
     const queue = this.queues.get(queueName);
-    if (!queue) {
-      throw new Error(`Queue ${queueName} not found`);
-    }
+    if (!queue) throw new Error(`Queue ${queueName} not found`);
 
     try {
       const [active, waiting, completed, failed, delayed] = await Promise.all([
