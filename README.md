@@ -123,6 +123,26 @@ pnpm orm
 
 ### Migration Management
 
+**Before running migrations, make sure to create the database first:**
+
+1. Start the PostgreSQL service using Docker:
+
+```bash
+docker-compose up -d postgres
+```
+
+2. Access the PostgreSQL container and create the database:
+
+```bash
+docker exec -it background_service_postgres psql -U root -d db_background_service -c "CREATE DATABASE db_event_management;"
+```
+
+3. Verify the database was created:
+
+```bash
+docker exec -it background_service_postgres psql -U root -d db_background_service -c "SELECT datname FROM pg_database WHERE datname = 'db_event_management';"
+```
+
 Generate migration from entity changes:
 
 ```bash
