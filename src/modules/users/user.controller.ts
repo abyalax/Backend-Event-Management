@@ -24,30 +24,9 @@ export class UserController {
   async list(@Query() query: QueryUserDto): Promise<TResponse<Paginated<UserDto>>> {
     const paginatedUsers = await this.userCacheService.getList(query);
 
-    const users = plainToInstance(UserDto, paginatedUsers.data, {
-      excludeExtraneousValues: true,
-    });
-
-    // Manually set permissions for each user's roles
-    users.forEach((user) => {
-      const originalUser = paginatedUsers.data.find((u) => u.id === user.id);
-      if (originalUser?.roles) {
-        user.roles.forEach((role) => {
-          const originalRole = originalUser.roles.find((r) => r.id === role.id);
-          if (originalRole?.rolePermissions) {
-            role.permissions = originalRole.rolePermissions.map((rp) => rp.permission);
-          }
-        });
-      }
-    });
-
     return {
       message: 'get data user successfully',
-      data: {
-        meta: paginatedUsers.meta,
-        links: paginatedUsers.links,
-        data: users,
-      },
+      data: paginatedUsers,
     };
   }
 
@@ -111,6 +90,57 @@ export class UserController {
     return {
       message: 'user deleted successfully',
       data: removed.affected ? removed.affected > 0 : false,
+    };
+  }
+
+  @Permissions(PERMISSIONS.USER.UPDATE)
+  @Post(':id/roles')
+  async assignRoles(@Param('id', ParseUUIDPipe) id: string, @Body() body: { roleIds: number[] }) {
+    const user = await this.userCacheService.assignRoles(id, body.roleIds);
+
+    return {
+      message: 'roles assigned successfully',
+      data: plainToInstance(UserDto, user, {
+        excludeExtraneousValues: true,
+      }),
+    };
+  }
+
+  @Permissions(PERMISSIONS.USER.UPDATE)
+  @Delete(':id/roles/:roleId')
+  async removeRole(@Param('id', ParseUUIDPipe) id: string, @Param('roleId') roleId: number): Promise<TResponse<UserDto>> {
+    const user = await this.userCacheService.removeRole(id, roleId);
+
+    return {
+      message: 'role removed successfully',
+      data: plainToInstance(UserDto, user, {
+        excludeExtraneousValues: true,
+      }),
+    };
+  }
+
+  @Permissions(PERMISSIONS.USER.READ)
+  @Get(':id/roles')
+  async getUserRoles(@Param('id', ParseUUIDPipe) id: string): Promise<TResponse<UserDto>> {
+    const user = await this.userCacheService.getUserRoles(id);
+
+    const userDto = plainToInstance(UserDto, user, {
+      excludeExtraneousValues: true,
+    });
+
+    // Manually set permissions for the user's roles
+    if (user?.roles) {
+      userDto.roles.forEach((role) => {
+        const originalRole = user.roles.find((r) => r.id === role.id);
+        if (originalRole?.rolePermissions) {
+          role.permissions = originalRole.rolePermissions.map((rp) => rp.permission);
+        }
+      });
+    }
+
+    return {
+      message: 'user roles retrieved successfully',
+      data: userDto,
     };
   }
 }

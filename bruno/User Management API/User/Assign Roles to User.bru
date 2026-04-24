@@ -1,19 +1,18 @@
 meta {
-  name: Create Role
+  name: Assign Roles to User
   type: http
-  seq: 2
+  seq: 7
 }
 
 post {
-  url: {{base_url}}/roles
+  url: {{base_url}}/users/1d20b980-004c-4834-a733-3daf60de6fdb/roles
   body: json
   auth: inherit
 }
 
 body:json {
   {
-    "name": "Event Creator",
-    "permissionIds": [11]
+    "roleIds": [39]
   }
 }
 

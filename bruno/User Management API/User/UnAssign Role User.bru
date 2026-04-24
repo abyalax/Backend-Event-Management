@@ -1,0 +1,16 @@
+meta {
+  name: UnAssign Role User
+  type: http
+  seq: 8
+}
+
+delete {
+  url: {{base_url}}/users/1d20b980-004c-4834-a733-3daf60de6fdb/roles/39
+  body: json
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

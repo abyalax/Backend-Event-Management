@@ -247,6 +247,37 @@ describe('Module Role Permissions', () => {
       expect(res.body.data.name).toBe(updatePayload.name);
     });
 
+    test('PATCH /roles/:id (Update Role with Permissions)', async () => {
+      const updatePayload = {
+        name: 'Test Role with Permissions Updated',
+        permissionIds: [1, 3, 5], // Update permissions
+      };
+
+      const res = await request(app.getHttpServer())
+        .patch(`/roles/${createdRoleId}`)
+        .set('Cookie', [`access_token=s:${access_token}`])
+        .send(updatePayload);
+
+      expect(res.status).toBe(200);
+      expect(res.body.message).toBe('role updated successfully');
+      expect(res.body.data.name).toBe(updatePayload.name);
+      expect(res.body.data).toHaveProperty('permissions');
+      expect(Array.isArray(res.body.data.permissions)).toBe(true);
+      expect(res.body.data.permissions.length).toBe(updatePayload.permissionIds.length);
+
+      // Verify the assigned permissions are correct
+      const assignedPermissions = res.body.data.permissions;
+      assignedPermissions.forEach((permission: any) => {
+        expect(updatePayload.permissionIds).toContain(permission.id);
+        expect(permission).toHaveProperty('id');
+        expect(permission).toHaveProperty('key');
+        expect(permission).toHaveProperty('name');
+        expect(typeof permission.id).toBe('number');
+        expect(typeof permission.key).toBe('string');
+        expect(typeof permission.name).toBe('string');
+      });
+    });
+
     test('DELETE /roles/:id/permissions/:permissionId (Remove Permission from Role)', async () => {
       expect(createdRoleId).toBeDefined();
 

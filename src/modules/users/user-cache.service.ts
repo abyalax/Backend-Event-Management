@@ -47,6 +47,7 @@ export class UserCacheService {
       sortBy,
       path: '',
     };
+
     return this.cache.getOrSet(
       this.keyList(mappedQuery),
       () => this.userService.list(mappedQuery),
@@ -83,5 +84,24 @@ export class UserCacheService {
   async invalidateOnMutation(userId?: string): Promise<void> {
     if (userId) await this.invalidateById(userId);
     await this.invalidateList();
+  }
+
+  async assignRoles(userId: string, roleIds: number[]): Promise<User> {
+    const user = await this.userService.assignRoles(userId, roleIds);
+    // Invalidate all user-related caches
+    await this.invalidateById(userId);
+    await this.invalidateList();
+    await this.cache.clearByPattern(`${this.KEY_PREFIX}:roles:${userId}`);
+    return user;
+  }
+
+  async removeRole(userId: string, roleId: number): Promise<User> {
+    const user = await this.userService.removeRole(userId, roleId);
+    await this.invalidateOnMutation(userId);
+    return user;
+  }
+
+  async getUserRoles(userId: string): Promise<User> {
+    return this.cache.getOrSet(`${this.KEY_PREFIX}:roles:${userId}`, () => this.userService.getUserRoles(userId), this.TTL_BY_ID);
   }
 }

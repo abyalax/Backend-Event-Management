@@ -72,20 +72,46 @@ export class RoleService {
   }
 
   async update(id: number, updateRoleDto: UpdateRoleDto) {
-    const role = await this.roleRepository.preload({
-      id: id,
-      ...updateRoleDto,
-    });
-    if (!role) throw new NotFoundException(`Role with ID ${id} not found`);
+    return await this.roleRepository.manager.transaction(async (manager) => {
+      const role = await manager.findOne(Role, {
+        where: { id },
+        relations: ['rolePermissions'],
+      });
 
-    const savedRole = await this.roleRepository.save(role);
-    const roleWithPermissions = await this.findOne({
-      where: { id: savedRole.id },
-      relations: ['rolePermissions', 'rolePermissions.permission'],
-    });
+      if (!role) throw new NotFoundException(`Role with ID ${id} not found`);
 
-    if (!roleWithPermissions) throw new NotFoundException(`Role with ID ${savedRole.id} not found after update`);
-    return roleWithPermissions;
+      // Update role name if provided
+      if (updateRoleDto.name) {
+        role.name = updateRoleDto.name;
+        await manager.save(role);
+      }
+
+      // Update permissions if permissionIds provided
+      if (updateRoleDto.permissionIds) {
+        // Remove existing role permissions
+        await manager.delete(RolePermission, { idRole: id });
+        // Add new role permissions
+        if (updateRoleDto.permissionIds.length > 0) {
+          const rolePermissions = updateRoleDto.permissionIds.map((permissionId) =>
+            manager.create(RolePermission, {
+              idRole: id,
+              idPermission: permissionId,
+            }),
+          );
+          await manager.save(rolePermissions);
+        }
+      }
+
+      // Return updated role with permissions
+      const updatedRole = await manager.findOne(Role, {
+        where: { id },
+        relations: ['rolePermissions', 'rolePermissions.permission'],
+      });
+
+      if (!updatedRole) throw new NotFoundException(`Role with ID ${id} not found after update`);
+
+      return updatedRole;
+    });
   }
 
   async remove(id: number): Promise<boolean> {

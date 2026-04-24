@@ -5,7 +5,7 @@ meta {
 }
 
 patch {
-  url: {{base_url}}/roles/5
+  url: {{base_url}}/roles/39
   body: json
   auth: none
 }
@@ -16,9 +16,8 @@ headers {
 
 body:json {
   {
-    "name": "Lynne Veumy",
-    "email": "lynne.veumy@hotmail.com",
-    "password": "securePassword"
+    "name": "Event Publisher",
+    "permissionIds": [15, 16]
   }
 }
 

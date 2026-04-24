@@ -1,0 +1,16 @@
+meta {
+  name: Get Roles User By ID
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{base_url}}/users/550e8400-e29b-41d4-a716-446655440000/roles
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
