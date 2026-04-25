@@ -2,6 +2,7 @@ import { Injectable, Inject } from '@nestjs/common';
 import { DataSource, Repository } from 'typeorm';
 import { MediaObject } from '../entitiy/media-objects.entity';
 import { CONFIG_PROVIDER } from '~/common/constants/provider';
+import { EAccessType } from '../dto/presigned-url.dto';
 
 @Injectable()
 export class MediaRepository {
@@ -24,5 +25,10 @@ export class MediaRepository {
   async remove(media: MediaObject): Promise<MediaObject> {
     const repository = this.getRepository();
     return repository.remove(media);
+  }
+
+  async findByAccessType(accessType: EAccessType): Promise<MediaObject[]> {
+    const repository = this.getRepository();
+    return repository.find({ where: { accessType } });
   }
 }

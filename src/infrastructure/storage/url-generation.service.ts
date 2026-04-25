@@ -13,9 +13,9 @@ export class UrlGenerationService {
   private readonly cdnUrl: string;
 
   constructor(@Inject(CONFIG_SERVICE) private readonly configService: ConfigService) {
-    const minioEndpoint = this.configService.get('MINIO_ENDPOINT') || 'localhost';
-    const minioPort = this.configService.get('MINIO_PORT') || 9000;
-    const minioUseSsl = this.configService.get('MINIO_USE_SSL') || false;
+    const minioEndpoint = this.configService.get('MINIO_ENDPOINT');
+    const minioPort = this.configService.get('MINIO_PORT');
+    const minioUseSsl = this.configService.get('MINIO_USE_SSL');
     const protocol = minioUseSsl ? 'https' : 'http';
     this.cdnUrl = `${protocol}://${minioEndpoint}:${minioPort}`;
   }

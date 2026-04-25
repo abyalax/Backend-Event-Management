@@ -30,13 +30,15 @@ export class CreateEventDto {
 
   @Expose()
   @IsDate()
-  @Transform(({ value }: { value: string | Date }) => new Date(value))
-  startDate: Date;
+  @IsOptional()
+  @Transform(({ value }: { value: string | Date }) => (value ? new Date(value) : undefined))
+  startDate?: Date;
 
   @Expose()
   @IsDate()
-  @Transform(({ value }: { value: string | Date }) => new Date(value))
-  endDate: Date;
+  @IsOptional()
+  @Transform(({ value }: { value: string | Date }) => (value ? new Date(value) : undefined))
+  endDate?: Date;
 
   @Expose()
   @IsString()

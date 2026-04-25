@@ -27,7 +27,6 @@ export class EventRepository {
 
       if (!category) throw new Error(`Category with ID ${payloadEvent.categoryId} not found`);
 
-      // Create event
       const event = await queryRunner.manager.save(Event, {
         ...payloadEvent,
         categoryId: payloadEvent.categoryId.toString(),

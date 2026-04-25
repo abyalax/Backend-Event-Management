@@ -19,7 +19,7 @@ export class QueryEventDto extends MetaRequestDto {
   @Expose()
   @IsOptional()
   @IsString()
-  status: string;
+  status?: string;
 
   @Expose()
   @IsOptional()

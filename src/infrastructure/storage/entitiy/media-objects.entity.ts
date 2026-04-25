@@ -1,4 +1,5 @@
 import { Column, CreateDateColumn, DeleteDateColumn, Entity, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import { EAccessType } from '../dto/presigned-url.dto';
 
 @Entity('media_objects')
 export class MediaObject {
@@ -22,6 +23,9 @@ export class MediaObject {
 
   @Column({ nullable: true })
   uploadedBy?: string;
+
+  @Column({ type: 'enum', enum: EAccessType, default: EAccessType.PRIVATE })
+  accessType: EAccessType = EAccessType.PRIVATE;
 
   @CreateDateColumn({ type: 'timestamp with time zone', name: 'created_at' })
   createdAt?: string;

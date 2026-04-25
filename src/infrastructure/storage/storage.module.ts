@@ -1,7 +1,8 @@
 import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { TerminusModule } from '@nestjs/terminus';
-import { CONFIG_SERVICE, ConfigService } from '~/infrastructure/config/config.provider';
+import { CONFIG_SERVICE, ConfigService, ConfigProvider } from '~/infrastructure/config/config.provider';
 import { DatabaseModule } from '~/infrastructure/database/database.module';
+import { PinoLogger } from 'nestjs-pino';
 import { StorageController } from './storage.controller';
 import { MediaController } from './media/media.controller';
 import { StorageService } from './storage.service';
@@ -35,6 +36,8 @@ import { CONFIG_PROVIDER } from '~/common/constants/provider';
   imports: [TerminusModule, DatabaseModule],
   controllers: [StorageController, MediaController],
   providers: [
+    ConfigProvider,
+    PinoLogger,
     MinioProvider,
     StorageService,
     UrlGenerationService,
@@ -43,6 +46,7 @@ import { CONFIG_PROVIDER } from '~/common/constants/provider';
     StorageHealthIndicator,
     FileValidationMiddleware,
     {
+      inject: [CONFIG_SERVICE],
       provide: CONFIG_PROVIDER.STORAGE,
       useFactory: (configService: ConfigService) => ({
         endpoint: configService.get('MINIO_ENDPOINT'),
@@ -56,6 +60,7 @@ import { CONFIG_PROVIDER } from '~/common/constants/provider';
           images: configService.get('STORAGE_BUCKET_IMAGES'),
           backups: configService.get('STORAGE_BUCKET_BACKUPS'),
           videos: configService.get('STORAGE_BUCKET_VIDEOS'),
+          'images-public': configService.get('STORAGE_BUCKET_IMAGES_PUBLIC'),
         },
         maxFileSize: configService.get('MAX_FILE_SIZE'),
         allowedMimeTypes: configService.get('ALLOWED_MIME_TYPES')?.split(',') ?? [],
@@ -69,7 +74,6 @@ import { CONFIG_PROVIDER } from '~/common/constants/provider';
           healthCheckInterval: configService.get('STORAGE_HEALTH_CHECK_INTERVAL'),
         },
       }),
-      inject: [CONFIG_SERVICE],
     },
   ],
   exports: [StorageService, MinioProvider, StorageHealthIndicator, UrlGenerationService],

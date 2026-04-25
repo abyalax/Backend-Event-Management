@@ -1,0 +1,118 @@
+meta {
+  name: Private Document Upload
+  type: http
+  seq: 5
+}
+
+post {
+  url: {{base_url}}/media/presigned
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "filename": "private-document.pdf",
+    "mimeType": "application/pdf",
+    "size": 1024000,
+    "accessType": "private"
+  }
+}
+
+docs {
+  # Private Document Upload
+  
+  Example request for uploading a private document to secure storage. Files uploaded with `accessType: "private"` are stored in the private bucket and require authentication for access.
+  
+  ## Request
+  - **Method**: POST
+  - **Endpoint**: `/media/presigned`
+  
+  ## Request Body
+  ```json
+  {
+    "filename": "private-document.pdf",
+    "mimeType": "application/pdf",
+    "size": 1024000,
+    "accessType": "private"
+  }
+  ```
+  
+  ## Expected Response
+  ```json
+  {
+    "message": "Presigned URL generated successfully",
+    "data": {
+      "url": "http://localhost:9000/images/1234567890_xyz789.pdf?X-Amz-Algorithm=...",
+      "mediaId": "550e8400-e29b-41d4-a716-446655440001",
+      "objectKey": "1234567890_xyz789.pdf",
+      "bucket": "images",
+      "accessType": "private",
+      "expiresAt": "2026-04-25T14:00:00.000Z"
+    }
+  }
+  ```
+  
+  ## Complete Workflow
+  1. **Step 1**: Get presigned URL with this request
+  2. **Step 2**: Upload file using PUT to returned URL
+  3. **Step 3**: Confirm upload with `PATCH /media/:id/confirm`
+  4. **Step 4**: Access file via authenticated endpoint
+  
+  ## File Upload (Step 2)
+  ```http
+  PUT http://localhost:9000/images/1234567890_xyz789.pdf?X-Amz-Algorithm=...
+  Content-Type: application/pdf
+  
+  [Binary file data]
+  ```
+  
+  ## Confirm Upload (Step 3)
+  ```http
+  PATCH {{base_url}}/media/550e8400-e29b-41d4-a716-446655440001/confirm
+  Content-Type: application/json
+  
+  {
+    "uploaded": true,
+    "actualSize": 1024000
+  }
+  ```
+  
+  ## Access Private File (Step 4)
+  ```http
+  GET {{base_url}}/media/550e8400-e29b-41d4-a716-446655440001/url
+  Authorization: Bearer <jwt_token>
+  
+  Response:
+  {
+    "message": "Media URL generated successfully",
+    "data": {
+      "url": "http://localhost:9000/images/1234567890_xyz789.pdf"
+    }
+  }
+  ```
+  
+  ## Security Notes
+  - Files stored in private bucket (`images`)
+  - Authentication required for access
+  - URLs may require additional security headers
+  - Suitable for sensitive documents, user uploads, etc.
+  
+  ## Use Cases
+  - User profile pictures (private)
+  - Internal documents
+  - Sensitive event materials
+  - User-uploaded content
+  
+  ## Best Practices
+  - Use `accessType: "private"` for sensitive files
+  - Implement proper authentication checks
+  - Consider file expiration policies
+  - Monitor access logs for security
+  
+  ## Difference from Public Upload
+  - **Bucket**: `images` (private) vs `images-public`
+  - **Access**: Requires authentication vs public access
+  - **URL Generation**: May need presigned URLs for access
+  - **Security**: Higher security vs open access
+}

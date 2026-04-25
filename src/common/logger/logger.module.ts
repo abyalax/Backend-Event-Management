@@ -28,6 +28,11 @@ import { CONFIG_SERVICE, ConfigService } from '~/infrastructure/config/config.pr
               url: req.url,
               id: req.id,
             }),
+            res: (res) => ({
+              statusCode: res.statusCode,
+              message: res.message,
+              responseTime: res.responseTime,
+            }),
           },
         },
       }),

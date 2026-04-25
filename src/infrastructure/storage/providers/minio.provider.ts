@@ -2,6 +2,7 @@ import { Inject, Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/commo
 import * as Minio from 'minio';
 import { PinoLogger } from 'nestjs-pino';
 import { CONFIG_PROVIDER } from '~/common/constants/provider';
+import { CONFIG_SERVICE, ConfigService } from '~/infrastructure/config/config.provider';
 
 export interface MinioConfig {
   endpoint: string;
@@ -40,7 +41,8 @@ export class MinioProvider implements OnModuleInit, OnModuleDestroy {
 
   constructor(
     private readonly logger: PinoLogger,
-    @Inject(CONFIG_PROVIDER.STORAGE) private readonly config: MinioConfig,
+    @Inject(CONFIG_SERVICE) private readonly configEnv: ConfigService,
+    @Inject(CONFIG_PROVIDER.STORAGE) private readonly configMinio: MinioConfig,
   ) {
     this.initClient();
   }
@@ -51,17 +53,17 @@ export class MinioProvider implements OnModuleInit, OnModuleDestroy {
   private initClient(): void {
     try {
       // Force SSL to false for development environment
-      const useSSL = this.config.useSSL && process.env.NODE_ENV === 'production';
+      const useSSL = this.configMinio.useSSL && this.configEnv.get('NODE_ENV') === 'production';
 
       this.client = new Minio.Client({
-        endPoint: this.config.endpoint,
-        port: this.config.port,
+        endPoint: this.configMinio.endpoint,
+        port: this.configMinio.port,
         useSSL: useSSL,
-        accessKey: this.config.accessKey,
-        secretKey: this.config.secretKey,
-        region: this.config.region,
+        accessKey: this.configMinio.accessKey,
+        secretKey: this.configMinio.secretKey,
+        region: this.configMinio.region,
       });
-      this.logger.info(`MinIO client initialized: ${this.config.endpoint}:${this.config.port} (SSL: ${useSSL})`);
+      this.logger.info(`MinIO client initialized: ${this.configMinio.endpoint}:${this.configMinio.port} (SSL: ${useSSL})`);
     } catch (error) {
       this.logger.error('Failed to initialize MinIO client', error);
       throw error;
@@ -86,7 +88,7 @@ export class MinioProvider implements OnModuleInit, OnModuleDestroy {
       await this.testConnection();
 
       // Create required buckets
-      const bucketNames = Object.values(this.config.buckets);
+      const bucketNames = Object.values(this.configMinio.buckets);
       for (const bucketName of bucketNames) {
         await this.ensureBucket(bucketName);
       }
@@ -96,7 +98,7 @@ export class MinioProvider implements OnModuleInit, OnModuleDestroy {
     } catch (error) {
       this.logger.error('MinIO initialization failed', error);
       // In test environment, don't throw errors to allow tests to run
-      if (process.env.NODE_ENV !== 'test') {
+      if (this.configEnv.get('NODE_ENV') !== 'test') {
         throw error;
       }
       this.logger.warn('MinIO not available in test environment - operations will fail gracefully');
@@ -116,7 +118,7 @@ export class MinioProvider implements OnModuleInit, OnModuleDestroy {
       this.logger.error('Failed to connect to MinIO server', error);
 
       // In development, don't fail hard on connection issues
-      if (process.env.NODE_ENV !== 'production') {
+      if (this.configEnv.get('NODE_ENV') !== 'production') {
         this.logger.warn('MinIO connection failed in development - continuing anyway');
         return;
       }
@@ -137,11 +139,8 @@ export class MinioProvider implements OnModuleInit, OnModuleDestroy {
         return;
       }
 
-      await this.client.makeBucket(bucketName, this.config.region);
+      await this.client.makeBucket(bucketName, this.configMinio.region);
       this.logger.info(`Bucket created successfully: ${bucketName}`);
-
-      // Set bucket versioning (optional, untuk backup strategy)
-      // await this.client.setBucketVersioning(bucketName, { Status: 'Enabled' });
     } catch (error) {
       // Ignore if bucket already exists (race condition)
       if (error.code !== 'BucketAlreadyExists') {
@@ -157,9 +156,7 @@ export class MinioProvider implements OnModuleInit, OnModuleDestroy {
    */
   async getClient(): Promise<Minio.Client> {
     await this.initializationPromise;
-    if (!this.isConnected && process.env.NODE_ENV !== 'test') {
-      throw new Error('MinIO client is not connected');
-    }
+    if (!this.isConnected && this.configEnv.get('NODE_ENV') !== 'test') throw new Error('MinIO client is not connected');
     return this.client;
   }
 
@@ -174,9 +171,9 @@ export class MinioProvider implements OnModuleInit, OnModuleDestroy {
   } {
     return {
       connected: this.isConnected,
-      endpoint: this.config.endpoint,
-      port: this.config.port,
-      buckets: Object.values(this.config.buckets),
+      endpoint: this.configMinio.endpoint,
+      port: this.configMinio.port,
+      buckets: Object.values(this.configMinio.buckets),
     };
   }
 
@@ -242,13 +239,13 @@ export class MinioProvider implements OnModuleInit, OnModuleDestroy {
     backups: string;
     videos: string;
   } {
-    return this.config.buckets;
+    return this.configMinio.buckets;
   }
 
   /**
    * Get config (useful untuk service layer)
    */
   getConfig(): MinioConfig {
-    return this.config;
+    return this.configMinio;
   }
 }

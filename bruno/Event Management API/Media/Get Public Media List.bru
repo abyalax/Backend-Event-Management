@@ -1,0 +1,74 @@
+meta {
+  name: Get Public Media List
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{base_url}}/media/public/list
+  body: none
+  auth: none
+}
+
+docs {
+  # Get Public Media List
+  
+  Retrieves a list of all public media files with their URLs. This endpoint is optimized for frontend applications to display public images (banners, posters, etc) without generating URLs on-demand per file.
+  
+  ## Request
+  - **Method**: GET
+  - **Endpoint**: `/media/public/list`
+  
+  ## Response (200 OK)
+  ```json
+  {
+    "message": "Public media list retrieved successfully",
+    "data": [
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440000",
+        "url": "http://localhost:9000/images-public/1234567890_abc123.jpg",
+        "originalName": "event-banner.jpg",
+        "mimeType": "image/jpeg"
+      },
+      {
+        "id": "550e8400-e29b-41d4-a716-446655440001",
+        "url": "http://localhost:9000/images-public/1234567891_def456.png",
+        "originalName": "event-poster.png",
+        "mimeType": "image/png"
+      }
+    ]
+  }
+  ```
+  
+  ## Response Fields
+  - `id` (string): Unique media identifier
+  - `url` (string): Direct CDN URL to the file
+  - `originalName` (string): Original filename
+  - `mimeType` (string): MIME type of the file
+  
+  ## Use Cases
+  - Displaying event banners on homepage
+  - Showing event posters in gallery
+  - Listing public images for selection
+  - Building image carousels
+  
+  ## Performance Benefits
+  - Single API call for all public media
+  - No on-demand URL generation
+  - Pre-built CDN URLs
+  - Reduced server load
+  
+  ## Example Usage
+  ```javascript
+  // Frontend usage
+  fetch('/media/public/list')
+    .then(response => response.json())
+    .then(data => {
+      const images = data.data;
+      images.forEach(image => {
+        console.log('Image URL:', image.url);
+        console.log('Original name:', image.originalName);
+      });
+    });
+  ```
+}

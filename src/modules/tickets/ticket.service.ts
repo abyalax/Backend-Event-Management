@@ -48,7 +48,7 @@ export class TicketService {
   }
 
   async remove(id: string) {
-    const result = await this.ticketRepository.delete(id);
+    const result = await this.ticketRepository.softDelete(id);
     if (result.affected === 0) throw new NotFoundException(`Ticket with ID ${id} not found`);
     return true;
   }

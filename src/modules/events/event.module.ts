@@ -4,6 +4,7 @@ import { AuthModule } from '../auth/auth.module';
 import { UserModule } from '../users/user.module';
 import { QueueModule } from '~/infrastructure/queue/queue.module';
 import { EmailModule } from '~/infrastructure/email/email.module';
+import { StorageModule } from '~/infrastructure/storage/storage.module';
 import { EventController } from './event.controller';
 import { eventProvider } from './event.provider';
 import { EventService } from './event.service';
@@ -13,6 +14,8 @@ import { EmailService } from '~/infrastructure/email/email.service';
 import { PinoLogger } from 'nestjs-pino';
 import { JwtModule } from '@nestjs/jwt';
 import { CONFIG_SERVICE, ConfigService } from '~/infrastructure/config/config.provider';
+import { QUEUE } from '~/common/constants/queue';
+import { JOB } from '~/common/constants/job';
 
 @Module({
   imports: [
@@ -21,6 +24,7 @@ import { CONFIG_SERVICE, ConfigService } from '~/infrastructure/config/config.pr
     UserModule,
     QueueModule,
     EmailModule,
+    StorageModule,
     JwtModule.registerAsync({
       inject: [CONFIG_SERVICE],
       useFactory: (configService: ConfigService) => ({
@@ -41,10 +45,9 @@ export class EventModule implements OnModuleInit {
   ) {}
 
   onModuleInit() {
-    // Register email notification queue for event creation
-    this.queueService.registerQueue('event-notifications', [
+    this.queueService.registerQueue(QUEUE.EVENT_NOTIFICATIONS, [
       {
-        name: 'send-event-creation-email',
+        name: JOB.EVENT_SEND_CREATION_EMAIL,
         handler: async (data: { eventId: string; userEmail: string; eventTitle: string }) => {
           await this.sendEventCreationEmail(data);
         },

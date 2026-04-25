@@ -1,0 +1,86 @@
+meta {
+  name: Pre Signed
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{base_url}}/media/presigned
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "filename": "banner.jpg",
+    "mimeType": "image/jpeg",
+    "size": 1024000,
+    "accessType": "public"
+  }
+}
+
+docs {
+  # Get Presigned URL for File Upload
+  
+  Generates a presigned URL for uploading files directly to storage. Supports both public and private access types.
+  
+  ## Request
+  - **Method**: POST
+  - **Endpoint**: `/media/presigned`
+  
+  ## Request Body
+  ```json
+  {
+    "filename": "banner.jpg",
+    "mimeType": "image/jpeg",
+    "size": 1024000,
+    "accessType": "public"
+  }
+  ```
+  
+  ### Parameters
+  - `filename` (string, required): Original filename
+  - `mimeType` (string, required): MIME type of the file
+  - `size` (number, optional): File size in bytes
+  - `bucket` (string, optional): Target bucket (overrides default)
+  - `accessType` (string, optional): "public" or "private" (default: "private")
+  
+  ## Response (201 Created)
+  ```json
+  {
+    "message": "Presigned URL generated successfully",
+    "data": {
+      "url": "http://localhost:9000/images-public/1234567890_abc123.jpg?X-Amz-Algorithm=...",
+      "mediaId": "550e8400-e29b-41d4-a716-446655440000",
+      "objectKey": "1234567890_abc123.jpg",
+      "bucket": "images-public",
+      "accessType": "public",
+      "expiresAt": "2026-04-25T14:00:00.000Z"
+    }
+  }
+  ```
+  
+  ## Access Types
+  - **public**: Files stored in public bucket (images-public), accessible to anyone
+  - **private**: Files stored in private bucket (images), requires authentication
+  
+  ## Usage Examples
+  
+  ### Event Banner (Public)
+  ```json
+  {
+    "filename": "event-banner.jpg",
+    "mimeType": "image/jpeg",
+    "accessType": "public"
+  }
+  ```
+  
+  ### Private Document
+  ```json
+  {
+    "filename": "private-doc.pdf",
+    "mimeType": "application/pdf",
+    "accessType": "private"
+  }
+  ```
+}

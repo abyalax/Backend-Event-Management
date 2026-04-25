@@ -44,7 +44,7 @@ export class EventCategoryService {
   }
 
   async remove(id: string): Promise<boolean> {
-    const Event = await this.eventCategoryRepository.delete(id);
+    const Event = await this.eventCategoryRepository.softDelete(id);
     if (Event.affected === 0) throw new NotFoundException(`Event Category with ID ${id} not found`);
     return true;
   }

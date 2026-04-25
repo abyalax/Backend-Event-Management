@@ -1,0 +1,107 @@
+meta {
+  name: Event Banner Upload
+  type: http
+  seq: 4
+}
+
+post {
+  url: {{base_url}}/media/presigned
+  body: json
+  auth: none
+}
+
+body:json {
+  {
+    "filename": "banner.jpg",
+    "mimeType": "image/jpg",
+    "size": 2048000,
+    "accessType": "public"
+  }
+}
+
+docs {
+  # Event Banner Upload (Public)
+  
+  Example request for uploading an event banner to public storage. This is the standard workflow for event banners that need to be publicly accessible.
+  
+  ## Request
+  - **Method**: POST
+  - **Endpoint**: `/media/presigned`
+  
+  ## Request Body
+  ```json
+  {
+    "filename": "event-banner.jpg",
+    "mimeType": "image/jpeg",
+    "size": 2048000,
+    "accessType": "public"
+  }
+  ```
+  
+  ## Expected Response
+  ```json
+  {
+    "message": "Presigned URL generated successfully",
+    "data": {
+      "url": "http://localhost:9000/images-public/1234567890_abc123.jpg?X-Amz-Algorithm=...",
+      "mediaId": "550e8400-e29b-41d4-a716-446655440000",
+      "objectKey": "1234567890_abc123.jpg",
+      "bucket": "images-public",
+      "accessType": "public",
+      "expiresAt": "2026-04-25T14:00:00.000Z"
+    }
+  }
+  ```
+  
+  ## Complete Workflow
+  1. **Step 1**: Get presigned URL with this request
+  2. **Step 2**: Upload file using PUT to the returned URL
+  3. **Step 3**: Confirm upload with `PATCH /media/:id/confirm`
+  4. **Step 4**: Use `mediaId` when creating event (as `bannerMediaId`)
+  
+  ## File Upload (Step 2)
+  ```http
+  PUT http://localhost:9000/images-public/1234567890_abc123.jpg?X-Amz-Algorithm=...
+  Content-Type: image/jpeg
+  
+  [Binary file data]
+  ```
+  
+  ## Confirm Upload (Step 3)
+  ```http
+  PATCH {{base_url}}/media/550e8400-e29b-41d4-a716-446655440000/confirm
+  Content-Type: application/json
+  
+  {
+    "uploaded": true,
+    "actualSize": 2048000
+  }
+  ```
+  
+  ## Create Event (Step 4)
+  ```http
+  POST {{base_url}}/events
+  Content-Type: application/json
+  
+  {
+    "title": "Tech Conference 2026",
+    "description": "Annual technology conference",
+    "categoryId": 1,
+    "bannerMediaId": "550e8400-e29b-41d4-a716-446655440000",
+    "startDate": "2026-05-15T09:00:00Z",
+    "endDate": "2026-05-15T17:00:00Z"
+  }
+  ```
+  
+  ## Public Access
+  Once uploaded and confirmed, the banner will be accessible at:
+  ```
+  http://localhost:9000/images-public/1234567890_abc123.jpg
+  ```
+  
+  ## Best Practices
+  - Use descriptive filenames
+  - Optimize images for web (JPEG/PNG)
+  - Keep file sizes reasonable (<5MB)
+  - Use `accessType: "public"` for banners, posters, thumbnails
+}

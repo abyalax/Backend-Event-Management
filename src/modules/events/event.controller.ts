@@ -17,7 +17,6 @@ import { Permissions } from '~/common/decorators/permissions.decorator';
 import { PERMISSIONS } from '~/common/constants/permissions';
 import { Request } from 'express';
 
-@UseGuards(JwtGuard, PermissionsGuard)
 @Controller('events')
 export class EventController {
   constructor(
@@ -25,6 +24,24 @@ export class EventController {
     private readonly eventRepository: EventRepository,
   ) {}
 
+  @Get('public')
+  @HttpCode(HttpStatus.OK)
+  async listPublic(@Query() query: QueryEventDto): Promise<TResponse<Paginated<Event>>> {
+    const sortBy: [string, string][] = query.sort_by && query.sort_order ? [[query.sort_by, query.sort_order]] : [['updatedAt', 'DESC']];
+    const paginatedEvents = await this.eventService.list({
+      page: query.page,
+      limit: query.limit,
+      search: query.search,
+      sortBy,
+      path: '',
+    });
+    return {
+      message: 'get public events successfully',
+      data: paginatedEvents,
+    };
+  }
+
+  @UseGuards(JwtGuard, PermissionsGuard)
   @Permissions(PERMISSIONS.EVENT.READ)
   @HttpCode(HttpStatus.OK)
   @Get()
@@ -43,6 +60,7 @@ export class EventController {
     };
   }
 
+  @UseGuards(JwtGuard, PermissionsGuard)
   @Permissions(PERMISSIONS.EVENT.CREATE)
   @HttpCode(HttpStatus.CREATED)
   @Post('')
@@ -54,6 +72,7 @@ export class EventController {
     };
   }
 
+  @UseGuards(JwtGuard, PermissionsGuard)
   @Permissions(PERMISSIONS.EVENT.READ)
   @HttpCode(HttpStatus.OK)
   @Get(':id')
@@ -65,6 +84,7 @@ export class EventController {
     };
   }
 
+  @UseGuards(JwtGuard, PermissionsGuard)
   @Permissions(PERMISSIONS.EVENT.UPDATE)
   @HttpCode(HttpStatus.NO_CONTENT)
   @Patch(':id')
@@ -76,6 +96,7 @@ export class EventController {
     };
   }
 
+  @UseGuards(JwtGuard, PermissionsGuard)
   @Permissions(PERMISSIONS.EVENT.DELETE)
   @HttpCode(HttpStatus.NO_CONTENT)
   @Delete(':id')
@@ -87,6 +108,7 @@ export class EventController {
     };
   }
 
+  @UseGuards(JwtGuard, PermissionsGuard)
   @Permissions(PERMISSIONS.EVENT.CREATE)
   @Post(':id/media')
   @HttpCode(HttpStatus.CREATED)

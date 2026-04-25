@@ -9,6 +9,8 @@ import { mockRedis, mockRepository } from '~/test/common/mock';
 import { UserService } from '../users/user.service';
 import { EventCategoryController } from './event-category.controller';
 import { EventCategoryService } from './event-category.service';
+import { EventCategoryCacheService } from './event-category-cache.service';
+import { CacheService } from '~/infrastructure/cache/cache.service';
 import { CONFIG_PROVIDER } from '~/common/constants/provider';
 
 describe('EventCategoryController', () => {
@@ -32,6 +34,8 @@ describe('EventCategoryController', () => {
       controllers: [EventCategoryController],
       providers: [
         EventCategoryService,
+        EventCategoryCacheService,
+        CacheService,
         {
           provide: REPOSITORY.EVENT_CATEGORY,
           useValue: mockRepository,

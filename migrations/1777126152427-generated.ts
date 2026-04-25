@@ -1,11 +1,10 @@
 import { MigrationInterface, QueryRunner } from "typeorm";
 
-export class Generated1776920799686 implements MigrationInterface {
-    name = 'Generated1776920799686'
+export class Generated1777126152427 implements MigrationInterface {
+    name = 'Generated1777126152427'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(`CREATE TABLE "permissions" ("id" SERIAL NOT NULL, "key" character varying(80) NOT NULL, "name" character varying(80) NOT NULL, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "deleted_at" TIMESTAMP WITH TIME ZONE, CONSTRAINT "UQ_017943867ed5ceef9c03edd9745" UNIQUE ("key"), CONSTRAINT "UQ_48ce552495d14eae9b187bb6716" UNIQUE ("name"), CONSTRAINT "PK_920331560282b8bd21bb02290df" PRIMARY KEY ("id"))`);
-        await queryRunner.query(`CREATE TABLE "roles" ("id_role" SERIAL NOT NULL, "name" character varying(50) NOT NULL, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "deleted_at" TIMESTAMP WITH TIME ZONE, CONSTRAINT "PK_3ebdb96dd6787bda0e3c8f89d66" PRIMARY KEY ("id_role"))`);
         await queryRunner.query(`CREATE TABLE "event_categories" ("id_category" SERIAL NOT NULL, "name" character varying(100) NOT NULL, "description" text, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "deleted_at" TIMESTAMP WITH TIME ZONE, CONSTRAINT "PK_10666fa3893cdcfd0fd4493ba85" PRIMARY KEY ("id_category"))`);
         await queryRunner.query(`CREATE INDEX "idx_event_categories_created_at" ON "event_categories" ("created_at") `);
         await queryRunner.query(`CREATE INDEX "idx_event_categories_name" ON "event_categories" ("name") `);
@@ -39,6 +38,11 @@ export class Generated1776920799686 implements MigrationInterface {
         await queryRunner.query(`CREATE INDEX "idx_tickets_event_id" ON "tickets" ("event_id") `);
         await queryRunner.query(`CREATE TABLE "users" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "name" character varying(100) NOT NULL, "email" character varying(100) NOT NULL, "password" character varying(100) NOT NULL, "refresh_token" text, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "deleted_at" TIMESTAMP WITH TIME ZONE, CONSTRAINT "PK_a3ffb1c0c8416b9fc6f907b7433" PRIMARY KEY ("id"))`);
         await queryRunner.query(`CREATE TABLE "role_permissions" ("id_role_permission" SERIAL NOT NULL, "id_role" integer NOT NULL, "id_permission" integer NOT NULL, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "deleted_at" TIMESTAMP WITH TIME ZONE, CONSTRAINT "PK_24a4b96b060d0a0fee0f8702396" PRIMARY KEY ("id_role_permission"))`);
+        await queryRunner.query(`CREATE TYPE "public"."media_objects_accesstype_enum" AS ENUM('public', 'private')`);
+        await queryRunner.query(`CREATE TABLE "media_objects" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "bucket" character varying NOT NULL, "objectKey" character varying NOT NULL, "mimeType" character varying, "size" integer, "originalName" character varying, "uploadedBy" character varying, "accessType" "public"."media_objects_accesstype_enum" NOT NULL DEFAULT 'private', "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "deleted_at" TIMESTAMP WITH TIME ZONE, CONSTRAINT "PK_6f25a90e781d66ee0c2515c11f7" PRIMARY KEY ("id"))`);
+        await queryRunner.query(`CREATE TABLE "event_media" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "eventId" character varying NOT NULL, "mediaId" character varying NOT NULL, "type" character varying NOT NULL DEFAULT 'banner', "order" integer NOT NULL DEFAULT '0', "event_id" uuid, "media_id" uuid, CONSTRAINT "PK_4e5f0c8c1718c8c2026c15296af" PRIMARY KEY ("id"))`);
+        await queryRunner.query(`CREATE UNIQUE INDEX "IDX_2b7b8d6f6ebcd65da777932b84" ON "event_media" ("eventId", "type") WHERE type = 'banner'`);
+        await queryRunner.query(`CREATE TABLE "roles" ("id_role" SERIAL NOT NULL, "name" character varying(50) NOT NULL, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "deleted_at" TIMESTAMP WITH TIME ZONE, CONSTRAINT "PK_3ebdb96dd6787bda0e3c8f89d66" PRIMARY KEY ("id_role"))`);
         await queryRunner.query(`CREATE TABLE "user_roles" ("id_user" uuid NOT NULL, "id_role" integer NOT NULL, CONSTRAINT "PK_dbfb392b1b20247554de529ea7c" PRIMARY KEY ("id_user", "id_role"))`);
         await queryRunner.query(`CREATE INDEX "IDX_37a75bf56b7a6ae65144e0d5c0" ON "user_roles" ("id_user") `);
         await queryRunner.query(`CREATE INDEX "IDX_af69ec5d5bd973309c025e7a62" ON "user_roles" ("id_role") `);
@@ -53,6 +57,8 @@ export class Generated1776920799686 implements MigrationInterface {
         await queryRunner.query(`ALTER TABLE "tickets" ADD CONSTRAINT "FK_bd5387c23fb40ae7e3526ad75ea" FOREIGN KEY ("event_id") REFERENCES "events"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE "role_permissions" ADD CONSTRAINT "FK_c0f5917f07a9e2bfd31ac5fb154" FOREIGN KEY ("id_role") REFERENCES "roles"("id_role") ON DELETE NO ACTION ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE "role_permissions" ADD CONSTRAINT "FK_5e7caee2bb7c1030ab07ad70ec2" FOREIGN KEY ("id_permission") REFERENCES "permissions"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "event_media" ADD CONSTRAINT "FK_16a84aef47c794ac3d01f39830c" FOREIGN KEY ("event_id") REFERENCES "events"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "event_media" ADD CONSTRAINT "FK_e17d233df9a7600e7fdf6e30d77" FOREIGN KEY ("media_id") REFERENCES "media_objects"("id") ON DELETE NO ACTION ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE "user_roles" ADD CONSTRAINT "FK_37a75bf56b7a6ae65144e0d5c00" FOREIGN KEY ("id_user") REFERENCES "users"("id") ON DELETE CASCADE ON UPDATE CASCADE`);
         await queryRunner.query(`ALTER TABLE "user_roles" ADD CONSTRAINT "FK_af69ec5d5bd973309c025e7a62e" FOREIGN KEY ("id_role") REFERENCES "roles"("id_role") ON DELETE NO ACTION ON UPDATE NO ACTION`);
     }
@@ -60,6 +66,8 @@ export class Generated1776920799686 implements MigrationInterface {
     public async down(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(`ALTER TABLE "user_roles" DROP CONSTRAINT "FK_af69ec5d5bd973309c025e7a62e"`);
         await queryRunner.query(`ALTER TABLE "user_roles" DROP CONSTRAINT "FK_37a75bf56b7a6ae65144e0d5c00"`);
+        await queryRunner.query(`ALTER TABLE "event_media" DROP CONSTRAINT "FK_e17d233df9a7600e7fdf6e30d77"`);
+        await queryRunner.query(`ALTER TABLE "event_media" DROP CONSTRAINT "FK_16a84aef47c794ac3d01f39830c"`);
         await queryRunner.query(`ALTER TABLE "role_permissions" DROP CONSTRAINT "FK_5e7caee2bb7c1030ab07ad70ec2"`);
         await queryRunner.query(`ALTER TABLE "role_permissions" DROP CONSTRAINT "FK_c0f5917f07a9e2bfd31ac5fb154"`);
         await queryRunner.query(`ALTER TABLE "tickets" DROP CONSTRAINT "FK_bd5387c23fb40ae7e3526ad75ea"`);
@@ -74,6 +82,11 @@ export class Generated1776920799686 implements MigrationInterface {
         await queryRunner.query(`DROP INDEX "public"."IDX_af69ec5d5bd973309c025e7a62"`);
         await queryRunner.query(`DROP INDEX "public"."IDX_37a75bf56b7a6ae65144e0d5c0"`);
         await queryRunner.query(`DROP TABLE "user_roles"`);
+        await queryRunner.query(`DROP TABLE "roles"`);
+        await queryRunner.query(`DROP INDEX "public"."IDX_2b7b8d6f6ebcd65da777932b84"`);
+        await queryRunner.query(`DROP TABLE "event_media"`);
+        await queryRunner.query(`DROP TABLE "media_objects"`);
+        await queryRunner.query(`DROP TYPE "public"."media_objects_accesstype_enum"`);
         await queryRunner.query(`DROP TABLE "role_permissions"`);
         await queryRunner.query(`DROP TABLE "users"`);
         await queryRunner.query(`DROP INDEX "public"."idx_tickets_event_id"`);
@@ -107,7 +120,6 @@ export class Generated1776920799686 implements MigrationInterface {
         await queryRunner.query(`DROP INDEX "public"."idx_event_categories_name"`);
         await queryRunner.query(`DROP INDEX "public"."idx_event_categories_created_at"`);
         await queryRunner.query(`DROP TABLE "event_categories"`);
-        await queryRunner.query(`DROP TABLE "roles"`);
         await queryRunner.query(`DROP TABLE "permissions"`);
     }
 

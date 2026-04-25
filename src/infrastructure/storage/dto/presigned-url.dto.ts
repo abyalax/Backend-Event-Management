@@ -1,5 +1,10 @@
 import { Exclude, Expose } from 'class-transformer';
-import { IsString, IsOptional, IsNumber } from 'class-validator';
+import { IsString, IsOptional, IsNumber, IsEnum } from 'class-validator';
+
+export enum EAccessType {
+  PUBLIC = 'public',
+  PRIVATE = 'private',
+}
 
 @Exclude()
 export class PresignedUrlDto {
@@ -20,4 +25,9 @@ export class PresignedUrlDto {
   @IsOptional()
   @IsString()
   bucket?: string;
+
+  @Expose()
+  @IsOptional()
+  @IsEnum(EAccessType)
+  accessType?: EAccessType = EAccessType.PRIVATE;
 }

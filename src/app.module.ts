@@ -4,7 +4,6 @@ import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { GracefulShutdownModule } from 'nestjs-graceful-shutdown';
 import { TerminusModule } from '@nestjs/terminus';
 import { AppController } from './app.controller';
-import { AppService } from './app.service';
 import { GlobalExceptionFilter } from './common/filters/global.filter';
 import { LoggerModule } from './common/logger/logger.module';
 import { ConfigModule } from './infrastructure/config/config.module';
@@ -65,7 +64,6 @@ const gracefulShutdownImports =
   ],
   controllers: [AppController],
   providers: [
-    AppService,
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard,

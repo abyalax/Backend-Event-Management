@@ -4,13 +4,15 @@ import { StorageService } from '../storage.service';
 import { MediaRepository } from './media.repository';
 import { ConfigService, CONFIG_SERVICE } from '~/infrastructure/config/config.provider';
 import { TResponse } from '~/common/types/response';
-import { PresignedUrlDto } from '../dto/presigned-url.dto';
+import { PresignedUrlDto, EAccessType } from '../dto/presigned-url.dto';
+import { PinoLogger } from 'nestjs-pino';
 
 export interface PresignedUrlResponse {
   url: string;
   mediaId: string;
   objectKey: string;
   bucket: string;
+  accessType: EAccessType;
   expiresAt: string;
 }
 
@@ -30,17 +32,20 @@ export interface ConfirmMediaRequest {
 @Controller('media')
 export class MediaController {
   private readonly defaultBucket: string;
+  private readonly publicBucket: string;
   private readonly cdnUrl: string;
 
   constructor(
+    private readonly logger: PinoLogger,
     private readonly storageService: StorageService,
     private readonly mediaRepository: MediaRepository,
     @Inject(CONFIG_SERVICE) private readonly configService: ConfigService,
   ) {
-    this.defaultBucket = this.configService.get('STORAGE_BUCKET_IMAGES') || 'images';
-    const minioEndpoint = this.configService.get('MINIO_ENDPOINT') || 'localhost';
-    const minioPort = this.configService.get('MINIO_PORT') || 9000;
-    const minioUseSsl = this.configService.get('MINIO_USE_SSL') || false;
+    this.defaultBucket = this.configService.get('STORAGE_BUCKET_IMAGES');
+    this.publicBucket = this.configService.get('STORAGE_BUCKET_IMAGES_PUBLIC');
+    const minioEndpoint = this.configService.get('MINIO_ENDPOINT');
+    const minioPort = this.configService.get('MINIO_PORT');
+    const minioUseSsl = this.configService.get('MINIO_USE_SSL');
     const protocol = minioUseSsl ? 'https' : 'http';
     this.cdnUrl = `${protocol}://${minioEndpoint}:${minioPort}`;
   }
@@ -54,10 +59,13 @@ export class MediaController {
   @Post('presigned')
   @HttpCode(HttpStatus.CREATED)
   async getPresignedUrl(@Body() request: PresignedUrlDto): Promise<TResponse<PresignedUrlResponse>> {
-    const { filename, mimeType, size, bucket = this.defaultBucket } = request;
+    const { filename, mimeType, size, bucket = this.defaultBucket, accessType = EAccessType.PRIVATE } = request;
 
     // Validate input
     if (!filename || !mimeType) throw new BadRequestException('filename and mimeType are required');
+
+    // Determine target bucket based on access type
+    const targetBucket = accessType === EAccessType.PUBLIC ? this.publicBucket : bucket;
 
     // Generate unique object key
     const timestamp = Date.now();
@@ -68,16 +76,17 @@ export class MediaController {
     // Create media record in database
     try {
       const media = await this.mediaRepository.create({
-        bucket,
+        bucket: targetBucket,
         objectKey,
         mimeType,
         size: size || 0,
         originalName: filename,
         uploadedBy: 'system',
+        accessType,
       });
 
       // Generate presigned PUT URL
-      const presignedUrl = await this.storageService.getPresignedPutUrl(bucket, objectKey, 3600);
+      const presignedUrl = await this.storageService.getPresignedPutUrl(targetBucket, objectKey, 3600);
 
       return {
         message: 'Presigned URL generated successfully',
@@ -85,7 +94,8 @@ export class MediaController {
           url: presignedUrl,
           mediaId: media.id,
           objectKey,
-          bucket,
+          bucket: targetBucket,
+          accessType,
           expiresAt: new Date(Date.now() + 3600 * 1000).toISOString(),
         },
       };
@@ -165,12 +175,44 @@ export class MediaController {
   }
 
   /**
+   * List all public media URLs (for banners, posters, etc)
+   * This endpoint is efficient for frontend to get all public images
+   * without generating URLs on-demand per file
+   *
+   * @returns List of public media URLs
+   */
+  @Get('public/list')
+  @HttpCode(HttpStatus.OK)
+  async getPublicMediaList(): Promise<TResponse<{ id: string; url: string; originalName?: string; mimeType?: string }[]>> {
+    const publicMedia = await this.mediaRepository.findByAccessType(EAccessType.PUBLIC);
+
+    const mediaList = publicMedia.map((media: MediaObject) => ({
+      id: media.id,
+      url: this.buildUrl(media),
+      originalName: media.originalName,
+      mimeType: media.mimeType,
+    }));
+
+    return {
+      message: 'Public media list retrieved successfully',
+      data: mediaList,
+    };
+  }
+
+  /**
    * Build CDN URL for media object
+   * For public files, returns direct CDN URL
+   * For private files, returns direct CDN URL (can be modified to use presigned URLs if needed)
    *
    * @param media - Media object
    * @returns CDN URL
    */
   private buildUrl(media: MediaObject): string {
-    return `${this.cdnUrl}/${media.bucket}/${media.objectKey}`;
+    const baseUrl = `${this.cdnUrl}/${media.bucket}/${media.objectKey}`;
+
+    // For public files, return direct URL
+    // For private files, you could generate presigned URLs here if needed
+    // Currently returning direct URL for both, but can be modified
+    return baseUrl;
   }
 }

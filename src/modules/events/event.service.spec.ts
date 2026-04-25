@@ -15,6 +15,7 @@ import { EmailService } from '~/infrastructure/email/email.service';
 import { PinoLogger } from 'nestjs-pino';
 import { JwtModule } from '@nestjs/jwt';
 import { CONFIG_SERVICE, ConfigService } from '~/infrastructure/config/config.provider';
+import { StorageService } from '~/infrastructure/storage/storage.service';
 
 describe('EventService', () => {
   let service: EventService;
@@ -73,6 +74,20 @@ describe('EventService', () => {
             info: jest.fn(),
             warn: jest.fn(),
             error: jest.fn(),
+          },
+        },
+        {
+          provide: REPOSITORY.EVENT_MEDIA,
+          useValue: mockRepository,
+        },
+        {
+          provide: REPOSITORY.MEDIA_OBJECT,
+          useValue: mockRepository,
+        },
+        {
+          provide: StorageService,
+          useValue: {
+            deleteFile: jest.fn(),
           },
         },
       ],

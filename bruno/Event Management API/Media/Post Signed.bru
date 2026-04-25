@@ -1,0 +1,57 @@
+meta {
+  name: Upload File to Presigned URL
+  type: http
+  seq: 2
+}
+
+put {
+  url: http://localhost:9000/images-public/1777100405345_j6diqz5x8.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=minioadmin%2F20260425%2Fus-east-1%2Fs3%2Faws4_request&X-Amz-Date=20260425T070005Z&X-Amz-Expires=3600&X-Amz-SignedHeaders=host&X-Amz-Signature=53373d8e250b2b4bee594c34eaf6181f63af7d5c35cee20fca52f3fbc87a7751
+  body: file
+  auth: none
+}
+
+params:query {
+  X-Amz-Algorithm: AWS4-HMAC-SHA256
+  X-Amz-Credential: minioadmin%2F20260425%2Fus-east-1%2Fs3%2Faws4_request
+  X-Amz-Date: 20260425T070005Z
+  X-Amz-Expires: 3600
+  X-Amz-SignedHeaders: host
+  X-Amz-Signature: 53373d8e250b2b4bee594c34eaf6181f63af7d5c35cee20fca52f3fbc87a7751
+}
+
+body:file {
+  file: @file(D:\typescript\event-management\be\assets\banner.jpg) @contentType(image/jpeg)
+}
+
+docs {
+  # Upload File to Presigned URL
+  
+  Uploads the actual file to storage using the presigned URL obtained from the previous step.
+  
+  ## Request
+  - **Method**: PUT
+  - **Endpoint**: Presigned URL from `/media/presigned` response
+  - **Content-Type**: Should match the mimeType from presigned request
+  
+  ## Request Body
+  - Binary file data
+  
+  ## Response (200 OK)
+  Empty response with status 200 indicates successful upload.
+  
+  ## Workflow
+  1. **Step 1**: Get presigned URL from `/media/presigned`
+  2. **Step 2**: Upload file using this PUT request
+  3. **Step 3**: Confirm upload with `/media/:id/confirm`
+  
+  ## Example URL Structure
+  ```
+  http://localhost:9000/images-public/1234567890_abc123.jpg?X-Amz-Algorithm=AWS4-HMAC-SHA256&X-Amz-Credential=...
+  ```
+  
+  ## Important Notes
+  - The URL expires after 1 hour (3600 seconds)
+  - Content-Type must match the original mimeType
+  - File size should not exceed the specified size in presigned request
+  - Use the exact URL returned from the presigned endpoint
+}

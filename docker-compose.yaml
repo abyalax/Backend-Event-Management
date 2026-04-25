@@ -1,8 +1,8 @@
 services:
-  # MinIO - Object Storage Server
   minio:
     image: minio/minio:latest
     container_name: event_management_minio_server
+    restart: no
     hostname: minio
     ports:
       - "9000:9000"  # MinIO API
@@ -25,7 +25,6 @@ services:
       timeout: 20s
       retries: 3
       start_period: 5s
-    restart: unless-stopped
     networks:
       - storage_network
     labels:
@@ -35,6 +34,7 @@ services:
   minio_mc:
     image: minio/mc:latest
     container_name: event_management_minio_mc
+    restart: no
     depends_on:
       minio:
         condition: service_healthy
@@ -50,11 +50,15 @@ services:
       # Create buckets
       mc mb minio/documents || true;
       mc mb minio/images || true;
+      mc mb minio/images-public || true;
       mc mb minio/backups || true;
       mc mb minio/videos || true;
       
       # Set bucket versioning
       mc version enable minio/backups;
+      
+      # Set public read policy for images-public bucket
+      mc anonymous set public minio/images-public || true;
       
       # Set bucket lifecycle for automatic cleanup
       mc ilm import minio/backups < /dev/null || true;
@@ -63,13 +67,11 @@ services:
       "
     networks:
       - storage_network
-    restart: on-failure
 
-  # PostgreSQL - For application data (optional)
   postgres:
     image: postgres:16
     container_name: event_management_postgres
-    restart: always
+    restart: no
     environment:
       POSTGRES_USER: ${POSTGRES_USER:-root}
       POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgress_pass}
@@ -78,16 +80,20 @@ services:
       - '5433:5432'
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - storage_network
 
   redis:
     image: redis:7-alpine
     container_name: event_management_redis
-    restart: always
+    restart: no
     ports:
       - '6380:6379'
     volumes:
       - redis_data:/data
     command: redis-server --requirepass ${REDIS_PASSWORD:-redis_password}
+    networks:
+      - storage_network
   
   mailpit:
     image: axllent/mailpit:latest
@@ -108,18 +114,24 @@ services:
     volumes:
       - mailpit_data:/var/lib/mailpit/data
     command: ["--smtp-auth-allow-insecure"]
+    networks:
+      - storage_network
 
   dbgate:
     image: dbgate/dbgate
     container_name: event_management_dbms
-    restart: always
+    restart: no
+    depends_on: 
+      - postgres
     ports:
-      - 8080:7000
+      - 8080:3000
     volumes:
       - dbgate-data:/root/.dbgate
+    networks:
+          - storage_network
     environment:
+      PORT: 3000
       CONNECTIONS: POSTGRES
-
       LABEL_POSTGRES: Postgres
       SERVER_POSTGRES: postgres
       USER_POSTGRES: root
@@ -148,9 +160,9 @@ volumes:
 # 1. Create .env file dengan required variables
 # 2. Run: docker-compose up -d
 # 3. Access MinIO Console: http://localhost:9001
-# 4. Access Application: http://localhost:3000
-# 5. Access Mailpit: http://localhost:8025
-# 6. Access PostgreSQL: localhost:5432
+# 4. Access Mailpit: http://localhost:8025
+# 5. Access DBMS: http://localhost:8080
+# 6. Access PostgreSQL: localhost:5433
 # 7. Access Redis: localhost:6379
 #
 # Helpful commands:
