@@ -46,6 +46,7 @@ describe('QueueService', () => {
       error: jest.fn(),
       debug: jest.fn(),
       warn: jest.fn(),
+      setContext: jest.fn(),
     } as unknown as jest.Mocked<PinoLogger>;
 
     const mockConfig = {

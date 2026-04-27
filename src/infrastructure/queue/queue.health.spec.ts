@@ -30,6 +30,7 @@ describe('QueueHealthIndicator', () => {
 
     mockLogger = {
       error: jest.fn(),
+      setContext: jest.fn(),
     } as unknown as jest.Mocked<PinoLogger>;
 
     mockIndicator = {

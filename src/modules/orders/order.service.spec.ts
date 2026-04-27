@@ -1,3 +1,5 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-unsafe-call */
 import { Test, TestingModule } from '@nestjs/testing';
 import { PinoLogger } from 'nestjs-pino';
 import { REPOSITORY } from '~/common/constants/database';
@@ -13,31 +15,31 @@ import { GeneratedEventTicket } from '~/modules/tickets/entity/generated-event-t
 describe('OrderService', () => {
   let service: OrderService;
 
-  const orderItemRepo: any = {
+  const orderItemRepo = {
     create: jest.fn((value) => ({ ...value })),
-    save: jest.fn(async (value) => value),
+    save: jest.fn((value) => value),
     count: jest.fn(),
   };
 
-  const ticketRepo: any = {
+  const ticketRepo = {
     findOne: jest.fn(),
-    save: jest.fn(async (value) => value),
+    save: jest.fn((value) => value),
   };
 
-  const generatedTicketRepo: any = {
+  const generatedTicketRepo = {
     create: jest.fn((value) => ({ ...value, id: value.id ?? 'generated-1' })),
-    save: jest.fn(async (value) => value),
+    save: jest.fn((value) => value),
     count: jest.fn().mockResolvedValue(0),
   };
 
   let orderRepo: any;
 
-  const paymentService: any = {
+  const paymentService = {
     createInvoice: jest.fn(),
     getTransactionByExternalId: jest.fn(),
   };
 
-  const eventRepo: any = {
+  const eventRepo = {
     findOne: jest.fn(),
   };
 
@@ -59,7 +61,7 @@ describe('OrderService', () => {
         ),
       },
       create: jest.fn((value: any) => ({ ...value })),
-      save: jest.fn(async (value: any) => ({
+      save: jest.fn((value: any) => ({
         ...value,
         id: value.id ?? 'order-1',
         createdAt: value.createdAt ?? '2026-01-01T00:00:00.000Z',
@@ -79,6 +81,7 @@ describe('OrderService', () => {
             info: jest.fn(),
             warn: jest.fn(),
             error: jest.fn(),
+            debug: jest.fn(),
           },
         },
         {
