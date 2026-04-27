@@ -66,6 +66,10 @@ export const envSchema = z.object({
 
   // Queue Configuration
   QUEUE_CONCURRENCY: z.coerce.number().default(5),
+
+  // Xendit Payment Gateway Configuration
+  XENDIT_SECRET_KEY: z.string({ message: 'XENDIT_SECRET_KEY is required' }),
+  XENDIT_CALLBACK_TOKEN: z.string({ message: 'XENDIT_CALLBACK_TOKEN is required' }),
 });
 
 export type Environment = z.infer<typeof envSchema>;

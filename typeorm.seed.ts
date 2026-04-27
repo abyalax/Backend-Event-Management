@@ -7,7 +7,7 @@ import { Event } from '~/modules/events/entity/event.entity';
 import { Notification } from '~/modules/notifications/entity/notification.entity';
 import { OrderItem } from '~/modules/orders/entity/order-item.entity';
 import { Order } from '~/modules/orders/entity/order.entity';
-import { Payment } from '~/modules/payments/entity/payment.entity';
+import { Payment } from '~/modules/payments/entities/payment.entity';
 import { GeneratedEventTicket } from '~/modules/tickets/entity/generated-event-ticket.entity';
 import { Ticket } from '~/modules/tickets/entity/ticket.entity';
 import { User } from '~/modules/users/entity/user.entity';
@@ -15,6 +15,7 @@ import { RolePermission } from '~/modules/role-permissions/entity/role-permissio
 import { MediaObject } from '~/infrastructure/storage/entitiy/media-objects.entity';
 import { EventMedia } from '~/modules/events/entity/event-media.entity';
 import { Role } from '~/modules/role-permissions/entity/role.entity';
+import { Transaction } from '~/modules/payments/entities/transaction.entity';
 
 configDotenv();
 
@@ -36,6 +37,7 @@ const dataSourceOptions: DataSourceOptions & SeederOptions = {
     RolePermission,
     MediaObject,
     EventMedia,
+    Transaction,
   ],
   synchronize: false,
   seeds: ['./src/infrastructure/database/seeds/*.seed.ts'],

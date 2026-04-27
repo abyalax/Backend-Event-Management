@@ -7,4 +7,9 @@ export const REPOSITORY = Object.freeze({
   TICKET: 'ticket_repository',
   EVENT_MEDIA: 'event_media_repository',
   MEDIA_OBJECT: 'media_object_repository',
+  ORDER: 'order_repository',
+  ORDER_ITEM: 'order_item_repository',
+  GENERATED_EVENT_TICKET: 'generated_event_ticket_repository',
+  PAYMENT: 'payment_repository',
+  TRANSACTION: 'transaction_repository',
 });

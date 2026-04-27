@@ -1,0 +1,26 @@
+meta {
+  name: Create Virtual Account - BNI
+  type: http
+  seq: 11
+}
+
+post {
+  url: {{base_url}}/payments/virtual-account
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{authToken}}
+}
+
+body:json {
+  {
+    "externalId": "VA-BNI-{{$randomUUID}}",
+    "bankCode": "BNI",
+    "name": "Jane Smith",
+    "expectedAmount": 200000,
+    "description": "Test BNI virtual account payment"
+  }
+}

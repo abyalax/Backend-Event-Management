@@ -1,0 +1,418 @@
+import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { InjectPinoLogger, PinoLogger } from 'nestjs-pino';
+import { LessThan, Repository } from 'typeorm';
+import { REPOSITORY } from '~/common/constants/database';
+import { ORDER_STATUS_TRANSITIONS, ORDER_TTL_MINUTES, OrderStatus } from '~/common/constants/order-status.enum';
+import { PaymentService } from '~/modules/payments/payment.service';
+import { GeneratedEventTicket } from '~/modules/tickets/entity/generated-event-ticket.entity';
+import { Ticket } from '~/modules/tickets/entity/ticket.entity';
+import { CreateOrderDto } from './dto/create-order.dto';
+import { OrderItemResponseDto, OrderPaymentResponseDto, OrderResponseDto } from './dto/order-response.dto';
+import { OrderStatusResponseDto } from './dto/order-status-response.dto';
+import { Order } from './entity/order.entity';
+import { OrderItem } from './entity/order-item.entity';
+import { PaymentStatus } from '~/modules/payments/payment.enum';
+import type { Transaction } from '~/modules/payments/entities/transaction.entity';
+
+type LoadedOrder = Order & {
+  orderItems?: Array<
+    OrderItem & {
+      ticket?: Ticket;
+      generatedTickets?: GeneratedEventTicket[];
+    }
+  >;
+};
+
+@Injectable()
+export class OrderService {
+  constructor(
+    @InjectPinoLogger(OrderService.name)
+    private readonly logger: PinoLogger,
+
+    @Inject(REPOSITORY.ORDER)
+    private readonly orderRepository: Repository<Order>,
+
+    @Inject(REPOSITORY.ORDER_ITEM)
+    private readonly orderItemRepository: Repository<OrderItem>,
+
+    @Inject(REPOSITORY.TICKET)
+    private readonly ticketRepository: Repository<Ticket>,
+
+    @Inject(REPOSITORY.GENERATED_EVENT_TICKET)
+    private readonly generatedTicketRepository: Repository<GeneratedEventTicket>,
+
+    private readonly paymentService: PaymentService,
+  ) {}
+
+  async createOrder(dto: CreateOrderDto, userId: string, userEmail: string): Promise<OrderResponseDto> {
+    if (!dto.items?.length) {
+      throw new BadRequestException('At least one ticket item is required');
+    }
+
+    const now = new Date();
+    const expiration = new Date(now.getTime() + ORDER_TTL_MINUTES * 60 * 1000);
+
+    let createdOrder: Order | undefined;
+
+    await this.orderRepository.manager.transaction(async (manager) => {
+      const orderRepo = manager.getRepository(Order);
+      const orderItemRepo = manager.getRepository(OrderItem);
+      const ticketRepo = manager.getRepository(Ticket);
+
+      const order = orderRepo.create({
+        userId,
+        totalAmount: 0,
+        status: OrderStatus.PENDING,
+        expiredAt: expiration,
+      });
+      createdOrder = await orderRepo.save(order);
+
+      const orderItems: OrderItem[] = [];
+      let totalAmount = 0;
+
+      for (const item of dto.items) {
+        const quantity = Number(item.quantity);
+        if (!Number.isInteger(quantity) || quantity < 1) {
+          throw new BadRequestException(`Invalid quantity for ticket ${item.ticketId}`);
+        }
+
+        const ticket = await ticketRepo.findOne({
+          where: { id: item.ticketId },
+          relations: ['event'],
+        });
+        if (!ticket) {
+          throw new NotFoundException(`Ticket ${item.ticketId} not found`);
+        }
+
+        const remaining = Number(ticket.quota) - Number(ticket.sold ?? 0);
+        if (remaining < quantity) {
+          throw new BadRequestException(`Insufficient quota for ticket ${ticket.id}`);
+        }
+
+        const price = Number(ticket.price);
+        const subtotal = price * quantity;
+        totalAmount += subtotal;
+
+        ticket.sold = Number(ticket.sold ?? 0) + quantity;
+        await ticketRepo.save(ticket);
+
+        orderItems.push(
+          orderItemRepo.create({
+            orderId: createdOrder.id,
+            ticketId: ticket.id,
+            quantity,
+            price,
+            subtotal,
+            ticket,
+          }),
+        );
+      }
+
+      createdOrder.totalAmount = Number(totalAmount.toFixed(2));
+      await orderRepo.save(createdOrder);
+      await orderItemRepo.save(orderItems);
+    });
+
+    if (!createdOrder) {
+      throw new Error('Failed to create order');
+    }
+
+    try {
+      await this.paymentService.createInvoice({
+        externalId: createdOrder.id,
+        amount: createdOrder.totalAmount,
+        payerEmail: userEmail,
+        description: dto.description ?? `Ticket order ${createdOrder.id}`,
+        successRedirectUrl: dto.successRedirectUrl,
+        failureRedirectUrl: dto.failureRedirectUrl,
+      });
+    } catch (error) {
+      this.logger.error({ orderId: createdOrder.id, error }, 'Payment creation failed, cancelling order');
+      await this.cancelOrderInternal(createdOrder.id, true);
+      throw error;
+    }
+
+    const order = await this.findOrderById(createdOrder.id, userId);
+    return this.toOrderResponse(order);
+  }
+
+  async getOrderById(id: string, userId: string): Promise<OrderResponseDto> {
+    const order = await this.findOrderById(id, userId);
+    return this.toOrderResponse(order);
+  }
+
+  async getOrderStatus(id: string, userId: string): Promise<OrderStatusResponseDto> {
+    const order = await this.findOrderById(id, userId);
+    const payment = await this.getPaymentByOrderId(order.id);
+
+    return {
+      orderId: order.id,
+      status: order.status,
+      paymentStatus: payment?.status ?? null,
+      paymentUrl: payment?.paymentUrl ?? null,
+      expiredAt: order.expiredAt ?? null,
+    };
+  }
+
+  async getOrderTickets(id: string, userId: string) {
+    const order = await this.findOrderById(id, userId);
+    if (![OrderStatus.PAID].includes(order.status)) {
+      const payment = await this.getPaymentByOrderId(order.id);
+      if (payment?.status !== PaymentStatus.SETTLED) {
+        throw new BadRequestException('Tickets are only available after the order is paid');
+      }
+    }
+
+    const generated = await this.generateTicketsForOrder(order.id);
+    return generated.map((ticket) => ({
+      id: ticket.id,
+      orderItemId: ticket.orderItemId,
+      ticketId: ticket.ticketId,
+      qrCodeUrl: ticket.qrCodeUrl,
+      pdfUrl: ticket.pdfUrl,
+      isUsed: ticket.isUsed,
+      issuedAt: ticket.issuedAt,
+    }));
+  }
+
+  async cancelOrder(id: string, userId: string): Promise<OrderResponseDto> {
+    const order = await this.findOrderById(id, userId);
+    if (order.status !== OrderStatus.PENDING) {
+      throw new BadRequestException('Only pending orders can be cancelled');
+    }
+
+    await this.cancelOrderInternal(id, false);
+    const updated = await this.findOrderById(id, userId);
+    return this.toOrderResponse(updated);
+  }
+
+  async getUserOrders(userId: string): Promise<OrderResponseDto[]> {
+    const orders = await this.orderRepository.find({
+      where: { userId },
+      relations: ['orderItems', 'orderItems.ticket'],
+      order: { createdAt: 'DESC' },
+    });
+
+    return Promise.all(orders.map(async (order) => this.toOrderResponse(order as LoadedOrder, await this.getPaymentByOrderId(order.id))));
+  }
+
+  async findOrderById(orderId: string, userId?: string): Promise<LoadedOrder> {
+    const order = await this.orderRepository.findOne({
+      where: { id: orderId },
+      relations: ['orderItems', 'orderItems.ticket', 'orderItems.generatedTickets'],
+    });
+
+    if (!order) {
+      throw new NotFoundException(`Order ${orderId} not found`);
+    }
+
+    if (userId && order.userId !== userId) {
+      throw new ForbiddenException('You are not allowed to access this order');
+    }
+
+    return order as LoadedOrder;
+  }
+
+  async findExpiredPendingOrders(): Promise<Order[]> {
+    return this.orderRepository.find({
+      where: {
+        status: OrderStatus.PENDING,
+        expiredAt: LessThan(new Date()),
+      },
+      order: { expiredAt: 'ASC' },
+      take: 100,
+    });
+  }
+
+  async updateOrderStatus(orderId: string, status: OrderStatus): Promise<Order> {
+    const order = await this.findOrderById(orderId);
+    if (order.status === status) {
+      return order;
+    }
+
+    const allowed = ORDER_STATUS_TRANSITIONS[order.status] ?? [];
+    if (!allowed.includes(status) && order.status !== status) {
+      throw new BadRequestException(`Cannot transition order ${orderId} from ${order.status} to ${status}`);
+    }
+
+    order.status = status;
+    const saved = await this.orderRepository.save(order);
+
+    if (status === OrderStatus.EXPIRED || status === OrderStatus.CANCELLED) {
+      await this.releaseTicketQuotas(orderId);
+    }
+
+    return saved;
+  }
+
+  async updateOrderExpiration(orderId: string, expiredAt: Date): Promise<Order> {
+    const order = await this.findOrderById(orderId);
+    if (order.status !== OrderStatus.PENDING) {
+      throw new BadRequestException('Only pending orders can update expiration');
+    }
+
+    order.expiredAt = expiredAt;
+    return this.orderRepository.save(order);
+  }
+
+  async releaseTicketQuotas(orderId: string): Promise<void> {
+    const order = await this.orderRepository.findOne({
+      where: { id: orderId },
+      relations: ['orderItems', 'orderItems.ticket'],
+    });
+
+    if (!order?.orderItems?.length) {
+      return;
+    }
+
+    for (const item of order.orderItems) {
+      if (!item.ticket) continue;
+
+      const ticket = await this.ticketRepository.findOne({ where: { id: item.ticketId } });
+      if (!ticket) continue;
+
+      const currentSold = Number(ticket.sold ?? 0);
+      ticket.sold = Math.max(0, currentSold - Number(item.quantity));
+      await this.ticketRepository.save(ticket);
+    }
+  }
+
+  async generateTicketsForOrder(orderId: string): Promise<GeneratedEventTicket[]> {
+    const order = await this.orderRepository.findOne({
+      where: { id: orderId },
+      relations: ['orderItems', 'orderItems.ticket', 'orderItems.generatedTickets'],
+    });
+
+    if (!order) {
+      throw new NotFoundException(`Order ${orderId} not found`);
+    }
+
+    if (![OrderStatus.PAID].includes(order.status)) {
+      const payment = await this.getPaymentByOrderId(orderId);
+      if (payment?.status !== PaymentStatus.SETTLED) {
+        throw new BadRequestException(`Order ${orderId} is not paid`);
+      }
+    }
+
+    const generatedTickets: GeneratedEventTicket[] = [];
+
+    for (const orderItem of order.orderItems ?? []) {
+      const existingCount = await this.generatedTicketRepository.count({
+        where: { orderItemId: orderItem.id },
+      });
+
+      const ticketsToCreate = Math.max(0, Number(orderItem.quantity) - existingCount);
+      for (let index = 0; index < ticketsToCreate; index += 1) {
+        const ticket = this.generatedTicketRepository.create({
+          orderItemId: orderItem.id,
+          ticketId: orderItem.ticketId,
+          qrCodeUrl: 'pending',
+          pdfUrl: 'pending',
+          isUsed: false,
+          issuedAt: new Date(),
+        });
+
+        const saved = await this.generatedTicketRepository.save(ticket);
+        saved.qrCodeUrl = `/orders/${orderId}/tickets/${saved.id}/qr`;
+        saved.pdfUrl = `/orders/${orderId}/tickets/${saved.id}/pdf`;
+        const persisted = await this.generatedTicketRepository.save(saved);
+        generatedTickets.push(persisted);
+      }
+    }
+
+    return generatedTickets;
+  }
+
+  async handleSuccessfulPayment(orderId: string): Promise<void> {
+    const order = await this.findOrderById(orderId);
+    if (order.status !== OrderStatus.PENDING) {
+      return;
+    }
+
+    order.status = OrderStatus.PAID;
+    await this.orderRepository.save(order);
+    await this.generateTicketsForOrder(orderId);
+  }
+
+  async handleExpiredPayment(orderId: string): Promise<void> {
+    const order = await this.findOrderById(orderId);
+    if (order.status !== OrderStatus.PENDING) {
+      return;
+    }
+
+    await this.updateOrderStatus(orderId, OrderStatus.EXPIRED);
+  }
+
+  async handleFailedPayment(orderId: string): Promise<void> {
+    const order = await this.findOrderById(orderId);
+    if (order.status !== OrderStatus.PENDING) {
+      return;
+    }
+
+    await this.updateOrderStatus(orderId, OrderStatus.CANCELLED);
+  }
+
+  async getPaymentByOrderId(orderId: string) {
+    return this.paymentService.getTransactionByExternalId(orderId);
+  }
+
+  private async cancelOrderInternal(orderId: string, dueToPaymentFailure: boolean): Promise<void> {
+    const order = await this.findOrderById(orderId);
+    if (order.status !== OrderStatus.PENDING) {
+      return;
+    }
+
+    order.status = OrderStatus.CANCELLED;
+    await this.orderRepository.save(order);
+    await this.releaseTicketQuotas(orderId);
+
+    if (dueToPaymentFailure) {
+      this.logger.warn({ orderId }, 'Order cancelled because payment creation failed');
+    }
+  }
+
+  private async toOrderResponse(order: LoadedOrder, payment?: Transaction | null): Promise<OrderResponseDto> {
+    const transaction = payment ?? (await this.getPaymentByOrderId(order.id));
+
+    return {
+      id: order.id,
+      userId: order.userId,
+      totalAmount: Number(order.totalAmount),
+      status: order.status,
+      expiredAt: order.expiredAt ?? null,
+      createdAt: order.createdAt,
+      updatedAt: order.updatedAt,
+      items: (order.orderItems ?? []).map((item) => this.toOrderItemResponse(item)),
+      payment: transaction
+        ? {
+            id: transaction.id,
+            externalId: transaction.externalId,
+            status: transaction.status,
+            amount: Number(transaction.amount),
+            paymentMethod: transaction.paymentMethod,
+            paymentUrl: transaction.paymentUrl,
+            paidAt: transaction.paidAt ?? null,
+            expiresAt: transaction.expiresAt ?? null,
+          }
+        : null,
+    };
+  }
+
+  private toOrderItemResponse(item: NonNullable<LoadedOrder['orderItems']>[number]): OrderItemResponseDto {
+    return {
+      id: item.id,
+      ticketId: item.ticketId,
+      ticketName: item.ticket?.name,
+      quantity: Number(item.quantity),
+      price: Number(item.price),
+      subtotal: Number(item.subtotal),
+      generatedTickets: (item.generatedTickets ?? []).map((ticket: GeneratedEventTicket) => ({
+        id: ticket.id,
+        qrCodeUrl: ticket.qrCodeUrl,
+        pdfUrl: ticket.pdfUrl,
+        isUsed: ticket.isUsed,
+        issuedAt: ticket.issuedAt,
+      })),
+    };
+  }
+}

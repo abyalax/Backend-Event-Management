@@ -1,4 +1,5 @@
-import { Module } from '@nestjs/common';
+import { MiddlewareConsumer, Module, NestModule } from '@nestjs/common';
+import { json } from 'express';
 import { LoggerModule as LoggerPinoModule } from 'nestjs-pino';
 import { CONFIG_SERVICE, ConfigService } from '~/infrastructure/config/config.provider';
 
@@ -27,10 +28,11 @@ import { CONFIG_SERVICE, ConfigService } from '~/infrastructure/config/config.pr
               method: req.method,
               url: req.url,
               id: req.id,
+              query: req.query,
             }),
             res: (res) => ({
               statusCode: res.statusCode,
-              message: res.message,
+              body: res.body,
               responseTime: res.responseTime,
             }),
           },
@@ -40,4 +42,8 @@ import { CONFIG_SERVICE, ConfigService } from '~/infrastructure/config/config.pr
   ],
   exports: [LoggerPinoModule],
 })
-export class LoggerModule {}
+export class LoggerModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(json()).forRoutes('*');
+  }
+}

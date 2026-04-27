@@ -1,0 +1,28 @@
+meta {
+  name: Create Invoice Payment
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{base_url}}/payments/invoice
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{authToken}}
+}
+
+body:json {
+  {
+    "externalId": "INV-{{$randomUUID}}",
+    "amount": 100000,
+    "payerEmail": "test@example.com",
+    "description": "Test invoice payment",
+    "currency": "IDR",
+    "successRedirectUrl": "{{base_url}}/payment/success",
+    "failureRedirectUrl": "{{base_url}}/payment/failure"
+  }
+}

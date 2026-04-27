@@ -1,0 +1,15 @@
+meta {
+  name: Payment Health Check
+  type: http
+  seq: 8
+}
+
+get {
+  url: {{base_url}}/payments/health
+  body: none
+  auth: none
+}
+
+headers {
+  Content-Type: application/json
+}

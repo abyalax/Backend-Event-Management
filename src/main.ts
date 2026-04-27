@@ -7,7 +7,9 @@ import { envSchema } from './infrastructure/config/config.schema';
 
 async function bootstrap() {
   const env = envSchema.parse(process.env);
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create(AppModule, {
+    rawBody: true,
+  });
 
   setupGracefulShutdown({ app });
 

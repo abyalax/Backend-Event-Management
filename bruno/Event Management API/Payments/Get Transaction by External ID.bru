@@ -1,0 +1,15 @@
+meta {
+  name: Get Transaction by External ID
+  type: http
+  seq: 6
+}
+
+get {
+  url: "{{base_url}}/payments/transactions/external/{{externalId}}"
+  body: none
+  auth: bearer
+}
+
+headers {
+  Authorization: Bearer {{authToken}}
+}

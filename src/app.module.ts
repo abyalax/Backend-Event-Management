@@ -3,6 +3,7 @@ import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { GracefulShutdownModule } from 'nestjs-graceful-shutdown';
 import { TerminusModule } from '@nestjs/terminus';
+import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { GlobalExceptionFilter } from './common/filters/global.filter';
 import { LoggerModule } from './common/logger/logger.module';
@@ -14,11 +15,13 @@ import { AuthModule } from './modules/auth/auth.module';
 import { EventCategoryModule } from './modules/event-categories/event-category.module';
 import { EventModule } from './modules/events/event.module';
 import { TicketModule } from './modules/tickets/ticket.module';
+import { OrderModule } from './modules/orders/order.module';
 import { UserModule } from './modules/users/user.module';
 import { RolePermissionModule } from './modules/role-permissions/role-permission.module';
 import { StorageModule } from './infrastructure/storage/storage.module';
 import { EmailModule } from './infrastructure/email/email.module';
 import { QueueModule } from './infrastructure/queue/queue.module';
+import { PaymentModule } from './modules/payments/payment.module';
 
 const gracefulShutdownImports =
   process.env.NODE_ENV === 'test'
@@ -43,6 +46,7 @@ const gracefulShutdownImports =
       throttlers: [{ ttl: 60000, limit: 20 }],
     }),
     TerminusModule,
+    ScheduleModule.forRoot(),
     RedisModule.forRootAsync({
       useFactory: (configService: ConfigService) => ({
         host: configService.get('REDIS_HOST'),
@@ -58,6 +62,8 @@ const gracefulShutdownImports =
     EventModule,
     EventCategoryModule,
     TicketModule,
+    OrderModule,
+    PaymentModule,
     StorageModule,
     EmailModule,
     QueueModule,
