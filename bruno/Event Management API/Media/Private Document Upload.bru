@@ -5,7 +5,7 @@ meta {
 }
 
 post {
-  url: {{base_url}}/media/presigned
+  url: {{URL_API}}/media/presigned
   body: json
   auth: none
 }
@@ -69,7 +69,7 @@ docs {
   
   ## Confirm Upload (Step 3)
   ```http
-  PATCH {{base_url}}/media/550e8400-e29b-41d4-a716-446655440001/confirm
+  PATCH {{URL_API}}/media/550e8400-e29b-41d4-a716-446655440001/confirm
   Content-Type: application/json
   
   {
@@ -80,7 +80,7 @@ docs {
   
   ## Access Private File (Step 4)
   ```http
-  GET {{base_url}}/media/550e8400-e29b-41d4-a716-446655440001/url
+  GET {{URL_API}}/media/550e8400-e29b-41d4-a716-446655440001/url
   Authorization: Bearer <jwt_token>
   
   Response:

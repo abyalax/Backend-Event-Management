@@ -34,9 +34,12 @@ export class JobHandlerService implements OnModuleInit {
   constructor(
     private readonly queueService: QueueService,
     private readonly errorHandler: QueueErrorHandler,
+
     private readonly logger: PinoLogger,
     private readonly redisService: RedisService,
-  ) {}
+  ) {
+    this.logger.setContext(JobHandlerService.name);
+  }
 
   onModuleInit() {
     try {

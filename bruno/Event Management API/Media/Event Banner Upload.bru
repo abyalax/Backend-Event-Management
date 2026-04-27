@@ -5,7 +5,7 @@ meta {
 }
 
 post {
-  url: {{base_url}}/media/presigned
+  url: {{URL_API}}/media/presigned
   body: json
   auth: none
 }
@@ -69,7 +69,7 @@ docs {
   
   ## Confirm Upload (Step 3)
   ```http
-  PATCH {{base_url}}/media/550e8400-e29b-41d4-a716-446655440000/confirm
+  PATCH {{URL_API}}/media/550e8400-e29b-41d4-a716-446655440000/confirm
   Content-Type: application/json
   
   {
@@ -80,7 +80,7 @@ docs {
   
   ## Create Event (Step 4)
   ```http
-  POST {{base_url}}/events
+  POST {{URL_API}}/events
   Content-Type: application/json
   
   {

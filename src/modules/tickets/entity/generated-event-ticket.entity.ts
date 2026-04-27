@@ -12,6 +12,9 @@ export class GeneratedEventTicket {
   @Column({ name: 'order_item_id', type: 'uuid', nullable: false })
   orderItemId: string;
 
+  @Column({ name: 'ticket_id', type: 'uuid', nullable: false })
+  ticketId: string;
+
   @Column({ name: 'qr_code_url', type: 'varchar', length: 500, nullable: false })
   qrCodeUrl: string;
 

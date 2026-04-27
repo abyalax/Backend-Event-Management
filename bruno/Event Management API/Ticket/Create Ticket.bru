@@ -5,7 +5,7 @@ meta {
 }
 
 post {
-  url: {{base_url}}/tickets
+  url: {{URL_API}}/tickets
   body: json
   auth: none
 }
@@ -16,10 +16,10 @@ headers {
 
 body:json {
   {
-    "name": "VIP Ticket",
-    "price": 150000,
-    "quota": 100,
-    "eventId": "550e8400-e29b-41d4-a716-446655440101"
+    "name": "Ticket Gold",
+    "price": 200000,
+    "quota": 50,
+    "eventId": "552b44bb-e445-462a-b421-779ba8637fe2"
   }
 }
 

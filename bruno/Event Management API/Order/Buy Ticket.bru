@@ -1,0 +1,27 @@
+meta {
+  name: Buy Ticket
+  type: http
+  seq: 1
+}
+
+post {
+  url: {{URL_API}}/orders/buy-ticket
+  body: json
+  auth: inherit
+}
+
+body:json {
+  {
+    "eventId": "552b44bb-e445-462a-b421-779ba8637fe2",
+    "ticketId": "299ae436-07d6-4584-9523-549186a0a546",
+    "quantity": 1,
+    "description": "Buy tickets gold for Road Show Beasiswa KSE",
+    "successRedirectUrl": "http://localhost:3000/payment/success",
+    "failureRedirectUrl": "http://localhost:3000/payment/failure"
+  }
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

@@ -97,6 +97,7 @@ export class StorageService {
     @Inject(CONFIG_PROVIDER.STORAGE)
     private readonly config: StorageConfig,
   ) {
+    this.logger.setContext(StorageService.name);
     this.logger.info('StorageService initialized');
   }
 

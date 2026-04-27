@@ -1,0 +1,54 @@
+meta {
+  name: List All Events Publics
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{URL_API}}/events/public?page=1&limit=30&sort_by=tiitle&sort_order=ASC
+  body: none
+  auth: none
+}
+
+params:query {
+  page: 1
+  limit: 30
+  sort_by: tiitle
+  sort_order: ASC
+  ~search: Devops
+}
+
+headers {
+  Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJlbWFpbCI6ImFkbWluQGdtYWlsLmNvbSIsImV4cCI6MTc3MzAzMjYyMywiaWF0IjoxNzcyOTQ2MjIzLCJpZCI6NX0.VLjK6uemfx1MPB5_dFNBOEeHnGLwS9cLjEV0dIvNaus
+}
+
+docs {
+  # List All Users
+  
+  Retrieves a list of all users in the system.
+  
+  ## Request
+  - **Method**: GET
+  - **Endpoint**: `/api/v1/users`
+  
+  ## Response (200 OK)
+  ```json
+  {
+    "data": [
+      {
+        "id": 1,
+        "name": "John Doe",
+        "email": "john@example.com"
+      },
+      {
+        "id": 2,
+        "name": "Jane Smith",
+        "email": "jane@example.com"
+      }
+    ]
+  }
+  ```
+  
+  ## Error Responses
+  - **500 Internal Server Error**: Database or server error
+}

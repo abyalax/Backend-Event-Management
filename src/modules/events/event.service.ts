@@ -34,10 +34,13 @@ export class EventService {
 
     private readonly eventRepositoryCustom: EventRepository,
     private readonly queueService: QueueService,
+
     private readonly logger: PinoLogger,
     @Inject(CONFIG_SERVICE) private readonly configService: ConfigService,
     private readonly storageService: StorageService,
-  ) {}
+  ) {
+    this.logger.setContext(EventService.name);
+  }
 
   async list(query: PaginateQuery) {
     const result = await paginate(query, this.eventRepository, EVENT_PAGINATION_CONFIG);
@@ -166,6 +169,18 @@ export class EventService {
       where: { eventId: event.id },
       relations: ['media'],
     });
+
+    // Manually load media objects for each EventMedia if the relation is null
+    for (const mediaItem of media) {
+      if (!mediaItem.media && mediaItem.mediaId) {
+        const mediaObject = await this.mediaObjectRepository.findOne({
+          where: { id: mediaItem.mediaId },
+        });
+        if (mediaObject) {
+          (mediaItem as any).media = mediaObject;
+        }
+      }
+    }
 
     const bannerMedia = media.find(
       (m) => m.type === EEventMediaType.BANNER && (m.media?.accessType === EAccessType.PUBLIC || m.media?.accessType === undefined),

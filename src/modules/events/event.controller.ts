@@ -123,4 +123,14 @@ export class EventController {
       data: eventMedia,
     };
   }
+
+  @Get('public/:id')
+  @HttpCode(HttpStatus.OK)
+  async getPublicEventById(@Param('id', ParseUUIDPipe) id: string): Promise<TResponse<Event>> {
+    const event = await this.eventService.findOneByID(id);
+    return {
+      message: 'get public event detail successfully',
+      data: event,
+    };
+  }
 }

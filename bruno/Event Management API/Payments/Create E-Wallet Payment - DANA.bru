@@ -1,0 +1,30 @@
+meta {
+  name: Create E-Wallet Payment - DANA
+  type: http
+  seq: 9
+}
+
+post {
+  url: {{URL_API}}/payments/ewallet
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{authToken}}
+}
+
+body:json {
+  {
+    "referenceId": "EW-DANA-{{$randomUUID}}",
+    "currency": "IDR",
+    "amount": 25000,
+    "channelCode": "DANA",
+    "channelProperties": {
+      "successReturnUrl": "{{baseUrl}}/payment/success",
+      "failureReturnUrl": "{{baseUrl}}/payment/failure",
+      "cancelReturnUrl": "{{baseUrl}}/payment/cancel"
+    }
+  }
+}

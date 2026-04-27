@@ -41,6 +41,7 @@ export class MediaController {
     private readonly mediaRepository: MediaRepository,
     @Inject(CONFIG_SERVICE) private readonly configService: ConfigService,
   ) {
+    this.logger.setContext(MediaController.name);
     this.defaultBucket = this.configService.get('STORAGE_BUCKET_IMAGES');
     this.publicBucket = this.configService.get('STORAGE_BUCKET_IMAGES_PUBLIC');
     const minioEndpoint = this.configService.get('MINIO_ENDPOINT');

@@ -31,8 +31,10 @@ export class EmailService {
 
   constructor(
     @Inject('EMAIL_CONFIG') private readonly emailConfig: EmailConfig,
+
     private readonly logger: PinoLogger,
   ) {
+    this.logger.setContext(EmailService.name);
     this.initializeTransporter();
   }
 

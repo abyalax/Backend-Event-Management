@@ -44,6 +44,7 @@ export class MinioProvider implements OnModuleInit, OnModuleDestroy {
     @Inject(CONFIG_SERVICE) private readonly configEnv: ConfigService,
     @Inject(CONFIG_PROVIDER.STORAGE) private readonly configMinio: MinioConfig,
   ) {
+    this.logger.setContext(MinioProvider.name);
     this.initClient();
   }
 

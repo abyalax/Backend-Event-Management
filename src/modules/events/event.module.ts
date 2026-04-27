@@ -16,6 +16,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { CONFIG_SERVICE, ConfigService } from '~/infrastructure/config/config.provider';
 import { QUEUE } from '~/common/constants/queue';
 import { JOB } from '~/common/constants/job';
+import { LoggerModule } from '~/common/logger/logger.module';
 
 @Module({
   imports: [
@@ -25,6 +26,7 @@ import { JOB } from '~/common/constants/job';
     QueueModule,
     EmailModule,
     StorageModule,
+    LoggerModule,
     JwtModule.registerAsync({
       inject: [CONFIG_SERVICE],
       useFactory: (configService: ConfigService) => ({
@@ -41,8 +43,11 @@ export class EventModule implements OnModuleInit {
   constructor(
     private readonly queueService: QueueService,
     private readonly emailService: EmailService,
+
     private readonly logger: PinoLogger,
-  ) {}
+  ) {
+    this.logger.setContext(EventModule.name);
+  }
 
   onModuleInit() {
     this.queueService.registerQueue(QUEUE.EVENT_NOTIFICATIONS, [

@@ -1,0 +1,33 @@
+meta {
+  name: Test Webhook Endpoint
+  type: http
+  seq: 7
+}
+
+post {
+  url: {{URL_API}}/payments/webhook
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json,
+  x-callback-token: "{{xenditCallbackToken}}"
+}
+
+body:json {
+  {
+    "event": "invoice.paid",
+    "data": {
+      "id": "inv_123456789",
+      "external_id": "INV-test-123",
+      "amount": 100000,
+      "status": "PAID",
+      "paid_amount": 100000,
+      "paid_at": "2024-01-15T10:30:00Z",
+      "payer_email": "test@example.com",
+      "payment_method": "VIRTUAL_ACCOUNT",
+      "payment_channel": "BCA"
+    }
+  }
+}

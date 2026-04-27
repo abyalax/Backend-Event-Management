@@ -11,7 +11,9 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   constructor(
     private readonly logger: PinoLogger,
     @Inject(CONFIG_PROVIDER.REDIS_CLIENT) private readonly client: Redis,
-  ) {}
+  ) {
+    this.logger.setContext(RedisService.name);
+  }
 
   async onModuleInit() {
     try {

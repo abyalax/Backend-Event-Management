@@ -1,0 +1,25 @@
+meta {
+  name: Webhook Invoice
+  type: http
+  seq: 12
+}
+
+post {
+  url: {{URL_API}}/payments/webhook/invoice
+  body: json
+  auth: none
+}
+
+headers {
+  Content-Type: application/json,
+  x-callback-token: {{XENDIT_CALLBACK_TOKEN}}
+}
+
+body:json {
+  {
+    "id": "inv-000001",
+    "external_id": "3b0cd155-2d79-4c71-9d4e-e6efd0a2e284",
+    "status": "PAID",
+    "amount": "200000"
+  }
+}

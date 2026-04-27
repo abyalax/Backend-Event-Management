@@ -4,9 +4,10 @@ import { PinoLogger } from 'nestjs-pino';
 import { QueueService } from './queue.service';
 import { QueueHealthIndicator } from './queue.health';
 import { QueueErrorHandler } from './queue.error-handler';
+import { LoggerModule } from '~/common/logger/logger.module';
 
 @Module({
-  imports: [TerminusModule],
+  imports: [TerminusModule, LoggerModule],
   providers: [QueueService, QueueHealthIndicator, QueueErrorHandler],
   exports: [QueueService, QueueHealthIndicator, QueueErrorHandler],
 })
@@ -14,7 +15,9 @@ export class QueueModule implements OnModuleInit, OnModuleDestroy {
   constructor(
     private readonly queueService: QueueService,
     private readonly logger: PinoLogger,
-  ) {}
+  ) {
+    this.logger.setContext(QueueModule.name);
+  }
 
   onModuleInit() {
     try {

@@ -28,11 +28,11 @@ The User Management API is a RESTful service built with Go and Gin framework tha
 
 The collection uses the following environment variables (configured in `environment.bru`):
 
-| Variable | Default | Description |
-|----------|---------|-------------|
-| `base_url` | `http://localhost:8080` | Server base URL |
-| `api_version` | `v1` | API version |
-| `api_url` | `http://localhost:8080/api/v1` | Full API endpoint |
+| Variable      | Default                        | Description       |
+| ------------- | ------------------------------ | ----------------- |
+| `URL_API`     | `http://localhost:8080`        | Server base URL   |
+| `api_version` | `v1`                           | API version       |
+| `URL_API`     | `http://localhost:8080/api/v1` | Full API endpoint |
 
 You can override these in Bruno's environment settings.
 
@@ -41,6 +41,7 @@ You can override these in Bruno's environment settings.
 ### Users Management
 
 #### 1. Create User
+
 - **Method**: `POST`
 - **Endpoint**: `/api/v1/users`
 - **File**: `Users/Create User.bru`
@@ -48,6 +49,7 @@ You can override these in Bruno's environment settings.
 Create a new user with name, email, and password.
 
 **Request Body**:
+
 ```json
 {
   "name": "John Doe",
@@ -57,6 +59,7 @@ Create a new user with name, email, and password.
 ```
 
 **Response** (201 Created):
+
 ```json
 {
   "id": 1,
@@ -66,6 +69,7 @@ Create a new user with name, email, and password.
 ```
 
 #### 2. List All Users
+
 - **Method**: `GET`
 - **Endpoint**: `/api/v1/users`
 - **File**: `Users/List All Users.bru`
@@ -73,6 +77,7 @@ Create a new user with name, email, and password.
 Retrieves all users in the system.
 
 **Response** (200 OK):
+
 ```json
 {
   "data": [
@@ -86,6 +91,7 @@ Retrieves all users in the system.
 ```
 
 #### 3. Get User by ID
+
 - **Method**: `GET`
 - **Endpoint**: `/api/v1/users/:id`
 - **File**: `Users/Get User by ID.bru`
@@ -93,9 +99,11 @@ Retrieves all users in the system.
 Retrieves a specific user by their ID.
 
 **URL Parameters**:
+
 - `id` (integer, required): User's unique identifier
 
 **Response** (200 OK):
+
 ```json
 {
   "id": 1,
@@ -105,6 +113,7 @@ Retrieves a specific user by their ID.
 ```
 
 #### 4. Update User
+
 - **Method**: `PUT`
 - **Endpoint**: `/api/v1/users/:id`
 - **File**: `Users/Update User.bru`
@@ -112,9 +121,11 @@ Retrieves a specific user by their ID.
 Updates an existing user. All fields are optional.
 
 **URL Parameters**:
+
 - `id` (integer, required): User's unique identifier
 
 **Request Body** (all fields optional):
+
 ```json
 {
   "name": "John Smith",
@@ -124,6 +135,7 @@ Updates an existing user. All fields are optional.
 ```
 
 **Response** (200 OK):
+
 ```json
 {
   "id": 1,
@@ -133,6 +145,7 @@ Updates an existing user. All fields are optional.
 ```
 
 #### 5. Delete User
+
 - **Method**: `DELETE`
 - **Endpoint**: `/api/v1/users/:id`
 - **File**: `Users/Delete User.bru`
@@ -140,6 +153,7 @@ Updates an existing user. All fields are optional.
 Deletes a user from the system.
 
 **URL Parameters**:
+
 - `id` (integer, required): User's unique identifier
 
 **Response** (204 No Content)
@@ -149,6 +163,7 @@ Deletes a user from the system.
 ### System Endpoints
 
 #### 1. Health Check
+
 - **Method**: `GET`
 - **Endpoint**: `/api/v1/health`
 - **File**: `System/Health Check.bru`
@@ -156,6 +171,7 @@ Deletes a user from the system.
 Checks if the API server is running and healthy.
 
 **Response** (200 OK):
+
 ```json
 {
   "status": "healthy"
@@ -163,6 +179,7 @@ Checks if the API server is running and healthy.
 ```
 
 #### 2. Ready Check
+
 - **Method**: `GET`
 - **Endpoint**: `/api/v1/ready`
 - **File**: `System/Ready Check.bru`
@@ -170,6 +187,7 @@ Checks if the API server is running and healthy.
 Checks if the API is ready to serve requests. Verifies database connection.
 
 **Response** (200 OK):
+
 ```json
 {
   "status": "ready"
@@ -177,6 +195,7 @@ Checks if the API is ready to serve requests. Verifies database connection.
 ```
 
 **Response** (503 Service Unavailable):
+
 ```json
 {
   "status": "not ready"
@@ -189,20 +208,20 @@ Checks if the API is ready to serve requests. Verifies database connection.
 
 ### User Creation & Update
 
-| Field | Rules |
-|-------|-------|
-| `name` | Required, string |
-| `email` | Required, must be valid email format |
+| Field      | Rules                                      |
+| ---------- | ------------------------------------------ |
+| `name`     | Required, string                           |
+| `email`    | Required, must be valid email format       |
 | `password` | Required on creation, minimum 6 characters |
 
 ### Error Codes
 
-| Code | Meaning |
-|------|---------|
+| Code  | Meaning                                          |
+| ----- | ------------------------------------------------ |
 | `400` | Bad Request - Invalid input or validation errors |
-| `404` | Not Found - User does not exist |
-| `409` | Conflict - Email already exists |
-| `500` | Internal Server Error - Server error |
+| `404` | Not Found - User does not exist                  |
+| `409` | Conflict - Email already exists                  |
+| `500` | Internal Server Error - Server error             |
 | `503` | Service Unavailable - Database connection failed |
 
 ---
@@ -239,6 +258,6 @@ Checks if the API is ready to serve requests. Verifies database connection.
 ## Support
 
 For issues with:
+
 - **Bruno usage**: See [Bruno Documentation](https://docs.usebruno.com/)
 - **API implementation**: Check the source code in the main project directory
-

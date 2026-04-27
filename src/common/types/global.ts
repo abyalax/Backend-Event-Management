@@ -9,3 +9,8 @@ declare module 'express' {
     user: UserPayload;
   }
 }
+declare module '@nestjs/common' {
+  interface Request {
+    user: UserPayload;
+  }
+}

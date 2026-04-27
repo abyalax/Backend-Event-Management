@@ -1,0 +1,30 @@
+meta {
+  name: Create E-Wallet Payment - ShopeePay
+  type: http
+  seq: 10
+}
+
+post {
+  url: {{URL_API}}/payments/ewallet
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{authToken}}
+}
+
+body:json {
+  {
+    "referenceId": "EW-SHOPEEPAY-{{$randomUUID}}",
+    "currency": "IDR",
+    "amount": 80000,
+    "channelCode": "SHOPEEPAY",
+    "channelProperties": {
+      "successReturnUrl": "{{baseUrl}}/payment/success",
+      "failureReturnUrl": "{{baseUrl}}/payment/failure",
+      "cancelReturnUrl": "{{baseUrl}}/payment/cancel"
+    }
+  }
+}

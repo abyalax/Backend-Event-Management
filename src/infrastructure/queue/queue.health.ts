@@ -9,7 +9,9 @@ export class QueueHealthIndicator {
     private readonly queueService: QueueService,
     private readonly healthIndicatorService: HealthIndicatorService,
     private readonly logger: PinoLogger,
-  ) {}
+  ) {
+    this.logger.setContext(QueueHealthIndicator.name);
+  }
 
   async isHealthy(queueNames: string[], key: string = 'queue') {
     const indicator = this.healthIndicatorService.check(key);

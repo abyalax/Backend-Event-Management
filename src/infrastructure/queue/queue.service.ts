@@ -31,6 +31,7 @@ export class QueueService implements OnModuleDestroy {
     @Inject(CONFIG_SERVICE) private readonly config: ConfigService,
     private readonly logger: PinoLogger,
   ) {
+    this.logger.setContext(QueueService.name);
     this.connection = new Redis({
       host: this.config.get('REDIS_HOST'),
       port: this.config.get('REDIS_PORT'),

@@ -1,0 +1,26 @@
+meta {
+  name: Create Virtual Account
+  type: http
+  seq: 2
+}
+
+post {
+  url: "{{baseUrl}}/payments/virtual-account"
+  body: json
+  auth: bearer
+}
+
+headers {
+  Content-Type: application/json
+  Authorization: Bearer {{authToken}}
+}
+
+body:json {
+  {
+    "externalId": "VA-{{$randomUUID}}",
+    "bankCode": "BCA",
+    "name": "John Doe",
+    "expectedAmount": 150000,
+    "description": "Test virtual account payment"
+  }
+}

@@ -2,6 +2,7 @@ import { DynamicModule, Global, InjectionToken, Module } from '@nestjs/common';
 import Redis, { RedisOptions } from 'ioredis';
 import { RedisService } from './redis.service';
 import { CONFIG_PROVIDER } from '~/common/constants/provider';
+import { LoggerModule } from '~/common/logger/logger.module';
 
 @Global()
 @Module({})
@@ -12,6 +13,7 @@ export class RedisModule {
   }): DynamicModule {
     return {
       module: RedisModule,
+      imports: [LoggerModule],
       providers: [
         {
           provide: CONFIG_PROVIDER.REDIS_OPTION,

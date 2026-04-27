@@ -5,7 +5,7 @@ meta {
 }
 
 get {
-  url: {{api_url}}/auth/logout
+  url: {{URL_API}}/auth/logout
   body: json
   auth: none
 }
@@ -15,7 +15,7 @@ headers {
 }
 
 vars:pre-request {
-  api_url: http://localhost:4000
+  URL_API: http://localhost:4000
 }
 
 settings {

@@ -39,7 +39,11 @@ export class QueueErrorHandler {
   private readonly lastErrorTimes = new Map<string, Date>();
   private readonly circuitBreaker = new Map<string, { state: 'closed' | 'open' | 'half-open'; openedAt: number }>();
 
-  constructor(private readonly logger: PinoLogger) {}
+  constructor(
+    private readonly logger: PinoLogger,
+  ) {
+    this.logger.setContext(QueueErrorHandler.name);
+  }
 
   handleError(error: Error, context: QueueErrorContext) {
     const queueError = this.wrapError(error, context);

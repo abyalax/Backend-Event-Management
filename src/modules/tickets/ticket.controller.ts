@@ -1,15 +1,23 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query, UseGuards, Request } from '@nestjs/common';
 import { Paginated } from '~/common/types/meta';
 import { TResponse } from '~/common/types/response';
 import { CreateTicketDto } from './dto/create-ticket.dto';
 import { QueryTicketDto } from './dto/query-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
+import { BuyTicketDto } from './dto/buy-ticket.dto';
 import { Ticket } from './entity/ticket.entity';
 import { TicketService } from './ticket.service';
+import { OrderService } from '~/modules/orders/order.service';
+import { OrderResponseDto } from '~/modules/orders/dto/order-response.dto';
+import { JwtGuard } from '~/common/guards/jwt.guard';
+import '~/common/types/global';
 
 @Controller('tickets')
 export class TicketController {
-  constructor(private readonly ticketService: TicketService) {}
+  constructor(
+    private readonly ticketService: TicketService,
+    private readonly orderService: OrderService,
+  ) {}
 
   @HttpCode(HttpStatus.OK)
   @Get()
@@ -75,6 +83,34 @@ export class TicketController {
     return {
       message: 'delete data ticket succesfully',
       data: isDeleted,
+    };
+  }
+
+  @UseGuards(JwtGuard)
+  @Post('buy')
+  @HttpCode(HttpStatus.CREATED)
+  async buyTicket(@Body() buyTicketDto: BuyTicketDto, @Request() req: Request): Promise<TResponse<OrderResponseDto>> {
+    const userId = req.user.id;
+    const userEmail = req.user.email;
+
+    // Convert BuyTicketDto to CreateOrderDto format
+    const createOrderDto = {
+      eventId: buyTicketDto.eventId,
+      items: [
+        {
+          ticketId: buyTicketDto.ticketId,
+          quantity: buyTicketDto.quantity,
+        },
+      ],
+      description: buyTicketDto.description || `Purchase ticket: ${buyTicketDto.ticketId}`,
+      successRedirectUrl: buyTicketDto.successRedirectUrl,
+      failureRedirectUrl: buyTicketDto.failureRedirectUrl,
+    };
+
+    const order = await this.orderService.createOrder(createOrderDto, userId, userEmail);
+    return {
+      message: 'ticket purchase order created successfully',
+      data: order,
     };
   }
 }

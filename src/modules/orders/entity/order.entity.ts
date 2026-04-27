@@ -10,9 +10,10 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import type { Payment } from '~/modules/payments/entity/payment.entity';
+import type { Payment } from '~/modules/payments/entities/payment.entity';
 import type { User } from '~/modules/users/entity/user.entity';
 import type { OrderItem } from './order-item.entity';
+import { OrderStatus } from '~/common/constants/order-status.enum';
 
 @Entity({ name: 'orders' })
 @Index('idx_orders_user_id', ['userId'])
@@ -34,8 +35,14 @@ export class Order {
   })
   totalAmount: number;
 
-  @Column({ name: 'status', type: 'varchar', length: 20, nullable: false })
-  status: string;
+  @Column({
+    name: 'status',
+    type: 'enum',
+    enum: OrderStatus,
+    nullable: false,
+    default: OrderStatus.PENDING,
+  })
+  status: OrderStatus;
 
   @Column({
     name: 'expired_at',

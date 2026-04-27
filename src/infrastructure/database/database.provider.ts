@@ -7,7 +7,7 @@ import { Event } from '~/modules/events/entity/event.entity';
 import { Notification } from '~/modules/notifications/entity/notification.entity';
 import { OrderItem } from '~/modules/orders/entity/order-item.entity';
 import { Order } from '~/modules/orders/entity/order.entity';
-import { Payment } from '~/modules/payments/entity/payment.entity';
+import { Payment } from '~/modules/payments/entities/payment.entity';
 import { GeneratedEventTicket } from '~/modules/tickets/entity/generated-event-ticket.entity';
 import { Ticket } from '~/modules/tickets/entity/ticket.entity';
 import { User } from '~/modules/users/entity/user.entity';
@@ -15,6 +15,7 @@ import { CONFIG_SERVICE, ConfigService } from '../config/config.provider';
 import { MediaObject } from '../storage/entitiy/media-objects.entity';
 import { EventMedia } from '~/modules/events/entity/event-media.entity';
 import { CONFIG_PROVIDER } from '~/common/constants/provider';
+import { Transaction } from '~/modules/payments/entities/transaction.entity';
 
 let dataSource: DataSource;
 
@@ -40,6 +41,7 @@ export const PostgreeConnection = {
         GeneratedEventTicket,
         MediaObject,
         EventMedia,
+        Transaction,
       ],
       synchronize: false,
     });
