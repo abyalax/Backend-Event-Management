@@ -5,6 +5,7 @@ import { TResponse } from '~/common/types/response';
 import { CreateEventDto } from './dto/create-event.dto';
 import { QueryEventDto } from './dto/query-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
+import { PublishEventDto } from './dto/publish-event.dto';
 import { Event } from './entity/event.entity';
 import { EventMedia } from './entity/event-media.entity';
 import { EventService } from './event.service';
@@ -34,6 +35,9 @@ export class EventController {
       search: query.search,
       sortBy,
       path: '',
+      filter: {
+        status: 'PUBLISHED',
+      },
     });
     return {
       message: 'get public events successfully',
@@ -105,6 +109,18 @@ export class EventController {
     return {
       message: 'delete data event successfully',
       data: isDeleted,
+    };
+  }
+
+  @UseGuards(JwtGuard, PermissionsGuard)
+  @Permissions(PERMISSIONS.EVENT.UPDATE)
+  @HttpCode(HttpStatus.OK)
+  @Post('publish')
+  async publish(@Body() payload: PublishEventDto): Promise<TResponse<{ message: string; affected: number }>> {
+    const result = await this.eventService.publish(payload.ids);
+    return {
+      message: 'publish events successfully',
+      data: result,
     };
   }
 

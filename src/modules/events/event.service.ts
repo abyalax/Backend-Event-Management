@@ -1,4 +1,4 @@
-import { Inject, Injectable, NotFoundException } from '@nestjs/common';
+import { Inject, Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { Repository } from 'typeorm';
 import { paginate, PaginateQuery } from 'nestjs-paginate';
 import { REPOSITORY } from '~/common/constants/database';
@@ -53,7 +53,7 @@ export class EventService {
         });
 
         // Debug: Check if media relations are null
-        if (media.length > 0 && media.some((m) => !m.media)) {
+        if (media.some((m) => !m.media)) {
           this.logger.debug(`Event ${event.id}: Some media relations are null, loading manually`);
         }
 
@@ -63,9 +63,7 @@ export class EventService {
             const mediaObject = await this.mediaObjectRepository.findOne({
               where: { id: mediaItem.mediaId },
             });
-            if (mediaObject) {
-              (mediaItem as any).media = mediaObject;
-            }
+            if (mediaObject) mediaItem.media = mediaObject;
           }
         }
 
@@ -114,9 +112,7 @@ export class EventService {
         const mediaObject = await this.mediaObjectRepository.findOne({
           where: { id: mediaItem.mediaId },
         });
-        if (mediaObject) {
-          (mediaItem as any).media = mediaObject;
-        }
+        if (mediaObject) mediaItem.media = mediaObject;
       }
     }
 
@@ -154,7 +150,7 @@ export class EventService {
     };
   }
 
-  async findOneByID(id: string): Promise<any> {
+  async findOneByID(id: string) {
     const event = await this.eventRepository.findOne({
       where: { id },
       relations: ['category', 'media', 'media.media'],
@@ -174,9 +170,7 @@ export class EventService {
         const mediaObject = await this.mediaObjectRepository.findOne({
           where: { id: mediaItem.mediaId },
         });
-        if (mediaObject) {
-          (mediaItem as any).media = mediaObject;
-        }
+        if (mediaObject) mediaItem.media = mediaObject;
       }
     }
 
@@ -234,13 +228,43 @@ export class EventService {
       if (!category) throw new NotFoundException(`Category with ID ${payloadEvent.categoryId} not found`);
     }
 
-    const Event = await this.eventRepository.update(id, {
+    const updatedEvent = await this.eventRepository.update(id, {
       ...payloadEvent,
       categoryId: payloadEvent.categoryId?.toString(),
       category,
     });
-    if (Event.affected === 0) throw new NotFoundException();
+    if (updatedEvent.affected === 0) throw new NotFoundException();
     return true;
+  }
+
+  async publish(ids: string[]) {
+    if (!ids || ids.length === 0) throw new BadRequestException('Event IDs are required');
+
+    // Check if events exist
+    const events = await this.eventRepository.find({
+      where: ids.map((id) => ({ id })),
+    });
+
+    if (events.length !== ids.length) {
+      const foundIds = new Set(events.map((e) => e.id));
+      const missingIds = ids.filter((id) => !foundIds.has(id));
+      throw new NotFoundException(`Events not found: ${missingIds.join(', ')}`);
+    }
+
+    // Update events status to PUBLISHED
+    const result = await this.eventRepository.update(
+      ids.map((id) => ({ id })),
+      { status: 'PUBLISHED' },
+    );
+
+    if (result.affected === 0) throw new NotFoundException('No events were updated');
+
+    this.logger.info({ eventIds: ids, affected: result.affected }, 'Events published successfully');
+
+    return {
+      message: `Successfully published ${result.affected} events`,
+      affected: result.affected || 0,
+    };
   }
 
   async remove(id: string): Promise<boolean> {
