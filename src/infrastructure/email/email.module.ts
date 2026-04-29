@@ -1,12 +1,17 @@
 import { Module } from '@nestjs/common';
+import { BullModule } from '@nestjs/bullmq';
 import { TerminusModule } from '@nestjs/terminus';
 import { EmailService } from './email.service';
+import { EmailProcessor } from './email.processor';
 import { CONFIG_SERVICE, ConfigService } from '../config/config.provider';
 import { CONFIG_PROVIDER } from '~/common/constants/provider';
 import { MailPitHealthIndicator } from './email.health';
+import { LoggerModule } from '~/common/logger/logger.module';
+import { DatabaseModule } from '../database/database.module';
+import { emailProviders } from './email.providers';
 
 @Module({
-  imports: [TerminusModule],
+  imports: [TerminusModule, BullModule.registerQueue({ name: 'email' }), LoggerModule, DatabaseModule],
   providers: [
     {
       provide: CONFIG_PROVIDER.EMAIL,
@@ -30,6 +35,8 @@ import { MailPitHealthIndicator } from './email.health';
       },
     },
     EmailService,
+    EmailProcessor,
+    ...emailProviders,
     MailPitHealthIndicator,
   ],
   exports: [EmailService, MailPitHealthIndicator],

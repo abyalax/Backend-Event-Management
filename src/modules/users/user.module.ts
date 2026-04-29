@@ -1,12 +1,7 @@
 import { Module } from '@nestjs/common';
 import { JwtModule } from '@nestjs/jwt';
-import { JwtGuard } from '~/common/guards/jwt.guard';
-import { PermissionsGuard } from '~/common/guards/permission.guard';
-import { CacheService } from '~/infrastructure/cache/cache.service';
 import { CONFIG_SERVICE, ConfigService } from '~/infrastructure/config/config.provider';
 import { DatabaseModule } from '~/infrastructure/database/database.module';
-import { RedisService } from '~/infrastructure/redis/redis.service';
-import { UserCacheService } from './user-cache.service';
 import { UserController } from './user.controller';
 import { userProvider } from './user.provider';
 import { UserService } from './user.service';
@@ -23,7 +18,7 @@ import { UserService } from './user.service';
       }),
     }),
   ],
-  providers: [...userProvider, CacheService, RedisService, UserCacheService, UserService, JwtGuard, PermissionsGuard],
+  providers: userProvider,
   controllers: [UserController],
   exports: [UserService, ...userProvider],
 })

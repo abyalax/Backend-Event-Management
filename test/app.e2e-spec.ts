@@ -4,7 +4,7 @@ import { TestingModule } from '@nestjs/testing';
 import * as request from 'supertest';
 import { App } from 'supertest/types';
 
-import { setupApplication } from './setup_e2e';
+import { cleanupApplication, setupApplication } from './setup_e2e';
 
 describe('AppController (e2e)', () => {
   let app: INestApplication<App>;
@@ -19,7 +19,6 @@ describe('AppController (e2e)', () => {
   });
 
   afterAll(async () => {
-    await app.close();
-    await moduleFixture.close();
+    await cleanupApplication(app, moduleFixture);
   });
 });

@@ -15,9 +15,7 @@ export class QueueModule implements OnModuleInit, OnModuleDestroy {
   constructor(
     private readonly queueService: QueueService,
     private readonly logger: PinoLogger,
-  ) {
-    this.logger.setContext(QueueModule.name);
-  }
+  ) {}
 
   onModuleInit() {
     try {

@@ -9,8 +9,8 @@ import { PaymentService } from '~/modules/payments/payment.service';
 import { OrderService } from './order.service';
 import { Order } from './entity/order.entity';
 import { OrderItem } from './entity/order-item.entity';
-import { Ticket } from '~/modules/tickets/entity/ticket.entity';
-import { GeneratedEventTicket } from '~/modules/tickets/entity/generated-event-ticket.entity';
+import { Ticket } from '~/modules/tickets/entities/ticket.entity';
+import { GeneratedEventTicket } from '~/modules/tickets/entities/generated-event-ticket.entity';
 
 describe('OrderService', () => {
   let service: OrderService;

@@ -50,6 +50,7 @@ services:
       # Create buckets
       mc mb minio/documents || true;
       mc mb minio/images || true;
+      mc mb minio/documents-public || true;
       mc mb minio/images-public || true;
       mc mb minio/backups || true;
       mc mb minio/videos || true;
@@ -59,6 +60,9 @@ services:
       
       # Set public read policy for images-public bucket
       mc anonymous set public minio/images-public || true;
+
+      # Set public read policy for documents-public bucket
+      mc anonymous set public minio/documents-public || true;
       
       # Set bucket lifecycle for automatic cleanup
       mc ilm import minio/backups < /dev/null || true;

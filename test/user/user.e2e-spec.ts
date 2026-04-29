@@ -5,7 +5,7 @@ import { App } from 'supertest/types';
 import z from 'zod';
 import { validateSchema } from '~/common/helpers/validation';
 import { QueryUserDto } from '~/modules/users/dto/query-user.dto';
-import { setupApplication } from '~/test/setup_e2e';
+import { cleanupApplication, setupApplication } from '~/test/setup_e2e';
 import { extractHttpOnlyCookie } from '~/test/utils';
 
 const USER = {
@@ -170,7 +170,6 @@ describe('Module User', () => {
   });
 
   afterAll(async () => {
-    await app.close();
-    await moduleFixture.close();
+    await cleanupApplication(app, moduleFixture);
   });
 });

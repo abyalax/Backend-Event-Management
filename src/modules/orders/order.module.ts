@@ -8,8 +8,6 @@ import { CONFIG_SERVICE, ConfigService } from '~/infrastructure/config/config.pr
 import { OrderController } from './order.controller';
 import { orderProvider } from './order.provider';
 import { OrderService } from './order.service';
-import { OrderExpirationWorker } from './workers/order-expiration.worker';
-import { OrderProcessorWorker } from './workers/order-processor.worker';
 
 @Module({
   imports: [
@@ -26,7 +24,7 @@ import { OrderProcessorWorker } from './workers/order-processor.worker';
       }),
     }),
   ],
-  providers: [...orderProvider, OrderService, OrderExpirationWorker, OrderProcessorWorker],
+  providers: orderProvider,
   controllers: [OrderController],
   exports: [OrderService, ...orderProvider],
 })

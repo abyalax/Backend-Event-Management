@@ -6,8 +6,8 @@ import { REPOSITORY } from '~/common/constants/database';
 import { ORDER_STATUS_TRANSITIONS, ORDER_TTL_MINUTES, OrderStatus } from '~/common/constants/order-status.enum';
 import { PaymentService } from '~/modules/payments/payment.service';
 import { Event } from '~/modules/events/entity/event.entity';
-import { GeneratedEventTicket } from '~/modules/tickets/entity/generated-event-ticket.entity';
-import { Ticket } from '~/modules/tickets/entity/ticket.entity';
+import { GeneratedEventTicket } from '~/modules/tickets/entities/generated-event-ticket.entity';
+import { Ticket } from '~/modules/tickets/entities/ticket.entity';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderItemResponseDto, OrderResponseDto } from './dto/order-response.dto';
 import { OrderStatusResponseDto } from './dto/order-status-response.dto';
@@ -48,9 +48,7 @@ export class OrderService {
     private readonly generatedTicketRepository: Repository<GeneratedEventTicket>,
 
     private readonly paymentService: PaymentService,
-  ) {
-    this.logger.setContext(OrderService.name);
-  }
+  ) {}
 
   async createOrder(dto: CreateOrderDto, userId: string, userEmail: string): Promise<OrderResponseDto> {
     if (!dto.items?.length) throw new BadRequestException('At least one ticket item is required');

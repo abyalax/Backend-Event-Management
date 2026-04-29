@@ -6,7 +6,6 @@ import { OrderModule } from '../orders/order.module';
 import { CONFIG_SERVICE, ConfigService } from '~/infrastructure/config/config.provider';
 import { TicketController } from './ticket.controller';
 import { eventProvider } from './ticket.provider';
-import { TicketService } from './ticket.service';
 
 @Module({
   imports: [
@@ -22,7 +21,7 @@ import { TicketService } from './ticket.service';
       }),
     }),
   ],
-  providers: [...eventProvider, TicketService],
+  providers: eventProvider,
   controllers: [TicketController],
   exports: [...eventProvider],
 })

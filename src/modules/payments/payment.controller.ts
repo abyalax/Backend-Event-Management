@@ -20,9 +20,7 @@ export class PaymentController {
     private readonly paymentService: PaymentService,
     @Inject(CONFIG_SERVICE)
     private readonly configService: ConfigService,
-  ) {
-    this.logger.setContext(PaymentController.name);
-  }
+  ) {}
 
   @Post('invoice')
   createInvoice(@Body() dto: CreateInvoiceDto) {

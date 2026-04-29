@@ -16,7 +16,6 @@ export class PaymentExpiryProcessor extends WorkerHost {
     private readonly emailService: EmailService,
   ) {
     super();
-    this.logger.setContext(PaymentExpiryProcessor.name);
   }
 
   async process(job: Job): Promise<void> {

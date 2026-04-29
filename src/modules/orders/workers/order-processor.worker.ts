@@ -4,6 +4,7 @@ import { OrderService } from '../order.service';
 import { OrderStatus } from '~/common/constants/order-status.enum';
 import { PinoLogger } from 'nestjs-pino';
 import { CONFIG_SERVICE, ConfigService } from '~/infrastructure/config/config.provider';
+import { PaymentStatus } from '~/modules/payments/payment.enum';
 
 export interface OrderProcessJobData {
   orderId: string;
@@ -20,7 +21,6 @@ export class OrderProcessorWorker {
     @Inject(CONFIG_SERVICE)
     private readonly config: ConfigService,
   ) {
-    this.logger.setContext(OrderProcessorWorker.name);
     this.worker = new Worker<OrderProcessJobData>(
       'order-queue',
       async (job: Job<OrderProcessJobData>) => {
@@ -60,7 +60,7 @@ export class OrderProcessorWorker {
           await this.generateTickets(orderId);
           break;
         default:
-          this.logger.warn(`Unknown action: ${action}`);
+          this.logger.warn(`Unknown action: ${action as string}`);
       }
     } catch (error) {
       this.logger.error(`Error processing ${action} for order ${orderId}:`, error);
@@ -72,9 +72,7 @@ export class OrderProcessorWorker {
     this.logger.info(`Validating payment for order ${orderId}`);
 
     const order = await this.orderService.findOrderById(orderId);
-    if (!order) {
-      throw new Error(`Order ${orderId} not found`);
-    }
+    if (!order) throw new Error(`Order ${orderId} not found`);
 
     if (order.status !== OrderStatus.PENDING) {
       this.logger.warn(`Order ${orderId} is not in PENDING status, current status: ${order.status}`);
@@ -84,7 +82,7 @@ export class OrderProcessorWorker {
     // Check if payment is actually paid by calling Xendit API
     // This is a safety check to ensure webhook was legitimate
     const payment = await this.orderService.getPaymentByOrderId(orderId);
-    if (payment && payment.status === 'PAID') {
+    if (payment?.status === PaymentStatus.PAID) {
       await this.orderService.updateOrderStatus(orderId, OrderStatus.PAID);
       await this.generateTickets(orderId);
       this.logger.info(`Payment validated and order ${orderId} marked as PAID`);
@@ -97,9 +95,7 @@ export class OrderProcessorWorker {
     this.logger.info(`Expiring order ${orderId}`);
 
     const order = await this.orderService.findOrderById(orderId);
-    if (!order) {
-      throw new Error(`Order ${orderId} not found`);
-    }
+    if (!order) throw new Error(`Order ${orderId} not found`);
 
     if (order.status !== OrderStatus.PENDING) {
       this.logger.warn(`Order ${orderId} is not in PENDING status, current status: ${order.status}`);
@@ -119,13 +115,9 @@ export class OrderProcessorWorker {
     this.logger.info(`Generating tickets for order ${orderId}`);
 
     const order = await this.orderService.findOrderById(orderId);
-    if (!order) {
-      throw new Error(`Order ${orderId} not found`);
-    }
+    if (!order) throw new Error(`Order ${orderId} not found`);
 
-    if (order.status !== OrderStatus.PAID) {
-      throw new Error(`Order ${orderId} is not in PAID status, current status: ${order.status}`);
-    }
+    if (order.status !== OrderStatus.PAID) throw new Error(`Order ${orderId} is not in PAID status, current status: ${order.status}`);
 
     // Generate individual tickets for each order item
     await this.orderService.generateTicketsForOrder(orderId);
@@ -135,6 +127,10 @@ export class OrderProcessorWorker {
 
   async onModuleDestroy(): Promise<void> {
     this.logger.info('Closing order processor worker');
+    if (process.env.NODE_ENV === 'test') {
+      this.worker.removeAllListeners();
+      return;
+    }
     await this.worker.close();
   }
 }

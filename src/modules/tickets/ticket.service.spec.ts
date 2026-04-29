@@ -4,7 +4,7 @@ import { REPOSITORY } from '~/common/constants/database';
 import { ConfigModule } from '~/infrastructure/config/config.module';
 import { LoggerModule } from '~/common/logger/logger.module';
 import { mockRepository } from '~/test/common/mock';
-import { Ticket } from './entity/ticket.entity';
+import { Ticket } from './entities/ticket.entity';
 import { TicketService } from './ticket.service';
 
 describe('TicketService', () => {

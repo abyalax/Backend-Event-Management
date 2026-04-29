@@ -15,9 +15,7 @@ export class PaymentHealthIndicator {
     private readonly healthIndicatorService: HealthIndicatorService,
     @InjectQueue(PAYMENT_QUEUE)
     private readonly paymentQueue: Queue<WebhookJobData>,
-  ) {
-    this.logger.setContext(PaymentHealthIndicator.name);
-  }
+  ) {}
 
   async isHealthy(key: string = 'xendit') {
     const indicator = this.healthIndicatorService.check(key);

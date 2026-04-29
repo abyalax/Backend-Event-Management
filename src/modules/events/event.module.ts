@@ -7,8 +7,6 @@ import { EmailModule } from '~/infrastructure/email/email.module';
 import { StorageModule } from '~/infrastructure/storage/storage.module';
 import { EventController } from './event.controller';
 import { eventProvider } from './event.provider';
-import { EventService } from './event.service';
-import { EventRepository } from './event.repository';
 import { QueueService } from '~/infrastructure/queue/queue.service';
 import { EmailService } from '~/infrastructure/email/email.service';
 import { PinoLogger } from 'nestjs-pino';
@@ -36,7 +34,7 @@ import { LoggerModule } from '~/common/logger/logger.module';
       }),
     }),
   ],
-  providers: [...eventProvider, EventService, EventRepository],
+  providers: eventProvider,
   controllers: [EventController],
 })
 export class EventModule implements OnModuleInit {
@@ -45,9 +43,7 @@ export class EventModule implements OnModuleInit {
     private readonly emailService: EmailService,
 
     private readonly logger: PinoLogger,
-  ) {
-    this.logger.setContext(EventModule.name);
-  }
+  ) {}
 
   onModuleInit() {
     this.queueService.registerQueue(QUEUE.EVENT_NOTIFICATIONS, [

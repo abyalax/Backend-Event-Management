@@ -38,9 +38,7 @@ export class EventService {
     private readonly logger: PinoLogger,
     @Inject(CONFIG_SERVICE) private readonly configService: ConfigService,
     private readonly storageService: StorageService,
-  ) {
-    this.logger.setContext(EventService.name);
-  }
+  ) {}
 
   async list(query: PaginateQuery) {
     const result = await paginate(query, this.eventRepository, EVENT_PAGINATION_CONFIG);
@@ -56,7 +54,7 @@ export class EventService {
 
         // Debug: Check if media relations are null
         if (media.length > 0 && media.some((m) => !m.media)) {
-          console.log(`Event ${event.id}: Some media relations are null, loading manually`);
+          this.logger.debug(`Event ${event.id}: Some media relations are null, loading manually`);
         }
 
         // Manually load media objects for each EventMedia if the relation is null

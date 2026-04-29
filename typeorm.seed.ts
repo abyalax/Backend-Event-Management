@@ -8,8 +8,8 @@ import { Notification } from '~/modules/notifications/entity/notification.entity
 import { OrderItem } from '~/modules/orders/entity/order-item.entity';
 import { Order } from '~/modules/orders/entity/order.entity';
 import { Payment } from '~/modules/payments/entities/payment.entity';
-import { GeneratedEventTicket } from '~/modules/tickets/entity/generated-event-ticket.entity';
-import { Ticket } from '~/modules/tickets/entity/ticket.entity';
+import { GeneratedEventTicket } from '~/modules/tickets/entities/generated-event-ticket.entity';
+import { Ticket } from '~/modules/tickets/entities/ticket.entity';
 import { User } from '~/modules/users/entity/user.entity';
 import { RolePermission } from '~/modules/role-permissions/entity/role-permissions.entity';
 import { MediaObject } from '~/infrastructure/storage/entitiy/media-objects.entity';

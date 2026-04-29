@@ -4,7 +4,7 @@ export const jestConfig: Config = {
   moduleFileExtensions: ['js', 'json', 'ts'],
   rootDir: '.',
   testEnvironment: 'node',
-  forceExit: true,
+  detectOpenHandles: true,
   transform: {
     '^.+\\.(t|j)s$': 'ts-jest',
   },

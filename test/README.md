@@ -103,8 +103,7 @@ describe('Module Product', () => {
   });
 
   afterAll(async () => {
-    await app.close();
-    await moduleFixture.close();
+    await cleanupApplication(app, moduleFixture);
   });
 });
 ```

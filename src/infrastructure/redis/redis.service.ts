@@ -11,9 +11,7 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   constructor(
     private readonly logger: PinoLogger,
     @Inject(CONFIG_PROVIDER.REDIS_CLIENT) private readonly client: Redis,
-  ) {
-    this.logger.setContext(RedisService.name);
-  }
+  ) {}
 
   async onModuleInit() {
     try {
@@ -44,6 +42,19 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
   }
 
   async onModuleDestroy() {
+    if (process.env.NODE_ENV === 'test') {
+      this.publisher?.removeAllListeners();
+      this.subscriber?.removeAllListeners();
+      this.client?.removeAllListeners();
+
+      this.publisher?.disconnect();
+      this.subscriber?.disconnect();
+      this.client?.disconnect();
+
+      this.logger.info('Redis connections cleanup completed');
+      return;
+    }
+
     const closeConnection = async (redis: Redis | null, name: string) => {
       if (!redis) return;
       redis.removeAllListeners('error');

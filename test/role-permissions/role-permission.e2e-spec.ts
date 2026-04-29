@@ -6,7 +6,7 @@ import z from 'zod';
 import { validateSchema } from '~/common/helpers/validation';
 import { Permission } from '~/modules/auth/entity/permission.entity';
 import { QueryRolePermissionDto } from '~/modules/role-permissions/dto/query-role-permission.dto';
-import { setupApplication } from '~/test/setup_e2e';
+import { cleanupApplication, setupApplication } from '~/test/setup_e2e';
 import { extractHttpOnlyCookie } from '~/test/utils';
 
 const USER = {
@@ -267,7 +267,8 @@ describe('Module Role Permissions', () => {
 
       // Verify the assigned permissions are correct
       const assignedPermissions = res.body.data.permissions;
-      assignedPermissions.forEach((permission: any) => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-call
+      assignedPermissions.forEach((permission: Permission) => {
         expect(updatePayload.permissionIds).toContain(permission.id);
         expect(permission).toHaveProperty('id');
         expect(permission).toHaveProperty('key');
@@ -425,7 +426,6 @@ describe('Module Role Permissions', () => {
   });
 
   afterAll(async () => {
-    await app.close();
-    await moduleFixture.close();
+    await cleanupApplication(app, moduleFixture);
   });
 });

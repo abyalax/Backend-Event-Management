@@ -44,7 +44,6 @@ export class MinioProvider implements OnModuleInit, OnModuleDestroy {
     @Inject(CONFIG_SERVICE) private readonly configEnv: ConfigService,
     @Inject(CONFIG_PROVIDER.STORAGE) private readonly configMinio: MinioConfig,
   ) {
-    this.logger.setContext(MinioProvider.name);
     this.initClient();
   }
 
@@ -219,11 +218,11 @@ export class MinioProvider implements OnModuleInit, OnModuleDestroy {
           // eslint-disable-next-line @typescript-eslint/no-unsafe-call
           agent.destroy(); // remove socket connection
           this.logger.info('MinIO HTTP Agent destroyed');
-          await new Promise((resolve) => setTimeout(resolve, 100));
+          if (this.configEnv.get('NODE_ENV') !== 'test') {
+            await new Promise((resolve) => setTimeout(resolve, 100));
+          }
         }
       }
-      this.isConnected = false;
-      this.logger.info('MinIO provider destroyed');
       this.isConnected = false;
       this.logger.info('MinIO provider destroyed');
     } catch (error) {

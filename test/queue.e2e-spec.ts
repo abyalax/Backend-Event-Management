@@ -397,9 +397,7 @@ describe('Module Queue', () => {
     }
 
     try {
-      if (app) {
-        await app.close();
-      }
+      if (app) await app.close();
     } catch (error) {
       console.error('Error closing app:', error);
     }

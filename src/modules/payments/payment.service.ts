@@ -30,8 +30,8 @@ import { CONFIG_SERVICE, ConfigService } from '~/infrastructure/config/config.pr
 
 @Injectable()
 export class PaymentService {
-  private readonly invoice: XenditInvoiceApi;
-  private readonly paymentMethod: XenditPaymentMethodApi;
+  private readonly invoice?: XenditInvoiceApi;
+  private readonly paymentMethod?: XenditPaymentMethodApi;
   private readonly xenditSecretKey: string;
   private readonly paymentProvider: 'mock' | 'xendit';
 
@@ -47,12 +47,13 @@ export class PaymentService {
     @InjectQueue(PAYMENT_QUEUE)
     private readonly paymentQueue: Queue,
   ) {
-    this.logger.setContext(PaymentService.name);
     this.xenditSecretKey = this.config.get('XENDIT_SECRET_KEY');
     this.paymentProvider = this.config.get('PAYMENT_PROVIDER');
-    const xendit = new Xendit({ secretKey: this.xenditSecretKey });
-    this.invoice = xendit.Invoice;
-    this.paymentMethod = xendit.PaymentMethod;
+    if (this.paymentProvider === 'xendit') {
+      const xendit = new Xendit({ secretKey: this.xenditSecretKey });
+      this.invoice = xendit.Invoice;
+      this.paymentMethod = xendit.PaymentMethod;
+    }
   }
 
   async createInvoice(dto: CreateInvoiceDto): Promise<Transaction> {
@@ -91,7 +92,7 @@ export class PaymentService {
       return this.transactionRepo.save(transaction);
     }
 
-    const xenditVA = await this.paymentMethod.createPaymentMethod({
+    const xenditVA = await this.getPaymentMethodClient().createPaymentMethod({
       data: {
         type: PaymentMethodType.VirtualAccount,
         reusability: PaymentMethodReusability.OneTimeUse,
@@ -145,7 +146,7 @@ export class PaymentService {
       return this.transactionRepo.save(transaction);
     }
 
-    const xenditQr = await this.paymentMethod.createPaymentMethod({
+    const xenditQr = await this.getPaymentMethodClient().createPaymentMethod({
       data: {
         type: PaymentMethodType.QrCode,
         reusability: PaymentMethodReusability.OneTimeUse,
@@ -194,7 +195,7 @@ export class PaymentService {
       return this.transactionRepo.save(transaction);
     }
 
-    const xenditEwallet = await this.paymentMethod.createPaymentMethod({
+    const xenditEwallet = await this.getPaymentMethodClient().createPaymentMethod({
       data: {
         type: PaymentMethodType.Ewallet,
         reusability: PaymentMethodReusability.OneTimeUse,
@@ -473,6 +474,9 @@ export class PaymentService {
 
   private async buildXenditInvoiceTransaction(dto: CreateInvoiceDto): Promise<Transaction> {
     this.logger.info('Create Xendit Transaction');
+    if (!this.invoice) {
+      throw new Error('Xendit invoice client is not initialized');
+    }
     const xenditInvoice = await this.invoice.createInvoice({
       data: {
         externalId: dto.externalId,
@@ -534,5 +538,13 @@ export class PaymentService {
       default:
         return EWalletChannelCode.Ovo;
     }
+  }
+
+  private getPaymentMethodClient(): XenditPaymentMethodApi {
+    if (!this.paymentMethod) {
+      throw new Error('Xendit payment method client is not initialized');
+    }
+
+    return this.paymentMethod;
   }
 }

@@ -37,9 +37,7 @@ export class JobHandlerService implements OnModuleInit {
 
     private readonly logger: PinoLogger,
     private readonly redisService: RedisService,
-  ) {
-    this.logger.setContext(JobHandlerService.name);
-  }
+  ) {}
 
   onModuleInit() {
     try {

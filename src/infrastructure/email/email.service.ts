@@ -34,7 +34,6 @@ export class EmailService {
 
     private readonly logger: PinoLogger,
   ) {
-    this.logger.setContext(EmailService.name);
     this.initializeTransporter();
   }
 

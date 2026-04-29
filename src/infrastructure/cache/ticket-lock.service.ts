@@ -8,9 +8,7 @@ export class TicketLockService {
   constructor(
     private readonly redisService: RedisService,
     private readonly logger: PinoLogger,
-  ) {
-    this.logger.setContext(TicketLockService.name);
-  }
+  ) {}
 
   async lockTicketQuota(ticketId: string, orderId: string, quantity: number): Promise<boolean> {
     const lockKey = `ticket_lock:${ticketId}:${orderId}`;

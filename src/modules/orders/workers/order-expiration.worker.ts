@@ -4,16 +4,16 @@ import { OrderService } from '../order.service';
 import { OrderStatus, ORDER_TTL_MINUTES } from '~/common/constants/order-status.enum';
 import { PinoLogger } from 'nestjs-pino';
 
+const CronEveryMinute = process.env.NODE_ENV === 'test' ? () => () => undefined : () => Cron(CronExpression.EVERY_MINUTE);
+
 @Injectable()
 export class OrderExpirationWorker {
   constructor(
     private readonly orderService: OrderService,
     private readonly logger: PinoLogger,
-  ) {
-    this.logger.setContext(OrderExpirationWorker.name);
-  }
+  ) {}
 
-  @Cron(CronExpression.EVERY_MINUTE)
+  @CronEveryMinute()
   async checkExpiredOrders(): Promise<void> {
     this.logger.info('Checking for expired orders...');
 
@@ -62,9 +62,7 @@ export class OrderExpirationWorker {
         return false;
       }
 
-      if (order.status !== OrderStatus.PENDING) {
-        return false;
-      }
+      if (order.status !== OrderStatus.PENDING) return false;
 
       // Check if order has expired
       if (!order.createdAt) {
@@ -93,13 +91,8 @@ export class OrderExpirationWorker {
     try {
       const order = await this.orderService.findOrderById(orderId);
 
-      if (!order || order.status !== OrderStatus.PENDING) {
-        return null;
-      }
-
-      if (!order.createdAt) {
-        return null;
-      }
+      if (!order || order?.status !== OrderStatus.PENDING) return null;
+      if (!order.createdAt) return null;
 
       const expirationTime = new Date(order.createdAt);
       expirationTime.setMinutes(expirationTime.getMinutes() + ORDER_TTL_MINUTES);
@@ -115,7 +108,7 @@ export class OrderExpirationWorker {
     try {
       const order = await this.orderService.findOrderById(orderId);
 
-      if (!order || order.status !== OrderStatus.PENDING) {
+      if (!order || order?.status !== OrderStatus.PENDING) {
         this.logger.warn(`Cannot extend expiration for order ${orderId}: not found or not pending`);
         return false;
       }

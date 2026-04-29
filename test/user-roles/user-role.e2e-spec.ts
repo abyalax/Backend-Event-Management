@@ -5,13 +5,15 @@ import { App } from 'supertest/types';
 import { Permission } from '~/modules/auth/entity/permission.entity';
 import { RoleDto } from '~/modules/role-permissions/dto/role-permission.dto';
 import { Role } from '~/modules/role-permissions/entity/role.entity';
-import { setupApplication } from '~/test/setup_e2e';
+import { cleanupApplication, setupApplication } from '~/test/setup_e2e';
 import { extractHttpOnlyCookie } from '~/test/utils';
 
 const USER = {
   email: 'admin@gmail.com',
   password: 'password',
 };
+
+const testPassword = 'sdvdsvfdvdfw123';
 
 describe('Module User Role Management', () => {
   let app: INestApplication<App>;
@@ -45,7 +47,7 @@ describe('Module User Role Management', () => {
       const payload = {
         name: 'Test User Role Assignment',
         email: 'testrole@example.com',
-        password: 'password123',
+        password: testPassword,
       };
 
       const res = await request(app.getHttpServer())
@@ -73,7 +75,7 @@ describe('Module User Role Management', () => {
       const userPayload = {
         name: 'Test User Role Assignment',
         email: 'testrole@example.com',
-        password: 'password123',
+        password: testPassword,
       };
 
       const userRes = await request(app.getHttpServer())
@@ -125,7 +127,7 @@ describe('Module User Role Management', () => {
       const userPayload = {
         name: 'Test User Get Roles',
         email: 'testgetroles@example.com',
-        password: 'password123',
+        password: testPassword,
       };
 
       const userRes = await request(app.getHttpServer())
@@ -202,7 +204,7 @@ describe('Module User Role Management', () => {
       const userPayload = {
         name: 'Test User Remove Role',
         email: 'testremoverole@example.com',
-        password: 'password123',
+        password: testPassword,
       };
 
       const userRes = await request(app.getHttpServer())
@@ -256,7 +258,6 @@ describe('Module User Role Management', () => {
   });
 
   afterAll(async () => {
-    await app.close();
-    await moduleFixture.close();
+    await cleanupApplication(app, moduleFixture);
   });
 });

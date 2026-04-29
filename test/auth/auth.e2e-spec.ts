@@ -8,7 +8,7 @@ import { validateDto } from '~/common/helpers/validation';
 import { envSchema } from '~/infrastructure/config/config.schema';
 import { SignUpDto } from '~/modules/auth/dto/sign-up.dto';
 import { UserDto } from '~/modules/users/dto/user.dto';
-import { setupApplication } from '~/test/setup_e2e';
+import { cleanupApplication, setupApplication } from '~/test/setup_e2e';
 import { USER } from '../common/constant';
 import { extractHttpOnlyCookie, extractSignedCookieToken } from '../utils';
 
@@ -92,7 +92,6 @@ describe('Module Authentication', () => {
   });
 
   afterAll(async () => {
-    await app.close();
-    await moduleFixture.close();
+    await cleanupApplication(app, moduleFixture);
   });
 });

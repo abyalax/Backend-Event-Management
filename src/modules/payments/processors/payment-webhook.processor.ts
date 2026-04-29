@@ -22,7 +22,6 @@ export class PaymentWebhookProcessor extends WorkerHost {
     private readonly emailService: EmailService,
   ) {
     super();
-    this.logger.setContext(PaymentWebhookProcessor.name);
   }
 
   async process(job: Job): Promise<void> {

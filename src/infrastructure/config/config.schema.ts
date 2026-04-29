@@ -71,6 +71,8 @@ export const envSchema = z.object({
   PAYMENT_PROVIDER: z.enum(['mock', 'xendit']).default('mock'),
   XENDIT_SECRET_KEY: z.string({ message: 'XENDIT_SECRET_KEY is required' }),
   XENDIT_CALLBACK_TOKEN: z.string({ message: 'XENDIT_CALLBACK_TOKEN is required' }),
+
+  QR_SECRET: z.string({ message: 'QR_SECRET is required' }),
 });
 
 export type Environment = z.infer<typeof envSchema>;

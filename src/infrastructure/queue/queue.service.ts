@@ -31,7 +31,6 @@ export class QueueService implements OnModuleDestroy {
     @Inject(CONFIG_SERVICE) private readonly config: ConfigService,
     private readonly logger: PinoLogger,
   ) {
-    this.logger.setContext(QueueService.name);
     this.connection = new Redis({
       host: this.config.get('REDIS_HOST'),
       port: this.config.get('REDIS_PORT'),
@@ -234,6 +233,31 @@ export class QueueService implements OnModuleDestroy {
 
     this.isShuttingDown = true;
     this.logger.info('Starting queue service shutdown');
+
+    if (process.env.NODE_ENV === 'test') {
+      for (const worker of this.workers.values()) {
+        void worker.close().catch((error) => {
+          this.logger.error({ error }, 'Error closing worker');
+        });
+      }
+
+      for (const queue of this.queues.values()) {
+        void queue.close().catch((error) => {
+          this.logger.error({ error }, 'Error closing queue');
+        });
+      }
+
+      void this.connection.quit().catch((error) => {
+        this.logger.error({ error }, 'Error closing Redis connection');
+        this.connection.disconnect?.();
+      });
+
+      this.queues.clear();
+      this.workers.clear();
+
+      this.logger.info('All queues and workers closed successfully');
+      return;
+    }
 
     try {
       const workerClosePromises = Array.from(this.workers.values()).map((worker) =>

@@ -2,13 +2,19 @@ import { Provider } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { REPOSITORY } from '~/common/constants/database';
 import { PostgreeConnection } from '~/infrastructure/database/database.provider';
-import { GeneratedEventTicket } from '~/modules/tickets/entity/generated-event-ticket.entity';
+import { GeneratedEventTicket } from '~/modules/tickets/entities/generated-event-ticket.entity';
 import { Event } from '~/modules/events/entity/event.entity';
 import { OrderItem } from './entity/order-item.entity';
 import { Order } from './entity/order.entity';
 import { Payment } from '~/modules/payments/entities/payment.entity';
+import { OrderExpirationWorker } from './workers/order-expiration.worker';
+import { OrderProcessorWorker } from './workers/order-processor.worker';
+import { OrderService } from './order.service';
 
 export const orderProvider: Provider[] = [
+  OrderService,
+  OrderExpirationWorker,
+  OrderProcessorWorker,
   {
     provide: REPOSITORY.EVENT,
     useFactory: (dataSource: DataSource) => dataSource.getRepository(Event),

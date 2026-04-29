@@ -8,7 +8,7 @@ import axios from 'axios';
 import z from 'zod';
 import { validateSchema } from '~/common/helpers/validation';
 import { QueryEventDto } from '~/modules/events/dto/query-event.dto';
-import { setupApplication } from '~/test/setup_e2e';
+import { cleanupApplication, setupApplication } from '~/test/setup_e2e';
 import { extractHttpOnlyCookie } from '~/test/utils';
 import { EventDto } from '~/modules/events/dto/event.dto';
 
@@ -370,7 +370,6 @@ describe('Module Events', () => {
   });
 
   afterAll(async () => {
-    await app.close();
-    await moduleFixture.close();
+    await cleanupApplication(app, moduleFixture);
   });
 });

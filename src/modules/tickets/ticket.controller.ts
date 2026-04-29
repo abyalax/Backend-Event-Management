@@ -5,7 +5,7 @@ import { CreateTicketDto } from './dto/create-ticket.dto';
 import { QueryTicketDto } from './dto/query-ticket.dto';
 import { UpdateTicketDto } from './dto/update-ticket.dto';
 import { BuyTicketDto } from './dto/buy-ticket.dto';
-import { Ticket } from './entity/ticket.entity';
+import { Ticket } from './entities/ticket.entity';
 import { TicketService } from './ticket.service';
 import { OrderService } from '~/modules/orders/order.service';
 import { OrderResponseDto } from '~/modules/orders/dto/order-response.dto';

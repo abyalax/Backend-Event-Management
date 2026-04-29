@@ -1,7 +1,7 @@
 import type { DataSource } from 'typeorm';
 import type { Seeder } from 'typeorm-extension';
 
-import { Ticket } from '~/modules/tickets/entity/ticket.entity';
+import { Ticket } from '~/modules/tickets/entities/ticket.entity';
 
 import { mockTickets } from '../mock/ticket.mock';
 

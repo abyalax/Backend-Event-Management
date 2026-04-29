@@ -23,6 +23,9 @@ import { StorageModule } from './infrastructure/storage/storage.module';
 import { EmailModule } from './infrastructure/email/email.module';
 import { QueueModule } from './infrastructure/queue/queue.module';
 import { PaymentModule } from './modules/payments/payment.module';
+import { PdfModule } from './modules/pdf/pdf.module';
+import { CheckInModule } from './modules/check-in/check-in.module';
+import { QrModule } from './modules/qr-code/qr-code.module';
 
 const gracefulShutdownImports =
   process.env.NODE_ENV === 'test'
@@ -55,6 +58,9 @@ const gracefulShutdownImports =
           host: configService.get('REDIS_HOST'),
           port: configService.get('REDIS_PORT'),
           password: configService.get('REDIS_PASSWORD'),
+          retryStrategy: process.env.NODE_ENV === 'test' ? () => null : undefined,
+          enableOfflineQueue: process.env.NODE_ENV === 'test' ? false : undefined,
+          maxRetriesPerRequest: process.env.NODE_ENV === 'test' ? 0 : undefined,
         },
       }),
     }),
@@ -78,13 +84,20 @@ const gracefulShutdownImports =
     StorageModule,
     EmailModule,
     QueueModule,
+    PdfModule,
+    QrModule,
+    CheckInModule,
   ],
   controllers: [AppController],
   providers: [
-    {
-      provide: APP_GUARD,
-      useClass: ThrottlerGuard,
-    },
+    ...(process.env.NODE_ENV === 'test'
+      ? []
+      : [
+          {
+            provide: APP_GUARD,
+            useClass: ThrottlerGuard,
+          },
+        ]),
     {
       provide: APP_FILTER,
       useClass: GlobalExceptionFilter,
