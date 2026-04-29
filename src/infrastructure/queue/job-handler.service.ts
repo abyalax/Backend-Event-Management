@@ -1,9 +1,16 @@
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, OnModuleInit, Inject } from '@nestjs/common';
+import { Repository } from 'typeorm';
+import { JobsOptions } from 'bullmq';
 import { QueueService } from './queue.service';
 import { QueueErrorHandler } from './queue.error-handler';
 import { PinoLogger } from 'nestjs-pino';
 import { QUEUE_NAMES, QUEUE_JOB_NAMES } from './queue.constants';
 import { RedisService } from '../redis/redis.service';
+import { EmailService } from '../email/email.service';
+import { REPOSITORY } from '~/common/constants/database';
+import { Event } from '~/modules/events/entity/event.entity';
+import { GeneratedEventTicket } from '~/modules/tickets/entities/generated-event-ticket.entity';
+import { User } from '~/modules/users/entity/user.entity';
 
 export interface EmailJobData {
   to: string;
@@ -34,9 +41,12 @@ export class JobHandlerService implements OnModuleInit {
   constructor(
     private readonly queueService: QueueService,
     private readonly errorHandler: QueueErrorHandler,
-
+    private readonly emailService: EmailService,
     private readonly logger: PinoLogger,
     private readonly redisService: RedisService,
+    @Inject(REPOSITORY.EVENT) private readonly eventRepository: Repository<Event>,
+    @Inject(REPOSITORY.GENERATED_EVENT_TICKET) private readonly generatedEventTicketRepository: Repository<GeneratedEventTicket>,
+    @Inject(REPOSITORY.USER) private readonly userRepository: Repository<User>,
   ) {}
 
   onModuleInit() {
@@ -239,17 +249,12 @@ export class JobHandlerService implements OnModuleInit {
 
   private async sendEmail(data: EmailJobData): Promise<void> {
     try {
-      // TODO: Integrate with your email service (e.g., Nodemailer, SendGrid, etc.)
-      // Example:
-      // await this.emailService.send({
-      //   to: data.to,
-      //   subject: data.subject,
-      //   html: data.html || data.body,
-      //   replyTo: data.replyTo,
-      // });
-
-      // Simulate email sending
-      await new Promise((resolve) => setTimeout(resolve, 100));
+      await this.emailService.sendEmail({
+        to: data.to,
+        subject: data.subject,
+        html: data.html || data.body,
+        replyTo: data.replyTo,
+      });
 
       this.logger.debug({ to: data.to }, 'Email sent via service');
     } catch (error) {
@@ -280,16 +285,35 @@ export class JobHandlerService implements OnModuleInit {
 
   private async cleanupExpiredData(): Promise<void> {
     try {
-      // TODO: Implement cleanup logic for expired records
-      // Example:
-      // await this.db.deleteMany({
-      //   expiresAt: { $lt: new Date() }
-      // });
+      const now = new Date();
+      const thirtyDaysAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
-      // Simulate cleanup
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      // Clean up expired events (events that ended more than 30 days ago)
+      const expiredEventsResult = await this.eventRepository
+        .createQueryBuilder('event')
+        .where('event.endDate < :thirtyDaysAgo', { thirtyDaysAgo })
+        .andWhere('event.status != :cancelled', { cancelled: 'CANCELLED' })
+        .update()
+        .set({ status: 'COMPLETED' })
+        .execute();
 
-      this.logger.debug('Expired data cleaned up');
+      // Clean up old notifications (older than 90 days and already read)
+      // Note: This would require injecting the notification repository
+      // const ninetyDaysAgo = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+      // const oldNotificationsResult = await this.notificationRepository
+      //   .createQueryBuilder('notification')
+      //   .where('notification.createdAt < :ninetyDaysAgo', { ninetyDaysAgo })
+      //   .andWhere('notification.isRead = :isRead', { isRead: true })
+      //   .delete()
+      //   .execute();
+
+      this.logger.debug(
+        {
+          expiredEventsUpdated: expiredEventsResult.affected || 0,
+          // oldNotificationsDeleted: oldNotificationsResult.affected || 0,
+        },
+        'Expired data cleaned up',
+      );
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to cleanup expired data: ${errorMessage}`);
@@ -298,17 +322,36 @@ export class JobHandlerService implements OnModuleInit {
 
   private async cleanupOrphanedData(): Promise<void> {
     try {
-      // TODO: Implement cleanup logic for orphaned records
-      // Example:
-      // await this.db.deleteMany({
-      //   parentId: null,
-      //   createdAt: { $lt: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) }
-      // });
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-      // Simulate cleanup
-      await new Promise((resolve) => setTimeout(resolve, 200));
+      // Clean up orphaned generated event tickets
+      // Find tickets whose order items no longer exist
+      const orphanedTicketsQuery = this.generatedEventTicketRepository
+        .createQueryBuilder('ticket')
+        .leftJoin('order_items', 'orderItem', 'orderItem.id = ticket.orderItemId')
+        .where('orderItem.id IS NULL')
+        .andWhere('ticket.issuedAt < :sevenDaysAgo', { sevenDaysAgo });
 
-      this.logger.debug('Orphaned data cleaned up');
+      const orphanedTicketsResult = await orphanedTicketsQuery.delete().execute();
+
+      // Clean up tickets for cancelled orders (older than 7 days)
+      const cancelledTicketsResult = await this.generatedEventTicketRepository
+        .createQueryBuilder('ticket')
+        .leftJoin('order_items', 'orderItem', 'orderItem.id = ticket.orderItemId')
+        .leftJoin('orders', 'order', 'order.id = orderItem.orderId')
+        .where('order.status = :cancelled', { cancelled: 'CANCELLED' })
+        .andWhere('ticket.issuedAt < :sevenDaysAgo', { sevenDaysAgo })
+        .andWhere('ticket.isUsed = :isUsed', { isUsed: false })
+        .delete()
+        .execute();
+
+      this.logger.debug(
+        {
+          orphanedTicketsDeleted: orphanedTicketsResult.affected || 0,
+          cancelledTicketsDeleted: cancelledTicketsResult.affected || 0,
+        },
+        'Orphaned data cleaned up',
+      );
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error);
       throw new Error(`Failed to cleanup orphaned data: ${errorMessage}`);
@@ -331,19 +374,19 @@ export class JobHandlerService implements OnModuleInit {
   }
 
   // Public methods for external usage
-  async sendEmailJob(data: EmailJobData, opts?: any) {
+  async sendEmailJob(data: EmailJobData, opts?: JobsOptions) {
     return this.queueService.addJob(QUEUE_NAMES.EMAIL, QUEUE_JOB_NAMES.SEND_EMAIL, data, opts);
   }
 
-  async sendNotificationJob(data: NotificationJobData, opts?: any) {
+  async sendNotificationJob(data: NotificationJobData, opts?: JobsOptions) {
     return this.queueService.addJob(QUEUE_NAMES.NOTIFICATION, QUEUE_JOB_NAMES.SEND_NOTIFICATION, data, opts);
   }
 
-  async scheduleCleanupExpired(opts?: any) {
+  async scheduleCleanupExpired(opts?: JobsOptions) {
     return this.queueService.addJob(QUEUE_NAMES.CLEANUP, QUEUE_JOB_NAMES.CLEANUP_EXPIRED, {}, opts);
   }
 
-  async scheduleCleanupOrphaned(opts?: any) {
+  async scheduleCleanupOrphaned(opts?: JobsOptions) {
     return this.queueService.addJob(QUEUE_NAMES.CLEANUP, QUEUE_JOB_NAMES.CLEANUP_ORPHANED, {}, opts);
   }
 

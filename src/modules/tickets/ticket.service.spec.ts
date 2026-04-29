@@ -1,11 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { Repository } from 'typeorm';
 import { REPOSITORY } from '~/common/constants/database';
-import { ConfigModule } from '~/infrastructure/config/config.module';
-import { LoggerModule } from '~/common/logger/logger.module';
-import { mockRepository } from '~/test/common/mock';
+import { mockRepository, mockConfigService } from '~/test/common/mock';
 import { Ticket } from './entities/ticket.entity';
 import { TicketService } from './ticket.service';
+import { CONFIG_SERVICE } from '~/infrastructure/config/config.provider';
 
 describe('TicketService', () => {
   let service: TicketService;
@@ -13,9 +12,23 @@ describe('TicketService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      imports: [ConfigModule, LoggerModule],
+      imports: [],
       providers: [
         TicketService,
+        {
+          provide: CONFIG_SERVICE,
+          useValue: mockConfigService,
+        },
+        {
+          provide: 'PinoLogger',
+          useValue: {
+            setContext: jest.fn(),
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
+            debug: jest.fn(),
+          },
+        },
         {
           provide: REPOSITORY.TICKET,
           useValue: mockRepository,

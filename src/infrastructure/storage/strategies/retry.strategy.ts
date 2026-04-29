@@ -1,4 +1,5 @@
-import { Inject, Injectable, Logger } from '@nestjs/common';
+import { Inject, Injectable } from '@nestjs/common';
+import { PinoLogger } from 'nestjs-pino';
 import { CONFIG_PROVIDER } from '~/common/constants/provider';
 
 export interface RetryConfig {
@@ -31,10 +32,12 @@ export interface RetryResult<T> {
  */
 @Injectable()
 export class RetryStrategy {
-  private readonly logger = new Logger('RetryStrategy');
   private readonly config: RetryConfig;
 
-  constructor(@Inject(CONFIG_PROVIDER.STORAGE) private readonly storageConfig: RetryConfig) {
+  constructor(
+    private readonly logger: PinoLogger,
+    @Inject(CONFIG_PROVIDER.STORAGE) private readonly storageConfig: RetryConfig,
+  ) {
     this.config = {
       maxAttempts: storageConfig.maxAttempts || 3,
       initialDelayMs: storageConfig.initialDelayMs || 100,

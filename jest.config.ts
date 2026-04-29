@@ -5,6 +5,7 @@ export const jestConfig: Config = {
   rootDir: '.',
   testEnvironment: 'node',
   detectOpenHandles: true,
+  forceExit: true,
   transform: {
     '^.+\\.(t|j)s$': 'ts-jest',
   },

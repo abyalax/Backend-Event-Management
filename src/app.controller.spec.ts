@@ -1,6 +1,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { TerminusModule } from '@nestjs/terminus';
 import { AppController } from './app.controller';
+import { mockMinioProvider, mockEmailService } from '~/test/common/mock';
 import { StorageHealthIndicator } from './infrastructure/storage/indicators/health.indicator';
 import { MailPitHealthIndicator } from './infrastructure/email/email.health';
 import { MinioProvider } from './infrastructure/storage/providers/minio.provider';
@@ -18,16 +19,11 @@ describe('AppController', () => {
         MailPitHealthIndicator,
         {
           provide: MinioProvider,
-          useValue: {
-            healthCheck: jest.fn().mockResolvedValue({ status: 'healthy', latency: 10 }),
-            getStatus: jest.fn().mockReturnValue({ connected: true, buckets: 2 }),
-          },
+          useValue: mockMinioProvider,
         },
         {
           provide: EmailService,
-          useValue: {
-            verifyConnection: jest.fn().mockResolvedValue(true),
-          },
+          useValue: mockEmailService,
         },
       ],
     }).compile();

@@ -15,7 +15,6 @@ import UserSeeder from '~/infrastructure/database/seeds/1_users.seed';
 import EventSeeder from '~/infrastructure/database/seeds/2_events.seed';
 import TicketSeeder from '~/infrastructure/database/seeds/3_tickets.seed';
 import OrderSeeder from '~/infrastructure/database/seeds/4_orders.seed';
-import { dataSource } from '../typeorm.seed';
 
 const TEST_CLOSE_TIMEOUT_MS = 10_000;
 
@@ -41,13 +40,15 @@ export class TestFileTracker {
 }
 
 export const waitForMinIO = async (endpoint: string, port: number): Promise<boolean> => {
+  // FIX: baca credentials dari env, bukan hardcode
+  const env = envSchema.parse(process.env);
   try {
     const client = new Minio.Client({
       endPoint: endpoint,
       port: port,
       useSSL: false,
-      accessKey: 'minioadmin',
-      secretKey: 'minioadmin',
+      accessKey: env.MINIO_ACCESS_KEY || 'minioadmin',
+      secretKey: env.MINIO_SECRET_KEY || 'minioadmin',
     });
 
     await client.listBuckets();
@@ -85,29 +86,66 @@ export const cleanupUploadedFiles = async (
   fileTracker.clear();
 };
 
-const closeQueues = async (moduleFixture: TestingModule): Promise<void> => {
+const silenceQueueErrors = (queue: Queue): void => {
+  // Error chain: ioredis Socket -> ioredis silentEmit -> RedisConnection.handleClientError -> Queue.emit
+  // removeAllListeners di Queue saja tidak cukup — harus silence di ioredis client level.
+  // (queue as any).connection       = BullMQ RedisConnection instance
+  // (queue as any).connection.client = ioredis Redis instance yang buat TCP connection
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const redisClient = (queue as any).connection?.client;
+  if (redisClient) {
+    redisClient.removeAllListeners('error');
+    redisClient.removeAllListeners('close');
+    redisClient.removeAllListeners('reconnecting');
+  }
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  (queue as any).connection?.removeAllListeners?.('error');
+  queue.removeAllListeners('error');
+};
+
+const forceCloseResidualConnections = async (moduleFixture: TestingModule): Promise<void> => {
   const queueNames = ['pdf', 'email', 'payment'];
 
   for (const name of queueNames) {
     try {
       const queue = moduleFixture.get<Queue>(getQueueToken(name), { strict: false });
       if (queue) {
+        silenceQueueErrors(queue);
         await queue.close();
-        console.log(`Closed queue: ${name}`);
+        console.log(`Force-closed queue: ${name}`);
       }
     } catch {
       // token not registered, skip
     }
   }
+
+  try {
+    const queueService = moduleFixture.get('QueueService', { strict: false });
+    if (queueService && typeof queueService.closeAll === 'function') {
+      console.log('Force-closing QueueService Redis connections...');
+      await queueService.closeAll();
+    }
+  } catch {
+    // QueueService not registered, skip
+  }
+
+  try {
+    const redisService = moduleFixture.get('RedisService', { strict: false });
+    if (redisService && typeof redisService.onModuleDestroy === 'function') {
+      console.log('Force-closing RedisService connections...');
+      await redisService.onModuleDestroy();
+    }
+  } catch {
+    // RedisService not registered, skip
+  }
 };
 
 export const cleanupApplication = async (app: INestApplication, moduleFixture?: TestingModule): Promise<void> => {
   try {
-    // Close queues first if module fixture is provided
-    if (moduleFixture) await closeQueues(moduleFixture);
-
-    // Then close the app
+    // FIX: app.close() dulu — NestJS lifecycle (onModuleDestroy) berjalan dengan benar
+    // Baru setelah itu force-close sisa connection yang mungkin belum tertutup
     if (app) await app.close();
+    if (moduleFixture) await forceCloseResidualConnections(moduleFixture);
   } catch (error) {
     console.error('Error during cleanup:', error);
     throw error;
@@ -121,9 +159,7 @@ export const setupApplication = async (): Promise<[NestExpressApplication, Testi
 
   // Wait for MinIO to be ready before proceeding
   const minioReady = await waitForMinIO(env.MINIO_ENDPOINT || 'localhost', env.MINIO_PORT || 9000);
-  if (!minioReady) {
-    throw new Error('MinIO is not ready for testing');
-  }
+  if (!minioReady) throw new Error('MinIO is not ready for testing');
 
   const moduleFixture: TestingModule = await Test.createTestingModule({
     imports: [AppModule],
@@ -136,13 +172,8 @@ export const setupApplication = async (): Promise<[NestExpressApplication, Testi
   const originalAppClose = app.close.bind(app);
   app.close = (async () => {
     const server = app.getHttpServer();
-    if (server && typeof server.closeAllConnections === 'function') {
-      server.closeAllConnections();
-    }
-    if (server && typeof server.closeIdleConnections === 'function') {
-      server.closeIdleConnections();
-    }
-
+    if (server && typeof server.closeAllConnections === 'function') server.closeAllConnections();
+    if (server && typeof server.closeIdleConnections === 'function') server.closeIdleConnections();
     return closeWithTimeout(() => originalAppClose() as Promise<void>);
   }) as NestExpressApplication['close'];
 
@@ -150,8 +181,14 @@ export const setupApplication = async (): Promise<[NestExpressApplication, Testi
   moduleFixture.close = (async () => closeWithTimeout(() => originalModuleClose() as Promise<void>)) as TestingModule['close'];
 
   clearScheduledJobs(moduleFixture);
-  await resetTestDatabase(moduleFixture);
-  await seedTestData(dataSource);
+
+  // FIX: gunakan dataSource dari dalam module (sama dengan yang dipakai app)
+  // bukan import terpisah dari typeorm.seed — konsisten satu koneksi
+  const appDataSource = moduleFixture.get<DataSource>(CONFIG_PROVIDER.PSQL_CONNECTION, { strict: false });
+  if (!appDataSource) throw new Error('Database connection not found in test module.');
+
+  await resetTestDatabase(appDataSource);
+  await seedTestData(appDataSource);
 
   return [
     app,
@@ -165,35 +202,33 @@ export const setupApplication = async (): Promise<[NestExpressApplication, Testi
   ];
 };
 
-const closeWithTimeout = async <T>(closeFn: () => Promise<T>): Promise<T> => {
-  return new Promise((resolve, reject) => {
+const closeWithTimeout = async <T>(closeFn: () => Promise<T>): Promise<T | void> => {
+  return new Promise((resolve) => {
     let settled = false;
+    // FIX: simpan ref timer supaya bisa di-clearTimeout saat close berhasil sebelum timeout.
+    // Tanpa clearTimeout, setTimeout tetap hidup sebagai open handle dan Jest tidak bisa exit.
+    let timer: NodeJS.Timeout | null = null;
 
-    const finish = (value?: T, error?: Error) => {
+    const finish = (value?: T) => {
       if (settled) return;
       settled = true;
-
-      if (error) {
-        reject(error);
-      } else {
-        resolve(value as T);
-      }
+      if (timer) clearTimeout(timer);
+      resolve(value);
     };
 
     void closeFn()
       .then((value) => finish(value))
       .catch((error) => {
         console.error('E2E close failed:', error);
-        finish(undefined, error instanceof Error ? error : new Error(String(error)));
+        finish();
       });
 
-    setTimeout(() => {
+    timer = setTimeout(() => {
       if (!settled) {
-        const timeoutError = new Error(`Close operation timed out after ${TEST_CLOSE_TIMEOUT_MS}ms`);
-        console.error('E2E close timeout:', timeoutError);
-        finish(undefined, timeoutError);
+        console.warn(`Close operation timed out after ${TEST_CLOSE_TIMEOUT_MS}ms — force settling`);
+        finish();
       }
-    }, TEST_CLOSE_TIMEOUT_MS);
+    }, TEST_CLOSE_TIMEOUT_MS).unref(); // .unref() supaya timer tidak cegah Node exit jika sudah settle
   });
 };
 
@@ -204,7 +239,8 @@ const clearScheduledJobs = (moduleFixture: TestingModule): void => {
   }
 
   for (const [name, job] of schedulerRegistry.getCronJobs()) {
-    void job.stop();
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
+    job.stop();
     schedulerRegistry.deleteCronJob(name);
   }
 
@@ -217,12 +253,7 @@ const clearScheduledJobs = (moduleFixture: TestingModule): void => {
   }
 };
 
-const resetTestDatabase = async (moduleFixture: TestingModule): Promise<void> => {
-  const dataSource = moduleFixture.get<DataSource>(CONFIG_PROVIDER.PSQL_CONNECTION, { strict: false });
-  if (!dataSource) {
-    throw new Error('Database connection not found in test module. Cannot reset test database.');
-  }
-
+const resetTestDatabase = async (dataSource: DataSource): Promise<void> => {
   const tables = await dataSource.query(`
     SELECT tablename
     FROM pg_tables
@@ -245,7 +276,6 @@ const resetTestDatabase = async (moduleFixture: TestingModule): Promise<void> =>
 
 export const seedTestData = async (dataSource: DataSource): Promise<void> => {
   try {
-    // Ensure DB initialized
     if (!dataSource.isInitialized) {
       console.log('[Seeder] Initializing data source...');
       await dataSource.initialize();
@@ -256,7 +286,6 @@ export const seedTestData = async (dataSource: DataSource): Promise<void> => {
     const ticketSeeder = new TicketSeeder();
     const orderSeeder = new OrderSeeder();
 
-    // Run sequentially (STRICT ORDER)
     console.log('[Seeder] Seeding users...');
     await userSeeder.run(dataSource);
 

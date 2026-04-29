@@ -5,10 +5,13 @@ import { QueueService } from './queue.service';
 import { QueueHealthIndicator } from './queue.health';
 import { QueueErrorHandler } from './queue.error-handler';
 import { LoggerModule } from '~/common/logger/logger.module';
+import { EmailModule } from '../email/email.module';
+import { DatabaseModule } from '../database/database.module';
+import { queueProvider } from './queue.provider';
 
 @Module({
-  imports: [TerminusModule, LoggerModule],
-  providers: [QueueService, QueueHealthIndicator, QueueErrorHandler],
+  imports: [TerminusModule, LoggerModule, EmailModule, DatabaseModule],
+  providers: queueProvider,
   exports: [QueueService, QueueHealthIndicator, QueueErrorHandler],
 })
 export class QueueModule implements OnModuleInit, OnModuleDestroy {

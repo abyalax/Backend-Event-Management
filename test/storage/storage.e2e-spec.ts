@@ -84,7 +84,7 @@ describe('Storage E2E Tests', () => {
     }
 
     // Close application
-    if (app) await cleanupApplication(app);
+    if (app) await cleanupApplication(app, moduleFixture);
   });
 
   describe('Health Check', () => {

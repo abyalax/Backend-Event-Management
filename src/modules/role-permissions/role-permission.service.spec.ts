@@ -1,16 +1,16 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { Repository } from 'typeorm';
 import { REPOSITORY } from '~/common/constants/database';
-import { ConfigModule } from '~/infrastructure/config/config.module';
-import { LoggerModule } from '~/common/logger/logger.module';
-import { CacheService } from '~/infrastructure/cache/cache.service';
 import { CONFIG_PROVIDER } from '~/common/constants/provider';
-import { RedisService } from '~/infrastructure/redis/redis.service';
-import { mockRedis, mockRepository } from '~/test/common/mock';
+import { mockRedis, mockRepository, mockConfigService, mockCacheService } from '~/test/common/mock';
 import { Permission } from '../auth/entity/permission.entity';
 import { RoleService } from './role-permission.service';
 import { Role } from './entity/role.entity';
 import { RoleCacheService } from './role-permission-cache.service';
+import { CONFIG_SERVICE } from '~/infrastructure/config/config.provider';
+import { CacheService } from '~/infrastructure/cache/cache.service';
+import { RedisService } from '~/infrastructure/redis/redis.service';
+import { PinoLogger } from 'nestjs-pino';
 
 describe('RolePermissionService', () => {
   let service: RoleService;
@@ -20,12 +20,23 @@ describe('RolePermissionService', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      imports: [ConfigModule, LoggerModule],
+      imports: [],
       providers: [
-        CacheService,
-        RedisService,
-        RoleCacheService,
         RoleService,
+        {
+          provide: CONFIG_SERVICE,
+          useValue: mockConfigService,
+        },
+        {
+          provide: PinoLogger,
+          useValue: {
+            setContext: jest.fn(),
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
+            debug: jest.fn(),
+          },
+        },
         {
           provide: REPOSITORY.ROLE,
           useValue: mockRepository,
@@ -42,6 +53,23 @@ describe('RolePermissionService', () => {
           provide: CONFIG_PROVIDER.REDIS_CLIENT,
           useValue: mockRedis,
         },
+        {
+          provide: 'CacheService',
+          useValue: mockCacheService,
+        },
+        {
+          provide: CacheService,
+          useValue: {
+            get: jest.fn(),
+            set: jest.fn(),
+            del: jest.fn(),
+            getLock: jest.fn(),
+            releaseLock: jest.fn(),
+          },
+        },
+        RedisService,
+        RoleCacheService,
+        RoleService,
       ],
     }).compile();
 

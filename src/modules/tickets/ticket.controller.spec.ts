@@ -1,13 +1,12 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
-import { REPOSITORY } from '~/common/constants/database';
 import { CONFIG_SERVICE } from '~/infrastructure/config/config.provider';
-import { ConfigModule } from '~/infrastructure/config/config.module';
-import { LoggerModule } from '~/common/logger/logger.module';
-import { mockRepository } from '~/test/common/mock';
+import { mockConfigService, mockRepository } from '~/test/common/mock';
 import { TicketController } from './ticket.controller';
 import { TicketService } from './ticket.service';
 import { OrderService } from '~/modules/orders/order.service';
+import { PinoLogger } from 'nestjs-pino';
+import { REPOSITORY } from '~/common/constants/database';
 
 describe('TicketController', () => {
   let controller: TicketController;
@@ -15,13 +14,27 @@ describe('TicketController', () => {
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
-      imports: [ConfigModule, LoggerModule],
+      imports: [],
       controllers: [TicketController],
       providers: [
         TicketService,
         {
+          provide: CONFIG_SERVICE,
+          useValue: mockConfigService,
+        },
+        {
           provide: REPOSITORY.TICKET,
           useValue: mockRepository,
+        },
+        {
+          provide: PinoLogger,
+          useValue: {
+            setContext: jest.fn(),
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
+            debug: jest.fn(),
+          },
         },
         {
           provide: OrderService,
@@ -37,9 +50,7 @@ describe('TicketController', () => {
         },
         {
           provide: CONFIG_SERVICE,
-          useValue: {
-            get: jest.fn(),
-          },
+          useValue: mockConfigService,
         },
       ],
     }).compile();

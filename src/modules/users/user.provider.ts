@@ -10,8 +10,9 @@ import { CacheService } from '~/infrastructure/cache/cache.service';
 import { RedisService } from '~/infrastructure/redis/redis.service';
 import { UserCacheService } from './user-cache.service';
 import { UserService } from './user.service';
+import { Provider } from '@nestjs/common';
 
-export const userProvider = [
+export const userProvider: Provider[] = [
   CacheService,
   RedisService,
   UserCacheService,

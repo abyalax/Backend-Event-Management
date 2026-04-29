@@ -12,6 +12,7 @@ import { XenditVirtualAccountWebhookDto } from './dto/xendit-virtual-account-web
 import { XenditQrisWebhookDto } from './dto/xendit-qris-webhook.dto';
 import { XenditEwalletWebhookDto } from './dto/xendit-ewallet-webhook.dto';
 import { CONFIG_SERVICE, ConfigService } from '~/infrastructure/config/config.provider';
+import { TResponse } from '~/common/types/response';
 
 @Controller('payments')
 export class PaymentController {
@@ -48,10 +49,13 @@ export class PaymentController {
   }
 
   @Post('webhook/invoice')
-  async handleInvoiceWebhook(@Headers(XENDIT_CALLBACK_TOKEN_HEADER) token: string, @Body() payload: XenditInvoiceWebhookDto) {
+  async handleInvoiceWebhook(@Headers(XENDIT_CALLBACK_TOKEN_HEADER) token: string, @Body() payload: XenditInvoiceWebhookDto): Promise<TResponse> {
     this.validateToken(token);
     await this.paymentService.enqueueWebhook(WebhookEventType.INVOICE, payload);
-    return { received: true };
+    return {
+      message: 'received invoiced successfully',
+      data: { received: true },
+    };
   }
 
   @Post('webhook/virtual-account')

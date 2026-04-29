@@ -2,17 +2,16 @@ import { JwtModule } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
 import { Repository } from 'typeorm';
 import { REPOSITORY } from '~/common/constants/database';
-import { CONFIG_SERVICE, ConfigService } from '~/infrastructure/config/config.provider';
-import { ConfigModule } from '~/infrastructure/config/config.module';
-import { LoggerModule } from '~/common/logger/logger.module';
-import { CacheService } from '~/infrastructure/cache/cache.service';
-import { RedisService } from '~/infrastructure/redis/redis.service';
-import { mockRedis, mockRepository } from '~/test/common/mock';
+import { CONFIG_SERVICE } from '~/infrastructure/config/config.provider';
+import { mockRedis, mockRepository, mockConfigService } from '~/test/common/mock';
 import { Permission } from '../auth/entity/permission.entity';
 import { User } from './entity/user.entity';
 import { UserCacheService } from './user-cache.service';
 import { UserService } from './user.service';
 import { CONFIG_PROVIDER } from '~/common/constants/provider';
+import { CacheService } from '~/infrastructure/cache/cache.service';
+import { RedisService } from '~/infrastructure/redis/redis.service';
+import { PinoLogger } from 'nestjs-pino';
 
 describe('UserService', () => {
   let service: UserService;
@@ -22,19 +21,28 @@ describe('UserService', () => {
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       imports: [
-        ConfigModule,
-        LoggerModule,
-        JwtModule.registerAsync({
-          inject: [CONFIG_SERVICE],
-          useFactory: (configService: ConfigService) => ({
-            secret: configService.get('JWT_SECRET'),
-            privateKey: configService.get('JWT_PRIVATE_KEY'),
-            publicKey: configService.get('JWT_PUBLIC_KEY'),
-          }),
+        JwtModule.register({
+          secret: 'test-secret',
+          privateKey: 'test-private-key',
+          publicKey: 'test-public-key',
         }),
       ],
       providers: [
         UserService,
+        {
+          provide: CONFIG_SERVICE,
+          useValue: mockConfigService,
+        },
+        {
+          provide: PinoLogger,
+          useValue: {
+            setContext: jest.fn(),
+            info: jest.fn(),
+            warn: jest.fn(),
+            error: jest.fn(),
+            debug: jest.fn(),
+          },
+        },
         UserCacheService,
         CacheService,
         RedisService,
