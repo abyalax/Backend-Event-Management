@@ -39,7 +39,7 @@ export class PaymentService {
     private readonly logger: PinoLogger,
 
     @Inject(REPOSITORY.TRANSACTION)
-    private readonly transactionRepo: Repository<Transaction>,
+    private readonly transactionRepository: Repository<Transaction>,
 
     @Inject(CONFIG_SERVICE)
     private readonly config: ConfigService,
@@ -57,7 +57,7 @@ export class PaymentService {
   }
 
   async createInvoice(dto: CreateInvoiceDto): Promise<Transaction> {
-    const existing = await this.transactionRepo.findOne({
+    const existing = await this.transactionRepository.findOne({
       where: { externalId: dto.externalId },
     });
     if (existing) {
@@ -67,13 +67,13 @@ export class PaymentService {
 
     const transaction = this.paymentProvider === 'mock' ? this.buildMockInvoiceTransaction(dto) : await this.buildXenditInvoiceTransaction(dto);
 
-    const saved = await this.transactionRepo.save(transaction);
+    const saved = await this.transactionRepository.save(transaction);
     this.logger.info({ transactionId: saved.id, externalId: saved.externalId }, 'Invoice created');
     return saved;
   }
 
   async createVirtualAccount(dto: CreateVirtualAccountDto): Promise<Transaction> {
-    const existing = await this.transactionRepo.findOne({
+    const existing = await this.transactionRepository.findOne({
       where: { externalId: dto.externalId },
     });
     if (existing) {
@@ -89,7 +89,7 @@ export class PaymentService {
         paymentUrl: `mock://payments/virtual-account/${dto.externalId}`,
         description: dto.description,
       });
-      return this.transactionRepo.save(transaction);
+      return this.transactionRepository.save(transaction);
     }
 
     const xenditVA = await this.getPaymentMethodClient().createPaymentMethod({
@@ -109,7 +109,7 @@ export class PaymentService {
       },
     });
 
-    const transaction = this.transactionRepo.create({
+    const transaction = this.transactionRepository.create({
       externalId: dto.externalId,
       xenditId: xenditVA.id,
       paymentMethod: PaymentMethod.VIRTUAL_ACCOUNT,
@@ -122,13 +122,13 @@ export class PaymentService {
       xenditResponse: { ...xenditVA },
     });
 
-    const saved = await this.transactionRepo.save(transaction);
+    const saved = await this.transactionRepository.save(transaction);
     this.logger.info({ transactionId: saved.id, bankCode: dto.bankCode }, 'Virtual account created');
     return saved;
   }
 
   async createQris(dto: CreateQrisDto): Promise<Transaction> {
-    const existing = await this.transactionRepo.findOne({
+    const existing = await this.transactionRepository.findOne({
       where: { externalId: dto.referenceId },
     });
     if (existing) {
@@ -143,7 +143,7 @@ export class PaymentService {
         paymentMethod: PaymentMethod.QRIS,
         paymentUrl: `mock://payments/qris/${dto.referenceId}`,
       });
-      return this.transactionRepo.save(transaction);
+      return this.transactionRepository.save(transaction);
     }
 
     const xenditQr = await this.getPaymentMethodClient().createPaymentMethod({
@@ -159,7 +159,7 @@ export class PaymentService {
       },
     });
 
-    const transaction = this.transactionRepo.create({
+    const transaction = this.transactionRepository.create({
       externalId: dto.referenceId,
       xenditId: xenditQr.id,
       paymentMethod: PaymentMethod.QRIS,
@@ -171,13 +171,13 @@ export class PaymentService {
       xenditResponse: { ...xenditQr },
     });
 
-    const saved = await this.transactionRepo.save(transaction);
+    const saved = await this.transactionRepository.save(transaction);
     this.logger.info({ transactionId: saved.id }, 'QRIS created');
     return saved;
   }
 
   async createEwallet(dto: CreateEwalletDto): Promise<Transaction> {
-    const existing = await this.transactionRepo.findOne({
+    const existing = await this.transactionRepository.findOne({
       where: { externalId: dto.referenceId },
     });
     if (existing) {
@@ -192,7 +192,7 @@ export class PaymentService {
         paymentMethod: PaymentMethod.EWALLET,
         paymentUrl: `mock://payments/ewallet/${dto.referenceId}`,
       });
-      return this.transactionRepo.save(transaction);
+      return this.transactionRepository.save(transaction);
     }
 
     const xenditEwallet = await this.getPaymentMethodClient().createPaymentMethod({
@@ -213,7 +213,7 @@ export class PaymentService {
       },
     });
 
-    const transaction = this.transactionRepo.create({
+    const transaction = this.transactionRepository.create({
       externalId: dto.referenceId,
       xenditId: xenditEwallet.id,
       paymentMethod: PaymentMethod.EWALLET,
@@ -224,7 +224,7 @@ export class PaymentService {
       xenditResponse: { ...xenditEwallet },
     });
 
-    const saved = await this.transactionRepo.save(transaction);
+    const saved = await this.transactionRepository.save(transaction);
     this.logger.info({ transactionId: saved.id, channelCode: dto.channelCode }, 'E-wallet created');
     return saved;
   }
@@ -256,7 +256,7 @@ export class PaymentService {
   }
 
   async processInvoiceWebhook(payload: XenditInvoiceWebhookDto): Promise<void> {
-    const transaction = await this.transactionRepo.findOne({
+    const transaction = await this.transactionRepository.findOne({
       where: { externalId: payload.external_id },
     });
     if (!transaction) {
@@ -278,12 +278,12 @@ export class PaymentService {
     transaction.status = statusMap[payload.status] ?? transaction.status;
     if (payload.paid_at) transaction.paidAt = new Date(payload.paid_at);
 
-    await this.transactionRepo.save(transaction);
+    await this.transactionRepository.save(transaction);
     this.logger.info({ transactionId: transaction.id, status: payload.status }, 'Invoice webhook processed');
   }
 
   async processVirtualAccountWebhook(payload: XenditVirtualAccountWebhookDto): Promise<void> {
-    const transaction = await this.transactionRepo.findOne({
+    const transaction = await this.transactionRepository.findOne({
       where: { externalId: payload.external_id },
     });
     if (!transaction) {
@@ -299,12 +299,12 @@ export class PaymentService {
     transaction.status = PaymentStatus.PAID;
     transaction.paidAt = new Date(payload.transaction_timestamp);
 
-    await this.transactionRepo.save(transaction);
+    await this.transactionRepository.save(transaction);
     this.logger.info({ transactionId: transaction.id }, 'VA webhook processed');
   }
 
   async processQrisWebhook(payload: XenditQrisWebhookDto): Promise<void> {
-    const transaction = await this.transactionRepo.findOne({
+    const transaction = await this.transactionRepository.findOne({
       where: { externalId: payload.reference_id },
     });
     if (!transaction) {
@@ -325,12 +325,12 @@ export class PaymentService {
     transaction.status = statusMap[payload.status] ?? transaction.status;
     if (transaction.status === PaymentStatus.PAID) transaction.paidAt = new Date();
 
-    await this.transactionRepo.save(transaction);
+    await this.transactionRepository.save(transaction);
     this.logger.info({ transactionId: transaction.id, status: payload.status }, 'QRIS webhook processed');
   }
 
   async processEwalletWebhook(payload: XenditEwalletWebhookDto): Promise<void> {
-    const transaction = await this.transactionRepo.findOne({
+    const transaction = await this.transactionRepository.findOne({
       where: { externalId: payload.data.reference_id },
     });
     if (!transaction) {
@@ -354,12 +354,12 @@ export class PaymentService {
       transaction.paidAt = new Date(payload.data.updated);
     }
 
-    await this.transactionRepo.save(transaction);
+    await this.transactionRepository.save(transaction);
     this.logger.info({ transactionId: transaction.id, status: payload.data.status }, 'E-wallet webhook processed');
   }
 
   async markExpired(transactionId: string): Promise<Transaction | null> {
-    const transaction = await this.transactionRepo.findOne({
+    const transaction = await this.transactionRepository.findOne({
       where: { id: transactionId },
     });
 
@@ -368,11 +368,11 @@ export class PaymentService {
     }
 
     transaction.status = PaymentStatus.EXPIRED;
-    return this.transactionRepo.save(transaction);
+    return this.transactionRepository.save(transaction);
   }
 
   async findExpiredPending(): Promise<Transaction[]> {
-    return this.transactionRepo.find({
+    return this.transactionRepository.find({
       where: {
         status: PaymentStatus.PENDING,
         expiresAt: LessThan(new Date()),
@@ -382,20 +382,20 @@ export class PaymentService {
   }
 
   async incrementRetry(id: string): Promise<void> {
-    await this.transactionRepo.increment({ id }, 'retryCount', 1);
+    await this.transactionRepository.increment({ id }, 'retryCount', 1);
   }
 
   async getTransaction(id: string): Promise<Transaction | null> {
-    return this.transactionRepo.findOne({ where: { id } });
+    return this.transactionRepository.findOne({ where: { id } });
   }
 
   async getTransactionByExternalId(externalId: string): Promise<Transaction | null> {
-    return this.transactionRepo.findOne({ where: { externalId } });
+    return this.transactionRepository.findOne({ where: { externalId } });
   }
 
   async ping(): Promise<boolean> {
     try {
-      await this.transactionRepo.count();
+      await this.transactionRepository.count();
       return true;
     } catch {
       return false;
@@ -411,23 +411,22 @@ export class PaymentService {
     const now = new Date();
     const expiresAt = new Date(now.getTime() + 15 * 60 * 1000);
 
-    return this.transactionRepo.create({
+    return this.transactionRepository.create({
       externalId: dto.externalId,
       xenditId: `mock-invoice-${randomUUID()}`,
       paymentMethod: PaymentMethod.INVOICE,
-      status: PaymentStatus.SETTLED,
+      status: PaymentStatus.PENDING,
       amount: dto.amount,
       currency: dto.currency ?? 'IDR',
       payerEmail: dto.payerEmail,
       description: dto.description,
       paymentUrl: `mock://payments/invoice/${dto.externalId}`,
-      paidAt: now,
       expiresAt,
       xenditResponse: {
         provider: 'mock',
         externalId: dto.externalId,
         paymentUrl: `mock://payments/invoice/${dto.externalId}`,
-        status: PaymentStatus.SETTLED,
+        status: PaymentStatus.PENDING,
       },
       metadata: {
         provider: 'mock',
@@ -447,7 +446,7 @@ export class PaymentService {
     const expiresAt = new Date(now.getTime() + 15 * 60 * 1000);
     const settledStatus = dto.paymentMethod === PaymentMethod.VIRTUAL_ACCOUNT ? PaymentStatus.PAID : PaymentStatus.SETTLED;
 
-    return this.transactionRepo.create({
+    return this.transactionRepository.create({
       externalId: dto.externalId,
       xenditId: `mock-${dto.paymentMethod.toLowerCase()}-${randomUUID()}`,
       paymentMethod: dto.paymentMethod,
@@ -489,7 +488,7 @@ export class PaymentService {
       },
     });
 
-    return this.transactionRepo.create({
+    return this.transactionRepository.create({
       externalId: dto.externalId,
       xenditId: xenditInvoice.id ?? dto.externalId,
       paymentMethod: PaymentMethod.INVOICE,

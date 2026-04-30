@@ -48,6 +48,7 @@ export const envSchema = z.object({
   STORAGE_BUCKET_DOCUMENTS: z.string().default('documents'),
   STORAGE_BUCKET_IMAGES: z.string().default('images'),
   STORAGE_BUCKET_IMAGES_PUBLIC: z.string().default('images-public'),
+  STORAGE_BUCKET_TICKETS_PUBLIC: z.string().default('tickets-public'),
   STORAGE_BUCKET_BACKUPS: z.string().default('backups'),
   STORAGE_BUCKET_VIDEOS: z.string().default('videos'),
 

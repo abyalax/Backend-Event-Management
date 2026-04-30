@@ -4,6 +4,7 @@ import { Queue } from 'bullmq';
 import { PinoLogger } from 'nestjs-pino';
 import { Repository } from 'typeorm';
 import * as PDFDocument from 'pdfkit';
+import * as QRCode from 'qrcode';
 import { QRService } from '~/modules/qr-code/qr-code.service';
 import { Ticket } from '../tickets/entities/ticket.entity';
 import { REPOSITORY } from '~/common/constants/database';
@@ -44,10 +45,9 @@ export class PdfService {
       return;
     }
 
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
-    const qrDataUrl: string = await this.qrService.generate(ticket.id, ticket.eventId);
+    const qrPayload: string = await this.qrService.generate(ticket.id, ticket.eventId);
 
-    const pdfBuffer = await this.buildPdf(ticket, qrDataUrl);
+    const pdfBuffer = await this.buildPdf(ticket, qrPayload);
 
     const uploadResult = await this.storageService.uploadFile({
       bucket: 'tickets-public',
@@ -57,7 +57,16 @@ export class PdfService {
         mimetype: 'application/pdf',
       },
     });
-    const pdfUrl = uploadResult.url;
+
+    // Check if upload was successful
+    if (!uploadResult.success) {
+      const errorMessage = uploadResult.error || 'Unknown upload error';
+      this.logger.error({ ticketId, error: errorMessage }, 'Storage upload failed');
+      throw new Error(`Storage upload failed: ${errorMessage}`);
+    }
+
+    // Generate proper download URL
+    const pdfUrl = uploadResult.filename ? `/api/storage/download/tickets-public/${uploadResult.filename}` : uploadResult.url;
 
     await this.ticketRepo.update(ticketId, { pdfUrl });
     this.logger.info({ ticketId, pdfUrl }, 'PDF generated and stored');
@@ -66,29 +75,38 @@ export class PdfService {
     this.logger.info({ ticketId }, 'send-ticket-email job enqueued');
   }
 
-  private buildPdf(ticket: Ticket, qrDataUrl: string): Promise<Buffer> {
-    return new Promise((resolve, reject) => {
-      const doc = new PDFDocument({ margin: 50 });
-      const chunks: Buffer[] = [];
+  private async buildPdf(ticket: Ticket, qrPayload: string): Promise<Buffer> {
+    try {
+      // Generate QR code image from payload first
+      const qrBuffer = await QRCode.toBuffer(qrPayload, {
+        type: 'png',
+        width: 150,
+        margin: 1,
+      });
 
-      doc.on('data', (chunk: Buffer) => chunks.push(chunk));
-      doc.on('end', () => resolve(Buffer.concat(chunks)));
-      doc.on('error', reject);
+      return new Promise((resolve, reject) => {
+        const doc = new PDFDocument({ margin: 50 });
+        const chunks: Buffer[] = [];
 
-      doc.fontSize(24).text(ticket.event.title, { align: 'center' });
-      doc.moveDown(0.5);
-      doc.fontSize(12).text(`Date: ${ticket.event.startDate.toISOString()}`, { align: 'center' });
-      doc.text(`Location: ${ticket.event.location}`, { align: 'center' });
-      doc.moveDown(1);
-      doc.fontSize(14).text(`Attendee: ${ticket.name}`);
-      doc.text(`Ticket ID: ${ticket.id}`);
-      doc.moveDown(1);
+        doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+        doc.on('end', () => resolve(Buffer.concat(chunks)));
+        doc.on('error', (error) => reject(error instanceof Error ? error : new Error(String(error))));
 
-      const qrBase64 = qrDataUrl.replace(/^data:image\/png;base64,/, '');
-      const qrBuffer = Buffer.from(qrBase64, 'base64');
-      doc.image(qrBuffer, { width: 150, align: 'center' });
+        doc.fontSize(24).text(ticket.event.title, { align: 'center' });
+        doc.moveDown(0.5);
+        doc.fontSize(12).text(`Date: ${ticket.event.startDate.toISOString()}`, { align: 'center' });
+        doc.text(`Location: ${ticket.event.location}`, { align: 'center' });
+        doc.moveDown(1);
+        doc.fontSize(14).text(`Attendee: ${ticket.name}`);
+        doc.text(`Ticket ID: ${ticket.id}`);
+        doc.moveDown(1);
 
-      doc.end();
-    });
+        doc.image(qrBuffer, { width: 150, align: 'center' });
+
+        doc.end();
+      });
+    } catch (error) {
+      throw new Error(`Failed to generate QR code: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
 }

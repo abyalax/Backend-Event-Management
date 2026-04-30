@@ -267,7 +267,7 @@ describe('Module Events', () => {
         location: 'Public Test Location',
         startDate: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString(),
         endDate: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
-        status: 'DRAFT',
+        status: 'PUBLISHED',
         categoryId: 1,
         createdBy: '550e8400-e29b-41d4-a716-446655440000',
         bannerMediaId: mediaId,
@@ -282,7 +282,7 @@ describe('Module Events', () => {
       const publicEventId = eventRes.body.data.id;
 
       // Test public endpoint
-      const publicQuery: QueryEventDto = { page: 1, limit: 10, status: 'DRAFT' };
+      const publicQuery: QueryEventDto = { page: 1, limit: 10 };
       const publicRes = await request(app.getHttpServer()).get('/events/public').query(publicQuery);
 
       expect(publicRes.status).toBe(200);
@@ -292,6 +292,8 @@ describe('Module Events', () => {
 
       // Find our created event in the list
       const publicEvents: EventDto[] = publicRes.body.data.data;
+      console.log({ publicEvents: publicRes.body });
+
       const publicCreatedEvent = publicEvents.find((event) => event.id === publicEventId);
 
       if (publicCreatedEvent === undefined) throw new Error("Public event doesn't exist");

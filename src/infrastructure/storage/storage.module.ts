@@ -61,6 +61,7 @@ import { CONFIG_PROVIDER } from '~/common/constants/provider';
           backups: configService.get('STORAGE_BUCKET_BACKUPS'),
           videos: configService.get('STORAGE_BUCKET_VIDEOS'),
           'images-public': configService.get('STORAGE_BUCKET_IMAGES_PUBLIC'),
+          'tickets-public': configService.get('STORAGE_BUCKET_TICKETS_PUBLIC'),
         },
         maxFileSize: configService.get('MAX_FILE_SIZE'),
         allowedMimeTypes: configService.get('ALLOWED_MIME_TYPES')?.split(',') ?? [],

@@ -72,6 +72,12 @@ export const mockEmailService = {
   sendTicketEmail: jest.fn(),
 };
 
+export const mockPdfService = {
+  enqueu: jest.fn(),
+  generateAndStore: jest.fn(),
+  buildPdf: jest.fn(),
+};
+
 export const mockStorageService = {
   uploadFile: jest.fn(),
   getFile: jest.fn(),

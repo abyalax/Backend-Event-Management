@@ -1,11 +1,11 @@
 meta {
-  name: Create Ticket
+  name: Publish Event
   type: http
-  seq: 1
+  seq: 8
 }
 
 post {
-  url: {{URL_API}}/tickets
+  url: {{URL_API}}/events/publish
   body: json
   auth: none
 }
@@ -16,10 +16,9 @@ headers {
 
 body:json {
   {
-    "name": "Ticket Reguler",
-    "price": 75000,
-    "quota": 200,
-    "eventId": "a0e0d97f-9b59-4b6d-95d3-8fabb69511ab"
+    "ids": [
+      "550e8400-e29b-41d4-a716-446655440102"
+    ]
   }
 }
 

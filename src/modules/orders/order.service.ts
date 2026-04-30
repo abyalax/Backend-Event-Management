@@ -8,6 +8,10 @@ import { PaymentService } from '~/modules/payments/payment.service';
 import { Event } from '~/modules/events/entity/event.entity';
 import { GeneratedEventTicket } from '~/modules/tickets/entities/generated-event-ticket.entity';
 import { Ticket } from '~/modules/tickets/entities/ticket.entity';
+import { QRService } from '~/modules/qr-code/qr-code.service';
+import { PdfService } from '~/modules/pdf/pdf.service';
+import { EmailService } from '~/infrastructure/email/email.service';
+import { StorageService } from '~/infrastructure/storage/storage.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderItemResponseDto, OrderResponseDto } from './dto/order-response.dto';
 import { OrderStatusResponseDto } from './dto/order-status-response.dto';
@@ -17,6 +21,8 @@ import { ORDER_PAGINATION_CONFIG } from './order-pagination.config';
 import { PaymentStatus } from '~/modules/payments/payment.enum';
 import type { Transaction } from '~/modules/payments/entities/transaction.entity';
 import { QueryUserOrdersDto } from './dto/query-user-orders.dto';
+import * as PDFDocument from 'pdfkit';
+import * as QRCode from 'qrcode';
 
 type LoadedOrder = Order & {
   orderItems?: Array<
@@ -48,6 +54,10 @@ export class OrderService {
     private readonly generatedTicketRepository: Repository<GeneratedEventTicket>,
 
     private readonly paymentService: PaymentService,
+    private readonly qrService: QRService,
+    private readonly pdfService: PdfService,
+    private readonly emailService: EmailService,
+    private readonly storageService: StorageService,
   ) {}
 
   async createOrder(dto: CreateOrderDto, userId: string, userEmail: string): Promise<OrderResponseDto> {
@@ -102,9 +112,8 @@ export class OrderService {
         const subtotal = price * quantity;
         totalAmount += subtotal;
 
-        ticket.sold = Number(ticket.sold ?? 0) + quantity;
-        await ticketRepo.save(ticket);
-
+        // Don't deduct quota yet - only confirm booking
+        // Quota will be deducted when payment is completed
         orderItems.push(
           orderItemRepo.create({
             orderId: createdOrder.id,
@@ -310,7 +319,7 @@ export class OrderService {
   async generateTicketsForOrder(orderId: string): Promise<GeneratedEventTicket[]> {
     const order = await this.orderRepository.findOne({
       where: { id: orderId },
-      relations: ['orderItems', 'orderItems.ticket', 'orderItems.generatedTickets'],
+      relations: ['orderItems', 'orderItems.ticket', 'orderItems.ticket.event', 'orderItems.generatedTickets'],
     });
 
     if (!order) throw new NotFoundException(`Order ${orderId} not found`);
@@ -341,12 +350,25 @@ export class OrderService {
         });
 
         const saved = await this.generatedTicketRepository.save(ticket);
-        saved.qrCodeUrl = `/orders/${orderId}/tickets/${saved.id}/qr`;
-        saved.pdfUrl = `/orders/${orderId}/tickets/${saved.id}/pdf`;
+
+        // Generate QR code
+        const qrCodePayload = await this.qrService.generate(saved.id, orderItem.ticket.eventId);
+        saved.qrCodeUrl = qrCodePayload;
+
+        // Generate PDF with QR code embedded
+        const pdfBuffer = await this.generateTicketPdf(saved, orderItem.ticket, qrCodePayload);
+
+        // Store PDF (using storage service through pdfService)
+        const pdfUrl = await this.storeTicketPdf(saved.id, pdfBuffer);
+        saved.pdfUrl = pdfUrl;
+
         const persisted = await this.generatedTicketRepository.save(saved);
         generatedTickets.push(persisted);
       }
     }
+
+    // Send email to user with tickets
+    if (generatedTickets.length > 0) await this.sendTicketEmail(order.userId, order, generatedTickets);
 
     return generatedTickets;
   }
@@ -355,8 +377,29 @@ export class OrderService {
     const order = await this.findOrderById(orderId);
     if (order.status !== OrderStatus.PENDING) return;
 
+    // Deduct quota for each ticket in the order
+    for (const orderItem of [...(order.orderItems ?? [])]) {
+      const ticket = orderItem.ticket; // Already loaded from relations
+
+      if (ticket) {
+        ticket.sold = Number(ticket.sold ?? 0) + Number(orderItem.quantity);
+        await this.ticketRepository.save(ticket);
+        this.logger.info(
+          {
+            ticketId: ticket.id,
+            ticketName: ticket.name,
+            quantity: orderItem.quantity,
+            newSold: ticket.sold,
+          },
+          'Ticket quota deducted after payment',
+        );
+      }
+    }
+
     order.status = OrderStatus.PAID;
     await this.orderRepository.save(order);
+
+    // Now generate tickets after quota is deducted
     await this.generateTicketsForOrder(orderId);
   }
 
@@ -416,6 +459,107 @@ export class OrderService {
           }
         : null,
     };
+  }
+
+  private async generateTicketPdf(generatedTicket: GeneratedEventTicket, ticket: Ticket, qrCodePayload: string): Promise<Buffer> {
+    try {
+      // Generate QR code image from payload first
+      const qrBuffer = await QRCode.toBuffer(qrCodePayload, {
+        type: 'png',
+        width: 150,
+        margin: 1,
+      });
+
+      return new Promise((resolve, reject) => {
+        const doc = new PDFDocument({ margin: 50 });
+        const chunks: Buffer[] = [];
+
+        doc.on('data', (chunk: Buffer) => chunks.push(chunk));
+        doc.on('end', () => resolve(Buffer.concat(chunks)));
+        doc.on('error', (error) => reject(error instanceof Error ? error : new Error(String(error))));
+
+        doc.fontSize(24).text(ticket.event?.title || 'Event Ticket', { align: 'center' });
+        doc.moveDown(0.5);
+        doc.fontSize(12).text(`Date: ${ticket.event?.startDate?.toISOString() || 'TBD'}`, { align: 'center' });
+        doc.text(`Location: ${ticket.event?.location || 'TBD'}`, { align: 'center' });
+        doc.moveDown(1);
+        doc.fontSize(14).text(`Ticket ID: ${generatedTicket.id}`);
+        doc.text(`Order ID: ${generatedTicket.orderItemId}`);
+        doc.text(`Ticket Type: ${ticket.name}`);
+        doc.moveDown(1);
+
+        doc.image(qrBuffer, { width: 150, align: 'center' });
+
+        doc.end();
+      });
+    } catch (error) {
+      throw new Error(`Failed to generate QR code: ${error instanceof Error ? error.message : String(error)}`);
+    }
+  }
+
+  private async storeTicketPdf(ticketId: string, pdfBuffer: Buffer): Promise<string> {
+    try {
+      // Use the storage service to upload the PDF
+      const uploadResult = await this.storageService.uploadFile({
+        bucket: 'tickets-public',
+        file: pdfBuffer,
+        metadata: {
+          originalname: `${ticketId}.pdf`,
+          mimetype: 'application/pdf',
+        },
+      });
+
+      // Check if upload was successful
+      if (!uploadResult.success) {
+        const errorMessage = uploadResult.error || 'Unknown upload error';
+        this.logger.error({ ticketId, error: errorMessage }, 'Storage upload failed');
+        throw new Error(`Storage upload failed: ${errorMessage}`);
+      }
+
+      // Return the full download URL
+      if (uploadResult.filename) {
+        const downloadUrl = `/api/storage/download/tickets-public/${uploadResult.filename}`;
+        this.logger.info({ ticketId, filename: uploadResult.filename }, 'PDF stored successfully');
+        return downloadUrl;
+      }
+
+      throw new Error('Upload succeeded but no filename returned');
+    } catch (error) {
+      this.logger.error({ ticketId, error: error instanceof Error ? error.message : String(error) }, 'Failed to store ticket PDF');
+      throw error;
+    }
+  }
+
+  private async sendTicketEmail(userId: string, order: LoadedOrder, tickets: GeneratedEventTicket[]): Promise<void> {
+    try {
+      // Get user email - you might need to inject a user service or repository
+      // For now, we'll assume we can get the user email from the order context
+      const userEmail = 'user@example.com'; // This should be fetched from user service
+
+      const ticketLinks = tickets.map((ticket) => `<li>Ticket ID: ${ticket.id} - <a href="${ticket.pdfUrl}">Download PDF</a></li>`).join('');
+
+      const emailHtml = `
+        <h2>Your Tickets Are Ready!</h2>
+        <p>Thank you for your purchase. Your tickets for order ${order.id} are now available.</p>
+        <h3>Ticket Details:</h3>
+        <ul>
+          ${ticketLinks}
+        </ul>
+        <p>Please present these tickets at the event entrance.</p>
+        <p>Best regards,<br>Event Management Team</p>
+      `;
+
+      await this.emailService.sendEmail({
+        to: userEmail,
+        subject: `Your Tickets - Order ${order.id}`,
+        html: emailHtml,
+      });
+
+      this.logger.info({ userId, orderId: order.id, ticketCount: tickets.length }, 'Ticket email sent successfully');
+    } catch (error) {
+      this.logger.error({ userId, orderId: order.id, error }, 'Failed to send ticket email');
+      // Don't throw error here to avoid breaking the ticket generation flow
+    }
   }
 
   private toOrderItemResponse(item: NonNullable<LoadedOrder['orderItems']>[number]): OrderItemResponseDto {

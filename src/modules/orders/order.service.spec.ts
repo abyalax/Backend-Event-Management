@@ -11,6 +11,12 @@ import { Order } from './entity/order.entity';
 import { OrderItem } from './entity/order-item.entity';
 import { Ticket } from '~/modules/tickets/entities/ticket.entity';
 import { GeneratedEventTicket } from '~/modules/tickets/entities/generated-event-ticket.entity';
+import { QRService } from '../qr-code/qr-code.service';
+import { EmailService } from '~/infrastructure/email/email.service';
+import { mockConfigService, mockEmailService, mockPdfService, mockStorageService } from '~/test/common/mock';
+import { StorageService } from '~/infrastructure/storage/storage.service';
+import { PdfService } from '../pdf/pdf.service';
+import { CONFIG_SERVICE } from '~/infrastructure/config/config.provider';
 
 describe('OrderService', () => {
   let service: OrderService;
@@ -74,6 +80,23 @@ describe('OrderService', () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         OrderService,
+        QRService,
+        {
+          provide: EmailService,
+          useValue: mockEmailService,
+        },
+        {
+          provide: StorageService,
+          useValue: mockStorageService,
+        },
+        {
+          provide: PdfService,
+          useValue: mockPdfService,
+        },
+        {
+          provide: CONFIG_SERVICE,
+          useValue: mockConfigService,
+        },
         {
           provide: PinoLogger,
           useValue: {

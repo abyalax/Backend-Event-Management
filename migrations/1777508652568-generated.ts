@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from "typeorm";
 
-export class Generated1777126152427 implements MigrationInterface {
-    name = 'Generated1777126152427'
+export class Generated1777508652568 implements MigrationInterface {
+    name = 'Generated1777508652568'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(`CREATE TABLE "permissions" ("id" SERIAL NOT NULL, "key" character varying(80) NOT NULL, "name" character varying(80) NOT NULL, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "deleted_at" TIMESTAMP WITH TIME ZONE, CONSTRAINT "UQ_017943867ed5ceef9c03edd9745" UNIQUE ("key"), CONSTRAINT "UQ_48ce552495d14eae9b187bb6716" UNIQUE ("name"), CONSTRAINT "PK_920331560282b8bd21bb02290df" PRIMARY KEY ("id"))`);
@@ -21,7 +21,8 @@ export class Generated1777126152427 implements MigrationInterface {
         await queryRunner.query(`CREATE TABLE "order_items" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "order_id" uuid NOT NULL, "ticket_id" uuid NOT NULL, "quantity" integer NOT NULL, "price" numeric(10,2) NOT NULL, "subtotal" numeric(10,2) NOT NULL, CONSTRAINT "PK_005269d8574e6fac0493715c308" PRIMARY KEY ("id"))`);
         await queryRunner.query(`CREATE INDEX "idx_order_items_ticket_id" ON "order_items" ("ticket_id") `);
         await queryRunner.query(`CREATE INDEX "idx_order_items_order_id" ON "order_items" ("order_id") `);
-        await queryRunner.query(`CREATE TABLE "orders" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "user_id" uuid NOT NULL, "total_amount" numeric(10,2) NOT NULL, "status" character varying(20) NOT NULL, "expired_at" TIMESTAMP WITH TIME ZONE, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "deleted_at" TIMESTAMP WITH TIME ZONE, CONSTRAINT "PK_710e2d4957aa5878dfe94e4ac2f" PRIMARY KEY ("id"))`);
+        await queryRunner.query(`CREATE TYPE "public"."orders_status_enum" AS ENUM('PENDING', 'PAID', 'EXPIRED', 'CANCELLED')`);
+        await queryRunner.query(`CREATE TABLE "orders" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "user_id" uuid NOT NULL, "total_amount" numeric(10,2) NOT NULL, "status" "public"."orders_status_enum" NOT NULL DEFAULT 'PENDING', "expired_at" TIMESTAMP WITH TIME ZONE, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "deleted_at" TIMESTAMP WITH TIME ZONE, CONSTRAINT "PK_710e2d4957aa5878dfe94e4ac2f" PRIMARY KEY ("id"))`);
         await queryRunner.query(`CREATE INDEX "idx_orders_created_at" ON "orders" ("created_at") `);
         await queryRunner.query(`CREATE INDEX "idx_orders_status" ON "orders" ("status") `);
         await queryRunner.query(`CREATE INDEX "idx_orders_user_id" ON "orders" ("user_id") `);
@@ -29,10 +30,10 @@ export class Generated1777126152427 implements MigrationInterface {
         await queryRunner.query(`CREATE INDEX "idx_payments_status" ON "payments" ("status") `);
         await queryRunner.query(`CREATE UNIQUE INDEX "idx_payments_external_id" ON "payments" ("external_id") `);
         await queryRunner.query(`CREATE INDEX "idx_payments_order_id" ON "payments" ("order_id") `);
-        await queryRunner.query(`CREATE TABLE "generated_event_tickets" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "order_item_id" uuid NOT NULL, "qr_code_url" character varying(500) NOT NULL, "pdf_url" character varying(500) NOT NULL, "is_used" boolean NOT NULL DEFAULT false, "issued_at" TIMESTAMP WITH TIME ZONE NOT NULL, "ticket_id" uuid, CONSTRAINT "PK_1b9042ea57d05e81acca074f9d0" PRIMARY KEY ("id"))`);
+        await queryRunner.query(`CREATE TABLE "generated_event_tickets" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "order_item_id" uuid NOT NULL, "ticket_id" uuid NOT NULL, "qr_code_url" character varying(500) NOT NULL, "pdf_url" character varying(500) NOT NULL, "is_used" boolean NOT NULL DEFAULT false, "issued_at" TIMESTAMP WITH TIME ZONE NOT NULL, CONSTRAINT "PK_1b9042ea57d05e81acca074f9d0" PRIMARY KEY ("id"))`);
         await queryRunner.query(`CREATE INDEX "idx_generated_event_tickets_is_used" ON "generated_event_tickets" ("is_used") `);
         await queryRunner.query(`CREATE INDEX "idx_generated_event_tickets_order_item_id" ON "generated_event_tickets" ("order_item_id") `);
-        await queryRunner.query(`CREATE TABLE "tickets" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "event_id" uuid NOT NULL, "name" character varying(100) NOT NULL, "price" numeric(10,2) NOT NULL, "quota" integer NOT NULL, "sold" integer NOT NULL DEFAULT '0', "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "deleted_at" TIMESTAMP WITH TIME ZONE, CONSTRAINT "PK_343bc942ae261cf7a1377f48fd0" PRIMARY KEY ("id"))`);
+        await queryRunner.query(`CREATE TABLE "tickets" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "event_id" uuid NOT NULL, "name" character varying(100) NOT NULL, "price" numeric(10,2) NOT NULL, "quota" integer NOT NULL, "sold" integer NOT NULL DEFAULT '0', "pdf_url" character varying, "is_used" boolean NOT NULL DEFAULT false, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "deleted_at" TIMESTAMP WITH TIME ZONE, CONSTRAINT "PK_343bc942ae261cf7a1377f48fd0" PRIMARY KEY ("id"))`);
         await queryRunner.query(`CREATE INDEX "idx_tickets_created_at" ON "tickets" ("created_at") `);
         await queryRunner.query(`CREATE INDEX "idx_tickets_name" ON "tickets" ("name") `);
         await queryRunner.query(`CREATE INDEX "idx_tickets_event_id" ON "tickets" ("event_id") `);
@@ -43,6 +44,11 @@ export class Generated1777126152427 implements MigrationInterface {
         await queryRunner.query(`CREATE TABLE "event_media" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "eventId" character varying NOT NULL, "mediaId" character varying NOT NULL, "type" character varying NOT NULL DEFAULT 'banner', "order" integer NOT NULL DEFAULT '0', "event_id" uuid, "media_id" uuid, CONSTRAINT "PK_4e5f0c8c1718c8c2026c15296af" PRIMARY KEY ("id"))`);
         await queryRunner.query(`CREATE UNIQUE INDEX "IDX_2b7b8d6f6ebcd65da777932b84" ON "event_media" ("eventId", "type") WHERE type = 'banner'`);
         await queryRunner.query(`CREATE TABLE "roles" ("id_role" SERIAL NOT NULL, "name" character varying(50) NOT NULL, "created_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "updated_at" TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now(), "deleted_at" TIMESTAMP WITH TIME ZONE, CONSTRAINT "PK_3ebdb96dd6787bda0e3c8f89d66" PRIMARY KEY ("id_role"))`);
+        await queryRunner.query(`CREATE TYPE "public"."transactions_paymentmethod_enum" AS ENUM('INVOICE', 'VIRTUAL_ACCOUNT', 'QRIS', 'EWALLET')`);
+        await queryRunner.query(`CREATE TYPE "public"."transactions_status_enum" AS ENUM('PENDING', 'PAID', 'EXPIRED', 'FAILED', 'SETTLED')`);
+        await queryRunner.query(`CREATE TABLE "transactions" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "externalId" character varying NOT NULL, "xenditId" character varying, "paymentMethod" "public"."transactions_paymentmethod_enum" NOT NULL, "status" "public"."transactions_status_enum" NOT NULL DEFAULT 'PENDING', "amount" numeric(15,2) NOT NULL, "currency" character varying NOT NULL DEFAULT 'IDR', "payerEmail" character varying, "description" character varying, "paymentUrl" character varying, "paidAt" TIMESTAMP, "expiresAt" TIMESTAMP, "retryCount" integer NOT NULL DEFAULT '0', "xenditResponse" jsonb, "metadata" jsonb, "createdAt" TIMESTAMP NOT NULL DEFAULT now(), "updatedAt" TIMESTAMP NOT NULL DEFAULT now(), CONSTRAINT "UQ_c7677fa092ee0c2659fbf452920" UNIQUE ("externalId"), CONSTRAINT "PK_a219afd8dd77ed80f5a862f1db9" PRIMARY KEY ("id"))`);
+        await queryRunner.query(`CREATE UNIQUE INDEX "IDX_c7677fa092ee0c2659fbf45292" ON "transactions" ("externalId") `);
+        await queryRunner.query(`CREATE INDEX "IDX_03a0dc30ed84a71abbf143b2f8" ON "transactions" ("xenditId") `);
         await queryRunner.query(`CREATE TABLE "user_roles" ("id_user" uuid NOT NULL, "id_role" integer NOT NULL, CONSTRAINT "PK_dbfb392b1b20247554de529ea7c" PRIMARY KEY ("id_user", "id_role"))`);
         await queryRunner.query(`CREATE INDEX "IDX_37a75bf56b7a6ae65144e0d5c0" ON "user_roles" ("id_user") `);
         await queryRunner.query(`CREATE INDEX "IDX_af69ec5d5bd973309c025e7a62" ON "user_roles" ("id_role") `);
@@ -82,6 +88,11 @@ export class Generated1777126152427 implements MigrationInterface {
         await queryRunner.query(`DROP INDEX "public"."IDX_af69ec5d5bd973309c025e7a62"`);
         await queryRunner.query(`DROP INDEX "public"."IDX_37a75bf56b7a6ae65144e0d5c0"`);
         await queryRunner.query(`DROP TABLE "user_roles"`);
+        await queryRunner.query(`DROP INDEX "public"."IDX_03a0dc30ed84a71abbf143b2f8"`);
+        await queryRunner.query(`DROP INDEX "public"."IDX_c7677fa092ee0c2659fbf45292"`);
+        await queryRunner.query(`DROP TABLE "transactions"`);
+        await queryRunner.query(`DROP TYPE "public"."transactions_status_enum"`);
+        await queryRunner.query(`DROP TYPE "public"."transactions_paymentmethod_enum"`);
         await queryRunner.query(`DROP TABLE "roles"`);
         await queryRunner.query(`DROP INDEX "public"."IDX_2b7b8d6f6ebcd65da777932b84"`);
         await queryRunner.query(`DROP TABLE "event_media"`);
@@ -104,6 +115,7 @@ export class Generated1777126152427 implements MigrationInterface {
         await queryRunner.query(`DROP INDEX "public"."idx_orders_status"`);
         await queryRunner.query(`DROP INDEX "public"."idx_orders_created_at"`);
         await queryRunner.query(`DROP TABLE "orders"`);
+        await queryRunner.query(`DROP TYPE "public"."orders_status_enum"`);
         await queryRunner.query(`DROP INDEX "public"."idx_order_items_order_id"`);
         await queryRunner.query(`DROP INDEX "public"."idx_order_items_ticket_id"`);
         await queryRunner.query(`DROP TABLE "order_items"`);
