@@ -1,7 +1,9 @@
+import { ADMIN } from '~/infrastructure/database/const/shared-data';
+
 export const USER = {
   LOGIN: {
-    email: 'admin@gmail.com',
-    password: 'password',
+    email: ADMIN.email,
+    password: ADMIN.password,
   },
 };
 

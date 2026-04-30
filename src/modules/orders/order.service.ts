@@ -12,6 +12,7 @@ import { QRService } from '~/modules/qr-code/qr-code.service';
 import { PdfService } from '~/modules/pdf/pdf.service';
 import { EmailService } from '~/infrastructure/email/email.service';
 import { StorageService } from '~/infrastructure/storage/storage.service';
+import { UserService } from '~/modules/users/user.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderItemResponseDto, OrderResponseDto } from './dto/order-response.dto';
 import { OrderStatusResponseDto } from './dto/order-status-response.dto';
@@ -23,6 +24,7 @@ import type { Transaction } from '~/modules/payments/entities/transaction.entity
 import { QueryUserOrdersDto } from './dto/query-user-orders.dto';
 import * as PDFDocument from 'pdfkit';
 import * as QRCode from 'qrcode';
+import { CONFIG_SERVICE, ConfigService } from '~/infrastructure/config/config.provider';
 
 type LoadedOrder = Order & {
   orderItems?: Array<
@@ -53,11 +55,15 @@ export class OrderService {
     @Inject(REPOSITORY.GENERATED_EVENT_TICKET)
     private readonly generatedTicketRepository: Repository<GeneratedEventTicket>,
 
+    @Inject(CONFIG_SERVICE)
+    private readonly config: ConfigService,
+
     private readonly paymentService: PaymentService,
     private readonly qrService: QRService,
     private readonly pdfService: PdfService,
     private readonly emailService: EmailService,
     private readonly storageService: StorageService,
+    private readonly userService: UserService,
   ) {}
 
   async createOrder(dto: CreateOrderDto, userId: string, userEmail: string): Promise<OrderResponseDto> {
@@ -378,7 +384,7 @@ export class OrderService {
     if (order.status !== OrderStatus.PENDING) return;
 
     // Deduct quota for each ticket in the order
-    for (const orderItem of [...(order.orderItems ?? [])]) {
+    for (const orderItem of order.orderItems ?? []) {
       const ticket = orderItem.ticket; // Already loaded from relations
 
       if (ticket) {
@@ -518,7 +524,8 @@ export class OrderService {
 
       // Return the full download URL
       if (uploadResult.filename) {
-        const downloadUrl = `/api/storage/download/tickets-public/${uploadResult.filename}`;
+        const baseUrl = this.config.get('URL_API');
+        const downloadUrl = `${baseUrl}/storage/download/tickets-public/${uploadResult.filename}`;
         this.logger.info({ ticketId, filename: uploadResult.filename }, 'PDF stored successfully');
         return downloadUrl;
       }
@@ -532,9 +539,8 @@ export class OrderService {
 
   private async sendTicketEmail(userId: string, order: LoadedOrder, tickets: GeneratedEventTicket[]): Promise<void> {
     try {
-      // Get user email - you might need to inject a user service or repository
-      // For now, we'll assume we can get the user email from the order context
-      const userEmail = 'user@example.com'; // This should be fetched from user service
+      // Get user email from UserService
+      const user = await this.userService.findOne({ where: { id: userId } });
 
       const ticketLinks = tickets.map((ticket) => `<li>Ticket ID: ${ticket.id} - <a href="${ticket.pdfUrl}">Download PDF</a></li>`).join('');
 
@@ -550,7 +556,7 @@ export class OrderService {
       `;
 
       await this.emailService.sendEmail({
-        to: userEmail,
+        to: user?.email as string,
         subject: `Your Tickets - Order ${order.id}`,
         html: emailHtml,
       });

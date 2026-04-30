@@ -4,14 +4,15 @@ import * as request from 'supertest';
 import { App } from 'supertest/types';
 import z from 'zod';
 import { validateSchema } from '~/common/helpers/validation';
+import { ADMIN } from '~/infrastructure/database/const/shared-data';
 import { Permission } from '~/modules/auth/entity/permission.entity';
 import { QueryRolePermissionDto } from '~/modules/role-permissions/dto/query-role-permission.dto';
 import { cleanupApplication, setupApplication } from '~/test/setup_e2e';
 import { extractHttpOnlyCookie } from '~/test/utils';
 
 const USER = {
-  email: 'admin@gmail.com',
-  password: 'password',
+  email: ADMIN.email,
+  password: ADMIN.password,
 };
 
 describe('Module Role Permissions', () => {

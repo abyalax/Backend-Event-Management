@@ -11,10 +11,6 @@ import { DataSource } from 'typeorm';
 import { AppModule } from '~/app.module';
 import { CONFIG_PROVIDER } from '~/common/constants/provider';
 import { envSchema } from '~/infrastructure/config/config.schema';
-import UserSeeder from '~/infrastructure/database/seeds/1_users.seed';
-import EventSeeder from '~/infrastructure/database/seeds/2_events.seed';
-import TicketSeeder from '~/infrastructure/database/seeds/3_tickets.seed';
-import OrderSeeder from '~/infrastructure/database/seeds/4_orders.seed';
 
 const TEST_CLOSE_TIMEOUT_MS = 10_000;
 
@@ -187,8 +183,10 @@ export const setupApplication = async (): Promise<[NestExpressApplication, Testi
   const appDataSource = moduleFixture.get<DataSource>(CONFIG_PROVIDER.PSQL_CONNECTION, { strict: false });
   if (!appDataSource) throw new Error('Database connection not found in test module.');
 
+  /**
   await resetTestDatabase(appDataSource);
   await seedTestData(appDataSource);
+   */
 
   return [
     app,
@@ -253,6 +251,7 @@ const clearScheduledJobs = (moduleFixture: TestingModule): void => {
   }
 };
 
+/**
 const resetTestDatabase = async (dataSource: DataSource): Promise<void> => {
   const tables = await dataSource.query(`
     SELECT tablename
@@ -274,7 +273,7 @@ const resetTestDatabase = async (dataSource: DataSource): Promise<void> => {
   console.log('Database reset completed successfully');
 };
 
-export const seedTestData = async (dataSource: DataSource): Promise<void> => {
+const seedTestData = async (dataSource: DataSource): Promise<void> => {
   try {
     if (!dataSource.isInitialized) {
       console.log('[Seeder] Initializing data source...');
@@ -304,3 +303,5 @@ export const seedTestData = async (dataSource: DataSource): Promise<void> => {
     throw error;
   }
 };
+
+ */

@@ -11,6 +11,6 @@ export const EVENT_PAGINATION_CONFIG: PaginateConfig<Event> = {
   defaultSortBy: [['createdAt', 'DESC']],
   defaultLimit: 10,
   maxLimit: 100,
-  relations: ['category', 'media', 'media.media'],
+  relations: ['category', 'media', 'media.media', 'tickets'],
   multiWordSearch: true,
 };

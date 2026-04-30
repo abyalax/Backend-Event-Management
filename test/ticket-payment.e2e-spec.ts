@@ -7,6 +7,7 @@ import { App } from 'supertest/types';
 import { cleanupApplication, setupApplication } from './setup_e2e';
 import { USER } from './common/constant';
 import { extractHttpOnlyCookie } from './utils';
+import { ADMIN_ID } from '~/infrastructure/database/const/shared-data';
 
 const USER_CREDENTIALS = {
   email: USER.LOGIN.email,
@@ -98,7 +99,7 @@ describe('Ticket Payment E2E Test', () => {
         endDate: '2024-07-20T17:00:00.000Z',
         status: 'upcoming',
         categoryId: 2,
-        createdBy: '550e8400-e29b-41d4-a716-446655440000',
+        createdBy: ADMIN_ID,
         bannerMediaId: mediaId,
       };
 

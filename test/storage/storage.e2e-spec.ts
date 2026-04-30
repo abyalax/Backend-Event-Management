@@ -43,7 +43,7 @@ describe('Storage E2E Tests', () => {
     }
 
     // Setup test file
-    testFilePath = path.join(__dirname, '../../assets/billie-elish.jpg');
+    testFilePath = path.join(__dirname, '../../assets/banner.jpg');
     if (!fs.existsSync(testFilePath)) {
       // Create a dummy test file if it doesn't exist
       const dummyDir = path.dirname(testFilePath);
@@ -89,7 +89,7 @@ describe('Storage E2E Tests', () => {
 
   describe('Health Check', () => {
     it('should return health status', async () => {
-      const response = await request(app.getHttpServer()).get('/api/storage/health');
+      const response = await request(app.getHttpServer()).get('/storage/health');
 
       // Accept both 200 (healthy) and 503 (MinIO not available)
       expect([200, 503]).toContain(response.status);
@@ -105,7 +105,7 @@ describe('Storage E2E Tests', () => {
 
   describe('File Upload', () => {
     it('should upload file to documents bucket', async () => {
-      const response = await request(app.getHttpServer()).post('/api/storage/upload/documents').attach('file', testFilePath);
+      const response = await request(app.getHttpServer()).post('/storage/upload/documents').attach('file', testFilePath);
 
       expect([200, 201, 500, 503]).toContain(response.status);
 
@@ -122,7 +122,7 @@ describe('Storage E2E Tests', () => {
     }, 30000);
 
     it('should upload file to images bucket', async () => {
-      const response = await request(app.getHttpServer()).post('/api/storage/upload/images').attach('file', testFilePath);
+      const response = await request(app.getHttpServer()).post('/storage/upload/images').attach('file', testFilePath);
 
       expect([200, 201, 500, 503]).toContain(response.status);
 
@@ -135,13 +135,13 @@ describe('Storage E2E Tests', () => {
     }, 30000);
 
     it('should reject upload without file', async () => {
-      const response = await request(app.getHttpServer()).post('/api/storage/upload/documents').expect(400);
+      const response = await request(app.getHttpServer()).post('/storage/upload/documents').expect(400);
 
       expect(response.body).toHaveProperty('message', 'No file provided');
     });
 
     it('should reject upload to invalid bucket', async () => {
-      const response = await request(app.getHttpServer()).post('/api/storage/upload/invalid-bucket').attach('file', testFilePath);
+      const response = await request(app.getHttpServer()).post('/storage/upload/invalid-bucket').attach('file', testFilePath);
 
       expect([200, 201, 400, 500, 503]).toContain(response.status);
 
@@ -160,7 +160,7 @@ describe('Storage E2E Tests', () => {
      * Setup for metadata tests - upload a file first
      */
     beforeAll(async () => {
-      const response = await request(app.getHttpServer()).post('/api/storage/upload/documents').attach('file', testFilePath);
+      const response = await request(app.getHttpServer()).post('/storage/upload/documents').attach('file', testFilePath);
 
       if (response.status === 200 && response.body.success) {
         testUploadedFilename = response.body.data.filename;
@@ -175,7 +175,7 @@ describe('Storage E2E Tests', () => {
         return;
       }
 
-      const response = await request(app.getHttpServer()).get(`/api/storage/metadata/${testUploadedBucket}/${testUploadedFilename}`);
+      const response = await request(app.getHttpServer()).get(`/storage/metadata/${testUploadedBucket}/${testUploadedFilename}`);
 
       expect([200, 404, 503]).toContain(response.status);
 
@@ -189,7 +189,7 @@ describe('Storage E2E Tests', () => {
     });
 
     it('should return error for non-existent file', async () => {
-      const response = await request(app.getHttpServer()).get('/api/storage/metadata/documents/non-existent-file-12345.jpg');
+      const response = await request(app.getHttpServer()).get('/storage/metadata/documents/non-existent-file-12345.jpg');
 
       expect([200, 404, 500, 503]).toContain(response.status);
 
@@ -208,7 +208,7 @@ describe('Storage E2E Tests', () => {
      * Setup for download tests
      */
     beforeAll(async () => {
-      const response = await request(app.getHttpServer()).post('/api/storage/upload/documents').attach('file', testFilePath);
+      const response = await request(app.getHttpServer()).post('/storage/upload/documents').attach('file', testFilePath);
 
       if (response.status === 200 && response.body.success) {
         testDownloadFilename = response.body.data.filename;
@@ -223,7 +223,7 @@ describe('Storage E2E Tests', () => {
         return;
       }
 
-      const response = await request(app.getHttpServer()).get(`/api/storage/download/${testDownloadBucket}/${testDownloadFilename}`);
+      const response = await request(app.getHttpServer()).get(`/storage/download/${testDownloadBucket}/${testDownloadFilename}`);
 
       expect([200, 404, 503]).toContain(response.status);
 
@@ -235,7 +235,7 @@ describe('Storage E2E Tests', () => {
     });
 
     it('should return 404 for non-existent file download', async () => {
-      const response = await request(app.getHttpServer()).get('/api/storage/download/documents/non-existent-file-12345.jpg');
+      const response = await request(app.getHttpServer()).get('/storage/download/documents/non-existent-file-12345.jpg');
 
       expect([200, 404, 500, 503]).toContain(response.status);
     });
@@ -249,7 +249,7 @@ describe('Storage E2E Tests', () => {
      * Setup for presigned URL tests
      */
     beforeAll(async () => {
-      const response = await request(app.getHttpServer()).post('/api/storage/upload/documents').attach('file', testFilePath);
+      const response = await request(app.getHttpServer()).post('/storage/upload/documents').attach('file', testFilePath);
 
       if (response.status === 200 && response.body.success) {
         testPresignedFilename = response.body.data.filename;
@@ -264,7 +264,7 @@ describe('Storage E2E Tests', () => {
         return;
       }
 
-      const response = await request(app.getHttpServer()).get(`/api/storage/presigned/${testPresignedBucket}/${testPresignedFilename}`);
+      const response = await request(app.getHttpServer()).get(`/storage/presigned/${testPresignedBucket}/${testPresignedFilename}`);
 
       expect([200, 404, 503]).toContain(response.status);
 
@@ -282,7 +282,7 @@ describe('Storage E2E Tests', () => {
       }
 
       const response = await request(app.getHttpServer()).get(
-        `/api/storage/presigned/${testPresignedBucket}/${testPresignedFilename}?expirySeconds=7200`,
+        `/storage/presigned/${testPresignedBucket}/${testPresignedFilename}?expirySeconds=7200`,
       );
 
       expect([200, 404, 503]).toContain(response.status);
@@ -297,7 +297,7 @@ describe('Storage E2E Tests', () => {
     beforeAll(async () => {
       // Upload a few test files
       for (let i = 0; i < 2; i++) {
-        const response = await request(app.getHttpServer()).post('/api/storage/upload/documents').attach('file', testFilePath);
+        const response = await request(app.getHttpServer()).post('/storage/upload/documents').attach('file', testFilePath);
 
         if (response.status === 200 && response.body.success) {
           fileTracker.trackFile(response.body.data.bucket, response.body.data.filename);
@@ -306,7 +306,7 @@ describe('Storage E2E Tests', () => {
     });
 
     it('should list files in bucket', async () => {
-      const response = await request(app.getHttpServer()).get('/api/storage/list/documents');
+      const response = await request(app.getHttpServer()).get('/storage/list/documents');
 
       expect([200, 201, 500, 503]).toContain(response.status);
 
@@ -320,7 +320,7 @@ describe('Storage E2E Tests', () => {
     });
 
     it('should filter files by prefix', async () => {
-      const response = await request(app.getHttpServer()).get('/api/storage/list/documents?prefix=17');
+      const response = await request(app.getHttpServer()).get('/storage/list/documents?prefix=17');
 
       expect([200, 201, 500, 503]).toContain(response.status);
 
@@ -338,7 +338,7 @@ describe('Storage E2E Tests', () => {
 
   describe('Bucket Statistics', () => {
     it('should get bucket statistics', async () => {
-      const response = await request(app.getHttpServer()).get('/api/storage/stats/documents');
+      const response = await request(app.getHttpServer()).get('/storage/stats/documents');
 
       expect([200, 201, 500, 503]).toContain(response.status);
 
@@ -362,7 +362,7 @@ describe('Storage E2E Tests', () => {
      * Setup for copy tests
      */
     beforeAll(async () => {
-      const response = await request(app.getHttpServer()).post('/api/storage/upload/documents').attach('file', testFilePath);
+      const response = await request(app.getHttpServer()).post('/storage/upload/documents').attach('file', testFilePath);
 
       if (response.status === 200 && response.body.success) {
         sourceCopyFilename = response.body.data.filename;
@@ -378,7 +378,7 @@ describe('Storage E2E Tests', () => {
       }
 
       const destFilename = `copied_${sourceCopyFilename}`;
-      const response = await request(app.getHttpServer()).post('/api/storage/copy').query({
+      const response = await request(app.getHttpServer()).post('/storage/copy').query({
         source: sourceCopyBucket,
         sourceFile: sourceCopyFilename,
         destination: 'backups',
@@ -394,7 +394,7 @@ describe('Storage E2E Tests', () => {
     });
 
     it('should reject copy with missing parameters', async () => {
-      const response = await request(app.getHttpServer()).post('/api/storage/copy').query({
+      const response = await request(app.getHttpServer()).post('/storage/copy').query({
         source: 'documents',
         // Missing other required parameters
       });
@@ -412,7 +412,7 @@ describe('Storage E2E Tests', () => {
      * Setup for deletion tests
      */
     beforeAll(async () => {
-      const response = await request(app.getHttpServer()).post('/api/storage/upload/documents').attach('file', testFilePath);
+      const response = await request(app.getHttpServer()).post('/storage/upload/documents').attach('file', testFilePath);
 
       if (response.status === 200 && response.body.success) {
         testDeleteFilename = response.body.data.filename;
@@ -427,7 +427,7 @@ describe('Storage E2E Tests', () => {
         return;
       }
 
-      const response = await request(app.getHttpServer()).delete(`/api/storage/${testDeleteBucket}/${testDeleteFilename}`);
+      const response = await request(app.getHttpServer()).delete(`/storage/${testDeleteBucket}/${testDeleteFilename}`);
 
       expect([200, 404, 500, 503]).toContain(response.status);
 
@@ -446,7 +446,7 @@ describe('Storage E2E Tests', () => {
     });
 
     it('should return error when deleting non-existent file', async () => {
-      const response = await request(app.getHttpServer()).delete('/api/storage/documents/non-existent-file-12345.jpg');
+      const response = await request(app.getHttpServer()).delete('/storage/documents/non-existent-file-12345.jpg');
 
       expect([200, 404, 500, 503]).toContain(response.status);
     });
@@ -454,7 +454,7 @@ describe('Storage E2E Tests', () => {
 
   describe('Metrics', () => {
     it('should return storage metrics', async () => {
-      const response = await request(app.getHttpServer()).get('/api/storage/metrics');
+      const response = await request(app.getHttpServer()).get('/storage/metrics');
 
       expect([200, 201, 500, 503]).toContain(response.status);
 

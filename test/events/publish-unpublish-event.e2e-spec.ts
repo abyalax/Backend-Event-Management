@@ -4,14 +4,15 @@ import * as request from 'supertest';
 import { App } from 'supertest/types';
 import z from 'zod';
 import { validateSchema } from '~/common/helpers/validation';
+import { ADMIN } from '~/infrastructure/database/const/shared-data';
 import { QueryEventDto } from '~/modules/events/dto/query-event.dto';
 import { Event } from '~/modules/events/entity/event.entity';
 import { cleanupApplication, setupApplication } from '~/test/setup_e2e';
 import { extractHttpOnlyCookie } from '~/test/utils';
 
 const USER = {
-  email: 'admin@gmail.com',
-  password: 'password',
+  email: ADMIN.email,
+  password: ADMIN.password,
 };
 
 describe('Management Event Publication', () => {

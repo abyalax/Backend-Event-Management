@@ -4,6 +4,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { DatabaseModule } from '~/infrastructure/database/database.module';
 import { TicketModule } from '../tickets/ticket.module';
 import { PaymentModule } from '../payments/payment.module';
+import { UserModule } from '../users/user.module';
 import { QrModule } from '../qr-code/qr-code.module';
 import { PdfModule } from '../pdf/pdf.module';
 import { EmailModule } from '~/infrastructure/email/email.module';
@@ -19,6 +20,7 @@ import { OrderService } from './order.service';
     ScheduleModule,
     forwardRef(() => TicketModule),
     forwardRef(() => PaymentModule),
+    UserModule,
     QrModule,
     PdfModule,
     EmailModule,

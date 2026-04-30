@@ -66,7 +66,7 @@ export class PdfService {
     }
 
     // Generate proper download URL
-    const pdfUrl = uploadResult.filename ? `/api/storage/download/tickets-public/${uploadResult.filename}` : uploadResult.url;
+    const pdfUrl = uploadResult.filename ? `/storage/download/tickets-public/${uploadResult.filename}` : uploadResult.url;
 
     await this.ticketRepo.update(ticketId, { pdfUrl });
     this.logger.info({ ticketId, pdfUrl }, 'PDF generated and stored');

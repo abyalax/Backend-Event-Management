@@ -11,10 +11,11 @@ import { QueryEventDto } from '~/modules/events/dto/query-event.dto';
 import { cleanupApplication, setupApplication } from '~/test/setup_e2e';
 import { extractHttpOnlyCookie } from '~/test/utils';
 import { EventDto } from '~/modules/events/dto/event.dto';
+import { ADMIN, ADMIN_ID } from '~/infrastructure/database/const/shared-data';
 
 const USER = {
-  email: 'admin@gmail.com',
-  password: 'password',
+  email: ADMIN.email,
+  password: ADMIN.password,
 };
 
 describe('Module Events', () => {
@@ -198,7 +199,7 @@ describe('Module Events', () => {
         endDate: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(), // Day after tomorrow
         status: 'DRAFT',
         categoryId: 1, // Use numeric category ID from seeds
-        createdBy: '550e8400-e29b-41d4-a716-446655440000', // Admin user ID
+        createdBy: ADMIN_ID,
         bannerMediaId: mediaId, // Use real uploaded media ID
       };
 
@@ -269,7 +270,7 @@ describe('Module Events', () => {
         endDate: new Date(Date.now() + 48 * 60 * 60 * 1000).toISOString(),
         status: 'PUBLISHED',
         categoryId: 1,
-        createdBy: '550e8400-e29b-41d4-a716-446655440000',
+        createdBy: ADMIN_ID,
         bannerMediaId: mediaId,
       };
 

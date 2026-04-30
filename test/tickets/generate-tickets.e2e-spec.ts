@@ -2,14 +2,15 @@ import { INestApplication } from '@nestjs/common';
 import { TestingModule } from '@nestjs/testing';
 import * as request from 'supertest';
 import { App } from 'supertest/types';
+import { ADMIN } from '~/infrastructure/database/const/shared-data';
 import { QueryEventDto } from '~/modules/events/dto/query-event.dto';
 import { Ticket } from '~/modules/tickets/entities/ticket.entity';
 import { cleanupApplication, setupApplication } from '~/test/setup_e2e';
 import { extractHttpOnlyCookie } from '~/test/utils';
 
 const USER = {
-  email: 'admin@gmail.com',
-  password: 'password',
+  email: ADMIN.email,
+  password: ADMIN.password,
 };
 
 describe('Module Ticket Generation', () => {

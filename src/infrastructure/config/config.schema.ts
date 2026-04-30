@@ -15,6 +15,8 @@ export const envSchema = z.object({
     message: 'JWT refresh expiration is required',
   }),
 
+  URL_API: z.string({ message: 'URL_API is required' }),
+
   DATABASE_URL: z.string({ message: 'Required Database URL' }),
   DATABASE_TYPE: z.string({ message: 'Required Database Type' }),
 

@@ -230,7 +230,8 @@ export class PaymentService {
   }
 
   async enqueueWebhook(type: WebhookEventType, payload: WebhookJobData['payload']): Promise<void> {
-    await this.paymentQueue.add(
+    this.logger.info({ type, payload }, 'Adding webhook job to payment queue');
+    const job = await this.paymentQueue.add(
       WEBHOOK_JOB,
       { type, payload },
       {
@@ -240,6 +241,7 @@ export class PaymentService {
         removeOnFail: false,
       },
     );
+    this.logger.info({ jobId: job.id, type }, 'Webhook job added to payment queue');
   }
 
   async enqueueExpiry(transactionId: string, externalId: string): Promise<void> {

@@ -1,101 +1,78 @@
 import type { Event } from "~/modules/events/entity/event.entity";
 
-export const mockEvents = (): Event[] => {
-  const now = new Date();
-  const tomorrow = new Date(now.getTime() + 24 * 60 * 60 * 1000);
-  const nextWeek = new Date(now.getTime() + 7 * 24 * 60 * 60 * 1000);
-  const nextMonth = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+import { faker } from '@faker-js/faker';
+import { MediaObject } from "~/infrastructure/storage/entitiy/media-objects.entity";
+import { EEventMediaType, EventMedia } from "~/modules/events/entity/event-media.entity";
+import { ADMIN_ID } from "../const/shared-data";
+import { Ticket } from "~/modules/tickets/entities/ticket.entity";
 
-  return [
-    {
-      id: "550e8400-e29b-41d4-a716-446655440100",
-      title: "Tech Conference 2024",
-      description: "Annual technology conference featuring the latest innovations in software development, AI, and cloud computing.",
-      maxAttendees: 500,
-      isVirtual: false,
-      location: "Jakarta Convention Center",
-      startDate: nextWeek,
-      endDate: new Date(nextWeek.getTime() + 8 * 60 * 60 * 1000),
-      status: "upcoming",
-      categoryId: "1",
-      category: {
-        id: 1,
-        name: "Conference",
-        description: "Large-scale professional conferences and summits",
-      },
-      createdBy: "550e8400-e29b-41d4-a716-446655440000",
-    },
-    {
-      id: "550e8400-e29b-41d4-a716-446655440101",
-      title: "Web Development Workshop",
-      description: "Hands-on workshop covering modern web development technologies including React, Node.js, and TypeScript.",
-      maxAttendees: 50,
-      isVirtual: true,
-      location: "Online - Zoom",
-      startDate: tomorrow,
-      endDate: new Date(tomorrow.getTime() + 4 * 60 * 60 * 1000),
-      status: "upcoming",
-      categoryId: "2",
-      category: {
-        id: 2,
-        name: "Workshop",
-        description: "Hands-on learning sessions and skill development",
-      },
-      createdBy: "550e8400-e29b-41d4-a716-446655440001",
-    },
-    {
-      id: "550e8400-e29b-41d4-a716-446655440102",
-      title: "Data Science Summit",
-      description: "Explore the latest trends in data science, machine learning, and artificial intelligence.",
-      maxAttendees: 300,
-      isVirtual: false,
-      location: "Surabaya Tech Hub",
-      startDate: nextMonth,
-      endDate: new Date(nextMonth.getTime() + 6 * 60 * 60 * 1000),
-      status: "upcoming",
-      categoryId: "3",
-      category: {
-        id: 3,
-        name: "Technology",
-        description: "Tech-focused events and meetups",
-      },
-      createdBy: "550e8400-e29b-41d4-a716-446655440000",
-    },
-    {
-      id: "550e8400-e29b-41d4-a716-446655440103",
-      title: "Startup Pitch Night",
-      description: "Connect with investors and showcase your startup ideas at our monthly pitch night.",
-      maxAttendees: 100,
-      isVirtual: false,
-      location: "Bandung Innovation Center",
-      startDate: new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000),
-      endDate: new Date(now.getTime() + 3 * 24 * 60 * 60 * 1000 + 3 * 60 * 60 * 1000),
-      status: "ongoing",
-      categoryId: "4",
-      category: {
-        id: 4,
-        name: "Networking",
-        description: "Professional networking and social events",
-      },
-      createdBy: "550e8400-e29b-41d4-a716-446655440001",
-    },
-    {
-      id: "550e8400-e29b-41d4-a716-446655440104",
-      title: "Mobile App Development Bootcamp",
-      description: "Intensive bootcamp covering iOS and Android app development using React Native and Flutter.",
-      maxAttendees: 25,
-      isVirtual: true,
-      location: "Online - Microsoft Teams",
-      startDate: new Date(now.getTime() + 14 * 24 * 60 * 60 * 1000),
-      endDate: new Date(now.getTime() + 16 * 24 * 60 * 60 * 1000),
-      status: "upcoming",
-      categoryId: "2",
-      category: {
-        id: 2,
-        name: "Workshop",
-        description: "Hands-on learning sessions and skill development",
-      },
-      createdBy: "550e8400-e29b-41d4-a716-446655440000",
-    },
+export const mockEvents = (
+  mediaObjects: MediaObject[]
+) => {
+  const events: Event[] = [];
+  const eventMedia: Partial<EventMedia>[] = [];
+  const tickets: Partial<Ticket>[] = [];
+  
+  const categories = [
+    { id: 1, name: "Conference", description: "Professional summits" },
+    { id: 2, name: "Workshop", description: "Hands-on learning sessions" },
+    { id: 3, name: "Seminar", description: "Educational presentations" }
   ];
+
+  const ticketTypes = ["General Admission", "VIP", "Early Bird", "Student Pass"];
+
+  for (let i = 0; i < 200; i++) {
+    const eventId = faker.string.uuid();
+    const category = faker.helpers.arrayElement(categories);
+    
+    // 1. Create Event
+    const startDate = faker.date.soon({ days: 30 });
+    events.push({
+      id: eventId,
+      title: faker.company.catchPhrase(),
+      description: faker.lorem.paragraph(),
+      maxAttendees: faker.number.int({ min: 100, max: 1000 }),
+      isVirtual: faker.datatype.boolean(),
+      location: faker.location.city() + " Convention Center",
+      startDate,
+      endDate: new Date(startDate.getTime() + 4 * 60 * 60 * 1000),
+      status: "upcoming",
+      categoryId: category.id.toString(),
+      category: category,
+      createdBy: ADMIN_ID,
+    });
+
+    // 2. Create Unique Tickets for this Event
+    // Setiap event akan punya 1 sampai 3 jenis tiket yang berbeda
+    const numTicketTypes = faker.number.int({ min: 1, max: 3 });
+    const selectedTicketNames = faker.helpers.arrayElements(ticketTypes, numTicketTypes);
+
+    selectedTicketNames.forEach((ticketName) => {
+      const quota = faker.number.int({ min: 20, max: 100 });
+      
+      tickets.push({
+        id: faker.string.uuid(),
+        eventId: eventId, // Relasi ke event yang baru dibuat
+        name: ticketName,
+        // Harga variasi: VIP lebih mahal, Early Bird lebih murah
+        price: ticketName === "VIP" 
+          ? faker.number.int({ min: 500000, max: 1500000 }) 
+          : faker.number.int({ min: 50000, max: 450000 }),
+        quota: quota,
+        sold: faker.number.int({ min: 0, max: quota }), // Sold tidak boleh > quota
+      });
+    });
+
+    // 3. Assign Media
+    const randomMedia = faker.helpers.arrayElement(mediaObjects);
+    eventMedia.push({
+      id: faker.string.uuid(),
+      eventId: eventId,
+      mediaId: randomMedia.id,
+      type: faker.helpers.arrayElement([EEventMediaType.BANNER, EEventMediaType.POSTER]),
+      order: 0,
+    });
+  }
+
+  return { events, tickets, eventMedia };
 };

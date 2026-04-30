@@ -18,6 +18,7 @@ export const QUEUE_NAMES = {
   TICKET_PROCESSING: 'ticket-processing',
   REPORT_GENERATION: 'report-generation',
   CLEANUP: 'cleanup',
+  PAYMENT: 'payment',
 } as const;
 
 export const QUEUE_JOB_NAMES = {
@@ -28,6 +29,7 @@ export const QUEUE_JOB_NAMES = {
   GENERATE_REPORT: 'generate-report',
   CLEANUP_EXPIRED: 'cleanup-expired',
   CLEANUP_ORPHANED: 'cleanup-orphaned',
+  PROCESS_WEBHOOK: 'webhook.process',
 } as const;
 
 export const QUEUE_PREFIXES = {

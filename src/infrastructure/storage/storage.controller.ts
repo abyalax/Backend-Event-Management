@@ -23,20 +23,20 @@ import { TResponse } from '~/common/types/response';
  * Storage Controller - REST API untuk file operations
  *
  * Endpoints:
- * POST   /api/storage/upload/:bucket
- * GET    /api/storage/download/:bucket/:filename
- * GET    /api/storage/metadata/:bucket/:filename
- * GET    /api/storage/presigned/:bucket/:filename
- * DELETE /api/storage/:bucket/:filename
- * GET    /api/storage/list/:bucket
- * GET    /api/storage/health
+ * POST   /storage/upload/:bucket
+ * GET    /storage/download/:bucket/:filename
+ * GET    /storage/metadata/:bucket/:filename
+ * GET    /storage/presigned/:bucket/:filename
+ * DELETE /storage/:bucket/:filename
+ * GET    /storage/list/:bucket
+ * GET    /storage/health
  *
  * Error handling:
  * - 400: Bad request (invalid file, bucket, etc)
  * - 404: File not found
  * - 500: Internal server error
  */
-@Controller('api/storage')
+@Controller('storage')
 export class StorageController {
   constructor(
     private readonly storageService: StorageService,
@@ -51,7 +51,7 @@ export class StorageController {
    * @returns Upload result dengan filename
    *
    * Example:
-   * curl -X POST http://localhost:3000/api/storage/upload/documents \
+   * curl -X POST http://localhost:3000/storage/upload/documents \
    *   -F "file=@/path/to/file.pdf"
    */
   @Post('upload/:bucket')
@@ -95,7 +95,7 @@ export class StorageController {
    * @returns File stream
    *
    * Example:
-   * curl http://localhost:3000/api/storage/download/documents/filename.pdf \
+   * curl http://localhost:3000/storage/download/documents/filename.pdf \
    *   -o downloaded_file.pdf
    */
   @Get('download/:bucket/:filename')
@@ -130,7 +130,7 @@ export class StorageController {
    * @returns File metadata
    *
    * Example:
-   * curl http://localhost:3000/api/storage/metadata/documents/filename.pdf
+   * curl http://localhost:3000/storage/metadata/documents/filename.pdf
    */
   @Get('metadata/:bucket/:filename')
   async getFileMetadata(@Param('bucket') bucket: string, @Param('filename') filename: string) {
@@ -159,7 +159,7 @@ export class StorageController {
    * @returns Presigned URL
    *
    * Example:
-   * curl "http://localhost:3000/api/storage/presigned/documents/filename.pdf?expiry=7200"
+   * curl "http://localhost:3000/storage/presigned/documents/filename.pdf?expiry=7200"
    */
   @Get('presigned/:bucket/:filename')
   async getPresignedUrl(@Param('bucket') bucket: string, @Param('filename') filename: string, @Query('expiry') expirySeconds: number = 3600) {
@@ -188,7 +188,7 @@ export class StorageController {
    * @param filename - File to delete
    *
    * Example:
-   * curl -X DELETE http://localhost:3000/api/storage/documents/filename.pdf
+   * curl -X DELETE http://localhost:3000/storage/documents/filename.pdf
    */
   @Delete(':bucket/:filename')
   @HttpCode(HttpStatus.OK)
@@ -216,8 +216,8 @@ export class StorageController {
    * @returns List of files
    *
    * Example:
-   * curl http://localhost:3000/api/storage/list/documents
-   * curl "http://localhost:3000/api/storage/list/documents?prefix=2024"
+   * curl http://localhost:3000/storage/list/documents
+   * curl "http://localhost:3000/storage/list/documents?prefix=2024"
    */
   @Get('list/:bucket')
   async listFiles(@Param('bucket') bucket: string, @Query('prefix') prefix: string = '') {
@@ -247,7 +247,7 @@ export class StorageController {
    * @returns Bucket stats
    *
    * Example:
-   * curl http://localhost:3000/api/storage/stats/documents
+   * curl http://localhost:3000/storage/stats/documents
    */
   @Get('stats/:bucket')
   async getBucketStats(@Param('bucket') bucket: string) {
@@ -275,7 +275,7 @@ export class StorageController {
    * @param destFile - Optional destination filename
    *
    * Example:
-   * curl -X Post "http://localhost:3000/api/storage/copy?source=documents&sourceFile=file.pdf&destination=backups"
+   * curl -X Post "http://localhost:3000/storage/copy?source=documents&sourceFile=file.pdf&destination=backups"
    */
   @Post('copy')
   async copyFile(
@@ -306,7 +306,7 @@ export class StorageController {
    * Berguna untuk monitoring & load balancing
    *
    * Example:
-   * curl http://localhost:3000/api/storage/health
+   * curl http://localhost:3000/storage/health
    */
   @Get('health')
   async health() {
@@ -338,7 +338,7 @@ export class StorageController {
    * Metrics endpoint - Get detailed metrics
    *
    * Example:
-   * curl http://localhost:3000/api/storage/metrics
+   * curl http://localhost:3000/storage/metrics
    */
   @Get('metrics')
   getMetrics() {
