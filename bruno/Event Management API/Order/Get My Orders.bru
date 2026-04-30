@@ -5,13 +5,12 @@ meta {
 }
 
 get {
-  url: {{URL_API}}/orders/user/my-orders?search=PAID
+  url: {{URL_API}}/orders/user/my-orders
   body: json
   auth: inherit
 }
 
 params:query {
-  search: PAID
   ~search: 300000
 }
 
