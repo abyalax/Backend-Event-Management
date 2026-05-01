@@ -67,8 +67,8 @@ export const mockEvents = (
     const randomMedia = faker.helpers.arrayElement(mediaObjects);
     eventMedia.push({
       id: faker.string.uuid(),
-      eventId: eventId,
-      mediaId: randomMedia.id,
+      eventId: eventId, // This will map to event_id column
+      mediaId: randomMedia.id, // This will map to media_id column
       type: faker.helpers.arrayElement([EEventMediaType.BANNER, EEventMediaType.POSTER]),
       order: 0,
     });

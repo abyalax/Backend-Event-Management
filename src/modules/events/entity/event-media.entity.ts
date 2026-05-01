@@ -14,10 +14,10 @@ export class EventMedia {
   @PrimaryGeneratedColumn('uuid')
   id: string;
 
-  @Column()
+  @Column({ name: 'event_id' })
   eventId: string;
 
-  @Column()
+  @Column({ name: 'media_id' })
   mediaId: string;
 
   @Column({ default: 'banner' })
@@ -26,7 +26,7 @@ export class EventMedia {
   @Column({ default: 0 })
   order: number;
 
-  @ManyToOne('Event')
+  @ManyToOne('Event', 'media')
   @JoinColumn({ name: 'event_id' })
   event: Event;
 

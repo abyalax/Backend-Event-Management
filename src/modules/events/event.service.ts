@@ -32,56 +32,31 @@ export class EventService {
     @Inject(REPOSITORY.MEDIA_OBJECT)
     private readonly mediaObjectRepository: Repository<MediaObject>,
 
-    private readonly eventRepositoryCustom: EventRepository,
-    private readonly queueService: QueueService,
-
-    private readonly logger: PinoLogger,
     @Inject(CONFIG_SERVICE) private readonly configService: ConfigService,
     private readonly storageService: StorageService,
+
+    private readonly eventRepositoryCustom: EventRepository,
+    private readonly queueService: QueueService,
+    private readonly logger: PinoLogger,
   ) {}
 
   async list(query: PaginateQuery) {
     const result = await paginate(query, this.eventRepository, EVENT_PAGINATION_CONFIG);
 
-    // Manually load media relations for each event since pagination isn't loading them properly
-    const eventsWithMedia = await Promise.all(
-      result.data.map(async (event) => {
-        // Load media relations manually
-        const media = await this.eventMediaRepository.find({
-          where: { eventId: event.id },
-          relations: ['media'],
-        });
+    // Process events to add bannerUrl
+    const eventsWithBannerUrl = result.data.map((event) => {
+      const bannerMedia = event.media?.find(
+        (m) => m.type === EEventMediaType.BANNER && (m.media?.accessType === EAccessType.PUBLIC || m.media?.accessType === undefined),
+      );
+      const bannerUrl = bannerMedia?.media ? this.buildPublicUrl(bannerMedia.media) : null;
 
-        // Debug: Check if media relations are null
-        if (media.some((m) => !m.media)) {
-          this.logger.debug(`Event ${event.id}: Some media relations are null, loading manually`);
-        }
+      return {
+        ...event,
+        bannerUrl,
+      };
+    });
 
-        // Manually load media objects for each EventMedia if the relation is null
-        for (const mediaItem of media) {
-          if (!mediaItem.media && mediaItem.mediaId) {
-            const mediaObject = await this.mediaObjectRepository.findOne({
-              where: { id: mediaItem.mediaId },
-            });
-            if (mediaObject) mediaItem.media = mediaObject;
-          }
-        }
-
-        // Find banner media - treat undefined accessType as PUBLIC for testing
-        const bannerMedia = media.find(
-          (m) => m.type === EEventMediaType.BANNER && (m.media?.accessType === EAccessType.PUBLIC || m.media?.accessType === undefined),
-        );
-        const bannerUrl = bannerMedia?.media ? this.buildPublicUrl(bannerMedia.media) : null;
-
-        return {
-          ...event,
-          media,
-          bannerUrl,
-        };
-      }),
-    );
-
-    result.data = eventsWithMedia;
+    result.data = eventsWithBannerUrl;
     return result;
   }
 
