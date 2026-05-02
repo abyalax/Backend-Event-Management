@@ -221,7 +221,6 @@ export class OrderService {
       sortBy,
       path: '',
       filter: {
-        // Add userId filter to the query using filter property
         userId,
       },
     };

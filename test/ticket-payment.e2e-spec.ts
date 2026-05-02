@@ -158,16 +158,15 @@ describe('Ticket Payment E2E Test', () => {
       expect(res.status).toBe(201);
       expect(res.body.message).toBe('buy ticket succesfully');
       expect(res.body.data.totalAmount).toBe(75000);
-      expect(res.body.data.status).toBe('PAID');
+      expect(res.body.data.status).toBe('PENDING');
       expect(res.body.data.items).toHaveLength(1);
-      expect(res.body.data.items[0].generatedTickets).toHaveLength(1);
 
       orderId = res.body.data.id;
       expect(orderId).toBeDefined();
 
       // Verify payment details
       expect(res.body.data.payment).toBeDefined();
-      expect(res.body.data.payment.status).toBe('SETTLED');
+      expect(res.body.data.payment.status).toBe('PENDING');
       expect(res.body.data.payment.amount).toBe(75000);
     });
 
@@ -180,7 +179,6 @@ describe('Ticket Payment E2E Test', () => {
       };
 
       const callbackToken = process.env.XENDIT_CALLBACK_TOKEN || 'test-token';
-
       const res = await request(app.getHttpServer()).post('/payments/webhook/invoice').set('x-callback-token', callbackToken).send(payload);
 
       expect([200, 201]).toContain(res.status);

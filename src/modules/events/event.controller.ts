@@ -6,6 +6,7 @@ import { CreateEventDto } from './dto/create-event.dto';
 import { QueryEventDto } from './dto/query-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { PublishEventDto } from './dto/publish-event.dto';
+import { DeleteEventDto } from './dto/delete-event.dto';
 import { Event } from './entity/event.entity';
 import { EventMedia } from './entity/event-media.entity';
 import { EventService } from './event.service';
@@ -102,13 +103,13 @@ export class EventController {
 
   @UseGuards(JwtGuard, PermissionsGuard)
   @Permissions(PERMISSIONS.EVENT.DELETE)
-  @HttpCode(HttpStatus.NO_CONTENT)
-  @Delete(':id')
-  async remove(@Param('id', ParseUUIDPipe) id: string): Promise<TResponse<boolean>> {
-    const isDeleted = await this.eventService.remove(id);
+  @HttpCode(HttpStatus.OK)
+  @Delete('')
+  async bulkDelete(@Body() payload: DeleteEventDto): Promise<TResponse<{ message: string; affected: number }>> {
+    const result = await this.eventService.bulkDelete(payload.ids);
     return {
-      message: 'delete data event successfully',
-      data: isDeleted,
+      message: 'delete events successfully',
+      data: result,
     };
   }
 

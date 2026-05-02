@@ -128,7 +128,7 @@ export class EventService {
   async findOneByID(id: string) {
     const event = await this.eventRepository.findOne({
       where: { id },
-      relations: ['category', 'media', 'media.media'],
+      relations: ['category', 'media', 'media.media', 'tickets'],
     });
 
     if (event === null) throw new NotFoundException('Event not found');
@@ -242,9 +242,28 @@ export class EventService {
     };
   }
 
-  async remove(id: string): Promise<boolean> {
-    const Event = await this.eventRepository.softDelete(id);
-    if (Event.affected === 0) throw new NotFoundException();
-    return true;
+  async bulkDelete(ids: string[]) {
+    if (!ids || ids.length === 0) throw new BadRequestException('Event IDs are required');
+    const events = await this.eventRepository.find({
+      where: ids.map((id) => ({ id })),
+    });
+
+    if (events.length !== ids.length) {
+      const foundIds = new Set(events.map((e) => e.id));
+      const missingIds = ids.filter((id) => !foundIds.has(id));
+      throw new NotFoundException(`Events not found: ${missingIds.join(', ')}`);
+    }
+
+    // Soft delete events
+    const result = await this.eventRepository.softDelete(ids);
+
+    if (result.affected === 0) throw new NotFoundException('No events were deleted');
+
+    this.logger.info({ eventIds: ids, affected: result.affected }, 'Events deleted successfully');
+
+    return {
+      message: `Successfully deleted ${result.affected} events`,
+      affected: result.affected || 0,
+    };
   }
 }
