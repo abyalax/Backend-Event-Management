@@ -1,0 +1,16 @@
+meta {
+  name: Get Top Categories
+  type: http
+  seq: 3
+}
+
+get {
+  url: {{URL_API}}/dashboard/top-categories
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}

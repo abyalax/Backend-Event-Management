@@ -26,6 +26,7 @@ import { PaymentModule } from './modules/payments/payment.module';
 import { PdfModule } from './modules/pdf/pdf.module';
 import { CheckInModule } from './modules/check-in/check-in.module';
 import { QrModule } from './modules/qr-code/qr-code.module';
+import { DashboardModule } from './modules/dashboard/dashboard.module';
 
 const gracefulShutdownImports =
   process.env.NODE_ENV === 'test'
@@ -87,6 +88,7 @@ const gracefulShutdownImports =
     PdfModule,
     QrModule,
     CheckInModule,
+    DashboardModule,
   ],
   controllers: [AppController],
   providers: [

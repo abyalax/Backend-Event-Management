@@ -25,6 +25,7 @@ import { QueryUserOrdersDto } from './dto/query-user-orders.dto';
 import * as PDFDocument from 'pdfkit';
 import * as QRCode from 'qrcode';
 import { CONFIG_SERVICE, ConfigService } from '~/infrastructure/config/config.provider';
+import { DashboardCacheService } from '~/modules/dashboard/dashboard-cache.service';
 
 type LoadedOrder = Order & {
   orderItems?: Array<
@@ -64,6 +65,7 @@ export class OrderService {
     private readonly emailService: EmailService,
     private readonly storageService: StorageService,
     private readonly userService: UserService,
+    private readonly dashboardCacheService: DashboardCacheService,
   ) {}
 
   async createOrder(dto: CreateOrderDto, userId: string, userEmail: string): Promise<OrderResponseDto> {
@@ -151,6 +153,8 @@ export class OrderService {
 
       if ([PaymentStatus.PAID, PaymentStatus.SETTLED].includes(payment.status)) {
         await this.handleSuccessfulPayment(createdOrder.id);
+        // Invalidate dashboard cache when payment is successful
+        await this.dashboardCacheService.invalidate();
       }
     } catch (error) {
       this.logger.error({ orderId: createdOrder.id, error }, 'Payment creation failed, cancelling order');

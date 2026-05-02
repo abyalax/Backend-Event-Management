@@ -58,4 +58,9 @@ export const mockPermissions: Permission[] = [
   { id: 38, key: 'permission:read', name: 'Read Permission', rolePermissions: [] },
   { id: 39, key: 'permission:update', name: 'Update Permission', rolePermissions: [] },
   { id: 40, key: 'permission:delete', name: 'Delete Permission', rolePermissions: [] },
+
+  // Dashboard
+  { id: 41, key: 'dashboard:total-sales', name: 'Read Total Sales', rolePermissions: [] },
+  { id: 42, key: 'dashboard:top-event', name: 'Read Top Event', rolePermissions: [] },
+  { id: 43, key: 'dashboard:top-categories', name: 'Read Top Categories', rolePermissions: [] },
 ];

@@ -11,6 +11,7 @@ import { ConfigModule } from '~/infrastructure/config/config.module';
 import { OrderModule } from '../orders/order.module';
 import { paymentProvider } from './payment.provider';
 import { DatabaseModule } from '~/infrastructure/database/database.module';
+import { DashboardModule } from '../dashboard/dashboard.module';
 
 @Module({
   imports: [
@@ -21,6 +22,7 @@ import { DatabaseModule } from '~/infrastructure/database/database.module';
     ScheduleModule.forRoot(),
     BullModule.registerQueue({ name: PAYMENT_QUEUE }),
     forwardRef(() => OrderModule),
+    DashboardModule,
   ],
   controllers: [PaymentController],
   providers: paymentProvider,

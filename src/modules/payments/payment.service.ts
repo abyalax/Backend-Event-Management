@@ -27,6 +27,7 @@ import { XenditEwalletWebhookDto } from './dto/xendit-ewallet-webhook.dto';
 import { EXPIRY_JOB, MAX_RETRY_ATTEMPTS, PAYMENT_QUEUE, WEBHOOK_JOB } from './payment.constant';
 import { REPOSITORY } from '~/common/constants/database';
 import { CONFIG_SERVICE, ConfigService } from '~/infrastructure/config/config.provider';
+import { DashboardCacheService } from '~/modules/dashboard/dashboard-cache.service';
 
 @Injectable()
 export class PaymentService {
@@ -46,6 +47,8 @@ export class PaymentService {
 
     @InjectQueue(PAYMENT_QUEUE)
     private readonly paymentQueue: Queue,
+
+    private readonly dashboardCacheService: DashboardCacheService,
   ) {
     this.xenditSecretKey = this.config.get('XENDIT_SECRET_KEY');
     this.paymentProvider = this.config.get('PAYMENT_PROVIDER');
@@ -281,6 +284,12 @@ export class PaymentService {
     if (payload.paid_at) transaction.paidAt = new Date(payload.paid_at);
 
     await this.transactionRepository.save(transaction);
+
+    // Invalidate dashboard cache when payment is completed
+    if (statusMap[payload.status] === PaymentStatus.PAID || statusMap[payload.status] === PaymentStatus.SETTLED) {
+      await this.dashboardCacheService.invalidate();
+    }
+
     this.logger.info({ transactionId: transaction.id, status: payload.status }, 'Invoice webhook processed');
   }
 
@@ -302,6 +311,12 @@ export class PaymentService {
     transaction.paidAt = new Date(payload.transaction_timestamp);
 
     await this.transactionRepository.save(transaction);
+
+    // Invalidate dashboard cache when payment is completed
+    if (transaction.status === PaymentStatus.PAID) {
+      await this.dashboardCacheService.invalidate();
+    }
+
     this.logger.info({ transactionId: transaction.id }, 'VA webhook processed');
   }
 
@@ -328,6 +343,12 @@ export class PaymentService {
     if (transaction.status === PaymentStatus.PAID) transaction.paidAt = new Date();
 
     await this.transactionRepository.save(transaction);
+
+    // Invalidate dashboard cache when payment is completed
+    if (transaction.status === PaymentStatus.PAID) {
+      await this.dashboardCacheService.invalidate();
+    }
+
     this.logger.info({ transactionId: transaction.id, status: payload.status }, 'QRIS webhook processed');
   }
 
@@ -357,6 +378,10 @@ export class PaymentService {
     }
 
     await this.transactionRepository.save(transaction);
+
+    // Invalidate dashboard cache when payment is completed
+    if (transaction.status === PaymentStatus.PAID) await this.dashboardCacheService.invalidate();
+
     this.logger.info({ transactionId: transaction.id, status: payload.data.status }, 'E-wallet webhook processed');
   }
 

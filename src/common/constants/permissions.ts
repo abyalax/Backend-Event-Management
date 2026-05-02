@@ -66,4 +66,10 @@ export const PERMISSIONS = Object.freeze({
     SEND: 'notification:send',
     READ: 'notification:read',
   },
+
+  DASHBOARD: {
+    TOTAL_SALES: 'dashboard:total-sales',
+    TOP_EVENTS: 'dashboard:top-event',
+    TOP_CATEGORIES: 'dashboard:top-categories',
+  },
 });

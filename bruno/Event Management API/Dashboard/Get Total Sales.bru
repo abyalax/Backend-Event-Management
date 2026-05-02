@@ -1,0 +1,16 @@
+meta {
+  name: Get Total Sales
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{URL_API}}/dashboard/total-sales
+  body: none
+  auth: inherit
+}
+
+settings {
+  encodeUrl: true
+  timeout: 0
+}
