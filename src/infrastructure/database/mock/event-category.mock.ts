@@ -1,4 +1,4 @@
-import { EventCategory } from "~/modules/event-categories/entity/event-category.entity";
+import { EventCategory } from "~/modules/event-categories/entities/event-category.entity";
 
 export const mockEventCategories: EventCategory[] = [
   {

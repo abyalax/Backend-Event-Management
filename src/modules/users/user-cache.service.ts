@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PaginateQuery } from 'nestjs-paginate';
 import { CacheService } from '~/infrastructure/cache/cache.service';
 import { QueryUserDto } from './dto/query-user.dto';
-import { User } from './entity/user.entity';
+import { User } from './entities/user.entity';
 import { UserService } from './user.service';
 import { CreateUserDto } from './dto/create-user.dto';
 import { UpdateUserDto } from './dto/update-user.dto';

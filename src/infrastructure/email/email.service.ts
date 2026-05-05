@@ -2,36 +2,15 @@ import { Injectable, Inject } from '@nestjs/common';
 import { PinoLogger } from 'nestjs-pino';
 import * as nodemailer from 'nodemailer';
 import { Transporter } from 'nodemailer';
-
-interface EmailConfig {
-  host: string;
-  port: number;
-  secure: boolean;
-  auth: {
-    user: string;
-    pass: string;
-  };
-  from: string;
-  fromName: string;
-}
-
-interface SendEmailOptions {
-  to: string | string[];
-  subject: string;
-  html: string;
-  text?: string | null;
-  replyTo?: string | null;
-  cc?: string | string[] | null;
-  bcc?: string | string[] | null;
-}
+import { EmailConfig, SendEmailOptions } from './email.interface';
+import { CONFIG_PROVIDER } from '~/common/constants/provider';
 
 @Injectable()
 export class EmailService {
   private transporter: Transporter;
 
   constructor(
-    @Inject('EMAIL_CONFIG') private readonly emailConfig: EmailConfig,
-
+    @Inject(CONFIG_PROVIDER.EMAIL) private readonly emailConfig: EmailConfig,
     private readonly logger: PinoLogger,
   ) {
     this.initializeTransporter();

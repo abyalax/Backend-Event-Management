@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query, BadRequestException, UseGuards, Req } from '@nestjs/common';
+import { Body, Controller, Delete, Get, HttpCode, HttpStatus, Param, Patch, Post, Query, UseGuards, Req } from '@nestjs/common';
 import '~/common/types/global';
 import { Paginated } from '~/common/types/meta';
 import { TResponse } from '~/common/types/response';
@@ -7,12 +7,12 @@ import { QueryEventDto } from './dto/query-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { PublishEventDto } from './dto/publish-event.dto';
 import { DeleteEventDto } from './dto/delete-event.dto';
-import { Event } from './entity/event.entity';
-import { EventMedia } from './entity/event-media.entity';
+import { Event } from './entities/event.entity';
+import { EventMedia } from './entities/event-media.entity';
 import { EventService } from './event.service';
 import { EventRepository } from './event.repository';
 import { ParseUUIDPipe } from '~/common/pipes/parse-uuid.pipe';
-import { AttachMediaRequest } from './event.interface';
+import { AttachMediaDto } from './dto/attach-media.dto';
 import { JwtGuard } from '~/common/guards/jwt.guard';
 import { PermissionsGuard } from '~/common/guards/permission.guard';
 import { Permissions } from '~/common/decorators/permissions.decorator';
@@ -103,6 +103,14 @@ export class EventController {
 
   @UseGuards(JwtGuard, PermissionsGuard)
   @Permissions(PERMISSIONS.EVENT.DELETE)
+  @HttpCode(HttpStatus.NO_CONTENT)
+  @Delete(':id')
+  async delete(@Param('id', ParseUUIDPipe) id: string): Promise<void> {
+    await this.eventService.delete(id);
+  }
+
+  @UseGuards(JwtGuard, PermissionsGuard)
+  @Permissions(PERMISSIONS.EVENT.DELETE)
   @HttpCode(HttpStatus.OK)
   @Delete('')
   async bulkDelete(@Body() payload: DeleteEventDto): Promise<TResponse<{ message: string; affected: number }>> {
@@ -129,11 +137,8 @@ export class EventController {
   @Permissions(PERMISSIONS.EVENT.CREATE)
   @Post(':id/media')
   @HttpCode(HttpStatus.CREATED)
-  async attachMedia(@Param('id', ParseUUIDPipe) id: string, @Body() request: AttachMediaRequest): Promise<TResponse<EventMedia>> {
-    const { mediaId, type } = request;
-
-    if (!mediaId || !type) throw new BadRequestException('mediaId and type are required');
-    const eventMedia = await this.eventRepository.attachMedia(id, mediaId, type);
+  async attachMedia(@Param('id', ParseUUIDPipe) id: string, @Body() request: AttachMediaDto): Promise<TResponse<EventMedia>> {
+    const eventMedia = await this.eventRepository.attachMedia(id, request.mediaId, request.type);
 
     return {
       message: 'Media attached to event successfully',

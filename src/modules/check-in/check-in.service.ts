@@ -4,6 +4,7 @@ import { QRService } from '~/modules/qr-code/qr-code.service';
 import { GeneratedEventTicket } from '~/modules/tickets/entities/generated-event-ticket.entity';
 import { REPOSITORY } from '~/common/constants/database';
 import { PinoLogger } from 'nestjs-pino';
+import { CheckInResponseDto } from './dto/check-in-response.dto';
 
 @Injectable()
 export class CheckInService {
@@ -14,18 +15,18 @@ export class CheckInService {
     private readonly logger: PinoLogger,
   ) {}
 
-  async validateTicket(qrCode: string): Promise<{ status: 'VALID' | 'ALREADY_USED' | 'INVALID' }> {
+  async validateTicket(qrCode: string): Promise<CheckInResponseDto> {
     // Decode and verify QR code
     const decoded = this.qrService.decode(qrCode);
 
     if (!decoded.valid) {
       this.logger.warn(`Invalid QR code signature: ${qrCode}`);
-      return { status: 'INVALID' };
+      return { status: 'INVALID', valid: false };
     }
 
     if (!decoded.ticketId || !decoded.eventId) {
       this.logger.warn(`Invalid QR code payload: ${qrCode}`);
-      return { status: 'INVALID' };
+      return { status: 'INVALID', valid: false };
     }
 
     // Find the generated ticket
@@ -36,13 +37,13 @@ export class CheckInService {
 
     if (!ticket) {
       this.logger.warn(`Ticket not found: ${decoded.ticketId}`);
-      return { status: 'INVALID' };
+      return { status: 'INVALID', valid: false };
     }
 
     // Verify event ID matches
     if (ticket.ticket.eventId !== decoded.eventId) {
       this.logger.warn(`Event ID mismatch - Expected: ${decoded.eventId}, Actual: ${ticket.ticket.eventId}, Ticket: ${decoded.ticketId}`);
-      return { status: 'INVALID' };
+      return { status: 'INVALID', valid: false };
     }
 
     // Atomic validation - mark as used if not already used
@@ -58,11 +59,21 @@ export class CheckInService {
 
     if (result.affected === 0) {
       this.logger.info(`Ticket already used: ${decoded.ticketId}`);
-      return { status: 'ALREADY_USED' };
+      return {
+        status: 'ALREADY_USED',
+        valid: false,
+        ticketId: decoded.ticketId,
+        eventId: decoded.eventId,
+      };
     }
 
     this.logger.info(`Ticket validated successfully - Ticket: ${decoded.ticketId}, Event: ${decoded.eventId}`);
 
-    return { status: 'VALID' };
+    return {
+      status: 'VALID',
+      valid: true,
+      ticketId: decoded.ticketId,
+      eventId: decoded.eventId,
+    };
   }
 }

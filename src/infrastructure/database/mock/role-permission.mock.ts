@@ -69,6 +69,11 @@ export const mockRolePermissions = [
   { id_role: 1, id_permission: 39 }, // permission:update
   { id_role: 1, id_permission: 40 }, // permission:delete
 
+  // Dashboard
+  { id_role: 1, id_permission: 41 }, // dashboard:total-sales
+  { id_role: 1, id_permission: 42 }, // dashboard:top-event
+  { id_role: 1, id_permission: 43 }, // dashboard:top-categories
+
   /**
    * User (2) - End-user / buyer ticket
     event:read (12)

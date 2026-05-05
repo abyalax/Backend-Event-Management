@@ -1,7 +1,8 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PinoLogger } from 'nestjs-pino';
 import * as crypto from 'node:crypto';
-import { CONFIG_SERVICE, ConfigService } from '~/infrastructure/config/config.provider';
+import { CONFIG_PROVIDER } from '~/common/constants/provider';
+import { QRConfig } from './qr.interface';
 
 @Injectable()
 export class QRService {
@@ -9,12 +10,12 @@ export class QRService {
 
   constructor(
     private readonly logger: PinoLogger,
-    @Inject(CONFIG_SERVICE)
-    private readonly config: ConfigService,
+    @Inject(CONFIG_PROVIDER.QR)
+    private readonly config: QRConfig,
   ) {}
 
   private sign(ticketId: string, eventId: string): string {
-    const secret = this.config.get('QR_SECRET');
+    const secret = this.config.secret;
     const nonce = crypto.randomUUID();
     return crypto.createHmac('sha256', secret).update(`${ticketId}:${eventId}:${nonce}`).digest('hex');
   }

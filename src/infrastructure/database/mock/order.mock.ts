@@ -1,14 +1,14 @@
-import type { Order } from "~/modules/orders/entity/order.entity";
+import type { Order } from "~/modules/orders/entities/order.entity";
 import { OrderStatus } from "~/common/constants/order-status.enum";
 
 import { faker } from '@faker-js/faker';
-import { User } from "~/modules/users/entity/user.entity";
+import { User } from "~/modules/users/entities/user.entity";
 import { Ticket } from "~/modules/tickets/entities/ticket.entity";
-import { OrderItem } from "~/modules/orders/entity/order-item.entity";
+import { OrderItem } from "~/modules/orders/entities/order-item.entity";
 import { Payment } from "~/modules/payments/entities/payment.entity";
 import { Transaction } from "~/modules/payments/entities/transaction.entity";
 import { GeneratedEventTicket } from "~/modules/tickets/entities/generated-event-ticket.entity";
-import { Event } from "~/modules/events/entity/event.entity";
+import { Event } from "~/modules/events/entities/event.entity";
 import { PaymentMethod, PaymentStatus } from "~/modules/payments/payment.enum";
 
 export const generateOrderSeeder = (

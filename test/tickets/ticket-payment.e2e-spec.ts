@@ -4,15 +4,9 @@ import * as request from 'supertest';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import { App } from 'supertest/types';
-import { cleanupApplication, setupApplication } from './setup_e2e';
-import { USER } from './common/constant';
-import { extractHttpOnlyCookie } from './utils';
+import { cleanupApplication, setupApplication } from '../setup_e2e';
 import { ADMIN_ID } from '~/infrastructure/database/const/shared-data';
-
-const USER_CREDENTIALS = {
-  email: USER.LOGIN.email,
-  password: USER.LOGIN.password,
-};
+import { loginAdmin } from '../common/auth';
 
 describe('Ticket Payment E2E Test', () => {
   let app: INestApplication<App>;
@@ -28,22 +22,12 @@ describe('Ticket Payment E2E Test', () => {
     [app, moduleFixture] = await setupApplication();
 
     // Setup test file path
-    testFilePath = path.join(__dirname, '../assets/banner.jpg');
-    if (!fs.existsSync(testFilePath)) {
-      // Create a dummy test file if it doesn't exist
-      const dummyDir = path.dirname(testFilePath);
-      if (!fs.existsSync(dummyDir)) {
-        fs.mkdirSync(dummyDir, { recursive: true });
-      }
-      fs.writeFileSync(testFilePath, Buffer.from('dummy test file content'));
-    }
+    testFilePath = path.join(__dirname, '../../assets/banner.jpg');
+    if (!fs.existsSync(testFilePath)) throw new Error(`Missing test asset: ${testFilePath}`);
 
-    // Login as admin
-    const res = await request(app.getHttpServer()).post('/auth/login').send(USER_CREDENTIALS);
+    const session = await loginAdmin(app);
+    access_token = session.accessToken;
 
-    expect(res.headers['set-cookie']).toBeDefined();
-    const cookies = res.headers['set-cookie'];
-    access_token = extractHttpOnlyCookie('access_token', cookies);
     expect(access_token).toBeDefined();
   });
 
@@ -89,14 +73,16 @@ describe('Ticket Payment E2E Test', () => {
     });
 
     test('POST /events - Create event with banner', async () => {
+      const startDate = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000).toISOString();
+      const endDate = new Date(Date.now() + 10 * 24 * 60 * 60 * 1000 + 4 * 60 * 60 * 1000).toISOString();
       const payload = {
         title: 'Road Show Beasiswa KSE',
         description: 'Creating o Sustainable Future by KSE Scholarship',
         maxAttendees: 50,
         isVirtual: false,
         location: 'Jakarta - Gedung Purna Jaya',
-        startDate: '2024-07-20T13:00:00.000Z',
-        endDate: '2024-07-20T17:00:00.000Z',
+        startDate,
+        endDate,
         status: 'upcoming',
         categoryId: 2,
         createdBy: ADMIN_ID,
@@ -156,7 +142,7 @@ describe('Ticket Payment E2E Test', () => {
         .send(payload);
 
       expect(res.status).toBe(201);
-      expect(res.body.message).toBe('buy ticket succesfully');
+      expect(res.body.message).toBe('buy ticket successfully');
       expect(res.body.data.totalAmount).toBe(75000);
       expect(res.body.data.status).toBe('PENDING');
       expect(res.body.data.items).toHaveLength(1);
@@ -171,11 +157,13 @@ describe('Ticket Payment E2E Test', () => {
     });
 
     test('POST /payments/webhook/invoice - Handle payment webhook simulation', async () => {
+      expect(orderId).toBeDefined();
+
       const payload = {
-        id: 'inv-000001',
+        id: `inv-${orderId}`,
         external_id: orderId,
         status: 'PAID',
-        amount: '75000',
+        amount: 75000,
       };
 
       const callbackToken = process.env.XENDIT_CALLBACK_TOKEN || 'test-token';

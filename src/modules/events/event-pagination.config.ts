@@ -1,5 +1,5 @@
 import { FilterOperator, PaginateConfig } from 'nestjs-paginate';
-import { Event } from './entity/event.entity';
+import { Event } from './entities/event.entity';
 
 export const EVENT_PAGINATION_CONFIG: PaginateConfig<Event> = {
   sortableColumns: ['id', 'title', 'description', 'location', 'status', 'startDate', 'endDate'],

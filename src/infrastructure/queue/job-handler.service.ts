@@ -8,9 +8,9 @@ import { QUEUE_NAMES, QUEUE_JOB_NAMES } from './queue.constants';
 import { RedisService } from '../redis/redis.service';
 import { EmailService } from '../email/email.service';
 import { REPOSITORY } from '~/common/constants/database';
-import { Event } from '~/modules/events/entity/event.entity';
+import { Event } from '~/modules/events/entities/event.entity';
 import { GeneratedEventTicket } from '~/modules/tickets/entities/generated-event-ticket.entity';
-import { User } from '~/modules/users/entity/user.entity';
+import { User } from '~/modules/users/entities/user.entity';
 
 export interface EmailJobData {
   to: string;

@@ -4,7 +4,7 @@ import { TResponse } from '~/common/types/response';
 import { CreateEventCategoryDto } from './dto/create-event-category.dto';
 import { QueryEventCategoryDto } from './dto/query-event-category.dto';
 import { UpdateEventCategoryDto } from './dto/update-event-category.dto';
-import { EventCategory } from './entity/event-category.entity';
+import { EventCategory } from './entities/event-category.entity';
 import { EventCategoryCacheService } from './event-category-cache.service';
 
 @Controller('event-category')

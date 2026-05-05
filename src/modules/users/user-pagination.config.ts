@@ -1,5 +1,5 @@
 import { FilterOperator, PaginateConfig } from 'nestjs-paginate';
-import { User } from './entity/user.entity';
+import { User } from './entities/user.entity';
 
 export const USER_PAGINATION_CONFIG: PaginateConfig<User> = {
   sortableColumns: ['id', 'name', 'email', 'createdAt', 'updatedAt'],

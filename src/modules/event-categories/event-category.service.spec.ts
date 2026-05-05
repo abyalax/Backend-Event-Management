@@ -2,7 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { Repository } from 'typeorm';
 import { REPOSITORY } from '~/common/constants/database';
 import { mockRedis, mockRepository, mockConfigService } from '~/test/common/mock';
-import { EventCategory } from './entity/event-category.entity';
+import { EventCategory } from './entities/event-category.entity';
 import { EventCategoryService } from './event-category.service';
 import { CONFIG_PROVIDER } from '~/common/constants/provider';
 import { CONFIG_SERVICE } from '~/infrastructure/config/config.provider';

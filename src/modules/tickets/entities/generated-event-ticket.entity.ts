@@ -1,5 +1,5 @@
 import { Column, Entity, Index, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from 'typeorm';
-import type { OrderItem } from '~/modules/orders/entity/order-item.entity';
+import type { OrderItem } from '~/modules/orders/entities/order-item.entity';
 import type { Ticket } from './ticket.entity';
 
 @Entity({ name: 'generated_event_tickets' })

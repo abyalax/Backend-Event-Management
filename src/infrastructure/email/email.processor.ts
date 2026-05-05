@@ -5,8 +5,8 @@ import { EmailService } from './email.service';
 import { Repository } from 'typeorm';
 import { GeneratedEventTicket } from '~/modules/tickets/entities/generated-event-ticket.entity';
 import { REPOSITORY } from '~/common/constants/database';
-import { User } from '~/modules/users/entity/user.entity';
-import { Event } from '~/modules/events/entity/event.entity';
+import { User } from '~/modules/users/entities/user.entity';
+import { Event } from '~/modules/events/entities/event.entity';
 import { PinoLogger } from 'nestjs-pino';
 
 @Processor('email')

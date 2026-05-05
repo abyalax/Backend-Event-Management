@@ -1,6 +1,6 @@
 import { Exclude, Expose, Type } from 'class-transformer';
 import { TransformRelation } from '~/common/decorators/transform-relations.decorator';
-import { RolePermission } from '../entity/role-permissions.entity';
+import { RolePermission } from '../entities/role-permissions.entity';
 import { UserDto } from '~/modules/users/dto/user.dto';
 import { PermissionsDto } from './permission.dto';
 

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { Test, TestingModule } from '@nestjs/testing';
 import { QueueHealthIndicator } from './queue.health';
@@ -10,9 +9,9 @@ import { HealthIndicatorSession } from '@nestjs/terminus/dist/health-indicator/h
 
 describe('QueueHealthIndicator', () => {
   let indicator: QueueHealthIndicator;
-  let mockQueueService: jest.Mocked<QueueService>;
   let mockHealthIndicatorService: jest.Mocked<HealthIndicatorService>;
   let mockLogger: jest.Mocked<PinoLogger>;
+  let mockQueueService: any;
   let mockIndicator: any;
 
   beforeEach(async () => {
@@ -22,7 +21,30 @@ describe('QueueHealthIndicator', () => {
       getQueueStats: jest.fn(),
       pauseQueue: jest.fn(),
       resumeQueue: jest.fn(),
-    } as unknown as jest.Mocked<QueueService>;
+      closeAll: jest.fn(),
+      config: {
+        get: jest.fn(),
+        getAll: jest.fn(),
+        isDevelopment: jest.fn(),
+        isProduction: jest.fn(),
+        isTest: jest.fn(),
+      },
+      connection: {
+        options: {},
+        status: 'ready',
+        stream: {},
+        isCluster: false,
+      },
+      drainQueue: jest.fn(),
+      getQueue: jest.fn(),
+      getQueueNames: jest.fn(),
+      getWorker: jest.fn(),
+      isShuttingDown: false,
+      onModuleDestroy: jest.fn(),
+      queues: jest.fn(),
+      removeJob: jest.fn(),
+      workers: jest.fn(),
+    };
 
     mockHealthIndicatorService = {
       check: jest.fn(),
@@ -31,6 +53,13 @@ describe('QueueHealthIndicator', () => {
     mockLogger = {
       error: jest.fn(),
       setContext: jest.fn(),
+      assign: jest.fn(),
+      debug: jest.fn(),
+      fatal: jest.fn(),
+      info: jest.fn(),
+      trace: jest.fn(),
+      warn: jest.fn(),
+      logger: {} as any,
     } as unknown as jest.Mocked<PinoLogger>;
 
     mockIndicator = {
@@ -42,7 +71,7 @@ describe('QueueHealthIndicator', () => {
         status: 'down',
         ...data,
       })),
-    } as unknown as HealthIndicatorSession;
+    } as unknown as HealthIndicatorSession<string>;
     mockHealthIndicatorService.check.mockReturnValue(mockIndicator);
 
     const module: TestingModule = await Test.createTestingModule({

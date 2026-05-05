@@ -1,5 +1,5 @@
 import { FilterOperator, PaginateConfig } from 'nestjs-paginate';
-import { Role } from './entity/role.entity';
+import { Role } from './entities/role.entity';
 
 export const ROLE_PAGINATION_CONFIG: PaginateConfig<Role> = {
   sortableColumns: ['id', 'name', 'createdAt', 'updatedAt'],

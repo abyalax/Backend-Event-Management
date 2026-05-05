@@ -1,8 +1,8 @@
-import type { Event } from "~/modules/events/entity/event.entity";
+import type { Event } from "~/modules/events/entities/event.entity";
 
 import { faker } from '@faker-js/faker';
 import { MediaObject } from "~/infrastructure/storage/entitiy/media-objects.entity";
-import { EEventMediaType, EventMedia } from "~/modules/events/entity/event-media.entity";
+import { EEventMediaType, EventMedia } from "~/modules/events/entities/event-media.entity";
 import { ADMIN_ID } from "../const/shared-data";
 import { Ticket } from "~/modules/tickets/entities/ticket.entity";
 

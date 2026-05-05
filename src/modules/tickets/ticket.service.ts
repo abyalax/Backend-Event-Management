@@ -38,6 +38,10 @@ export class TicketService {
     return ticket;
   }
 
+  async findByEventId(eventId: string): Promise<Ticket[]> {
+    return await this.ticketRepository.findBy({ eventId });
+  }
+
   async update(id: string, payloadTicket: UpdateTicketDto) {
     const ticket = await this.ticketRepository.preload({
       id: id,

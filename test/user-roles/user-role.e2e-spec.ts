@@ -2,17 +2,11 @@ import { INestApplication } from '@nestjs/common';
 import { TestingModule } from '@nestjs/testing';
 import * as request from 'supertest';
 import { App } from 'supertest/types';
-import { ADMIN } from '~/infrastructure/database/const/shared-data';
 import { Permission } from '~/modules/auth/entity/permission.entity';
 import { RoleDto } from '~/modules/role-permissions/dto/role-permission.dto';
-import { Role } from '~/modules/role-permissions/entity/role.entity';
+import { Role } from '~/modules/role-permissions/entities/role.entity';
 import { cleanupApplication, setupApplication } from '~/test/setup_e2e';
-import { extractHttpOnlyCookie } from '~/test/utils';
-
-const USER = {
-  email: ADMIN.email,
-  password: ADMIN.password,
-};
+import { loginAdmin } from '../common/auth';
 
 const testPassword = 'sdvdsvfdvdfw123';
 
@@ -29,19 +23,12 @@ describe('Module User Role Management', () => {
     let refresh_token: string;
 
     beforeAll(async () => {
-      const credentials = {
-        email: USER.email,
-        password: USER.password,
-      };
-      const res = await request(app.getHttpServer()).post('/auth/login').send(credentials);
+      const session = await loginAdmin(app);
+      access_token = session.accessToken;
+      refresh_token = session.refreshToken;
 
-      expect(res.headers['set-cookie']).toBeDefined();
-      const cookies = res.headers['set-cookie'];
-      access_token = extractHttpOnlyCookie('access_token', cookies);
-      refresh_token = extractHttpOnlyCookie('refresh_token', cookies);
-
-      expect(refresh_token).toBeDefined();
       expect(access_token).toBeDefined();
+      expect(refresh_token).toBeDefined();
     });
 
     test('POST /users (Create User for role assignment testing)', async () => {

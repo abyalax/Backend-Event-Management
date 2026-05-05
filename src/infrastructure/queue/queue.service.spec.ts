@@ -2,7 +2,7 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { QueueService } from './queue.service';
 import { PinoLogger } from 'nestjs-pino';
-import { CONFIG_SERVICE } from '../config/config.provider';
+import { CONFIG_PROVIDER } from '~/common/constants/provider';
 import Redis from 'ioredis';
 import { Queue, Worker } from 'bullmq';
 
@@ -49,23 +49,21 @@ describe('QueueService', () => {
       setContext: jest.fn(),
     } as unknown as jest.Mocked<PinoLogger>;
 
-    const mockConfig = {
-      get: jest.fn().mockImplementation((key: string) => {
-        const config = {
-          REDIS_HOST: 'localhost',
-          REDIS_PORT: 6379,
-          QUEUE_CONCURRENCY: 5,
-        };
-        return config[key as keyof typeof config];
-      }),
+    const mockQueueConfig = {
+      redis: {
+        host: 'localhost',
+        port: 6379,
+        password: '',
+      },
+      concurrency: 5,
     };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         QueueService,
         {
-          provide: CONFIG_SERVICE,
-          useValue: mockConfig,
+          provide: CONFIG_PROVIDER.QUEUE,
+          useValue: mockQueueConfig,
         },
         {
           provide: PinoLogger,
@@ -86,6 +84,7 @@ describe('QueueService', () => {
       expect(Redis).toHaveBeenCalledWith({
         host: 'localhost',
         port: 6379,
+        password: '',
         maxRetriesPerRequest: null,
         enableReadyCheck: false,
         retryStrategy: expect.any(Function),

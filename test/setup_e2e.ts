@@ -150,6 +150,7 @@ export const cleanupApplication = async (app: INestApplication, moduleFixture?: 
 
 export const setupApplication = async (): Promise<[NestExpressApplication, TestingModule, { minio: { endpoint: string; port: number } }]> => {
   process.env.NODE_ENV = 'test';
+  process.env.PAYMENT_PROVIDER = 'mock';
 
   const env = envSchema.parse(process.env);
 
@@ -182,11 +183,7 @@ export const setupApplication = async (): Promise<[NestExpressApplication, Testi
   // bukan import terpisah dari typeorm.seed — konsisten satu koneksi
   const appDataSource = moduleFixture.get<DataSource>(CONFIG_PROVIDER.PSQL_CONNECTION, { strict: false });
   if (!appDataSource) throw new Error('Database connection not found in test module.');
-
-  /**
-  await resetTestDatabase(appDataSource);
-  await seedTestData(appDataSource);
-   */
+  await appDataSource.synchronize();
 
   return [
     app,
@@ -250,58 +247,3 @@ const clearScheduledJobs = (moduleFixture: TestingModule): void => {
     schedulerRegistry.deleteTimeout(name);
   }
 };
-
-/**
-const resetTestDatabase = async (dataSource: DataSource): Promise<void> => {
-  const tables = await dataSource.query(`
-    SELECT tablename
-    FROM pg_tables
-    WHERE schemaname = 'public'
-      AND tablename <> 'migrations'
-    ORDER BY tablename
-  `);
-
-  const tableNames = tables
-    .map((row: { tablename?: string }) => row.tablename)
-    .filter((tableName: string | undefined): tableName is string => Boolean(tableName))
-    .map((tableName: string) => `"${tableName.replaceAll('"', '""')}"`);
-
-  if (tableNames.length > 0) {
-    await dataSource.query(`TRUNCATE TABLE ${tableNames.join(', ')} RESTART IDENTITY CASCADE`);
-  }
-
-  console.log('Database reset completed successfully');
-};
-
-const seedTestData = async (dataSource: DataSource): Promise<void> => {
-  try {
-    if (!dataSource.isInitialized) {
-      console.log('[Seeder] Initializing data source...');
-      await dataSource.initialize();
-    }
-
-    const userSeeder = new UserSeeder();
-    const eventSeeder = new EventSeeder();
-    const ticketSeeder = new TicketSeeder();
-    const orderSeeder = new OrderSeeder();
-
-    console.log('[Seeder] Seeding users...');
-    await userSeeder.run(dataSource);
-
-    console.log('[Seeder] Seeding events...');
-    await eventSeeder.run(dataSource);
-
-    console.log('[Seeder] Seeding tickets...');
-    await ticketSeeder.run(dataSource);
-
-    console.log('[Seeder] Seeding orders...');
-    await orderSeeder.run(dataSource);
-
-    console.log('[Seeder] ✅ Database seeds completed successfully');
-  } catch (error) {
-    console.error('[Seeder] ❌ Failed:', error);
-    throw error;
-  }
-};
-
- */

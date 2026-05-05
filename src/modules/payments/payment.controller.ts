@@ -1,4 +1,5 @@
 import { BadRequestException, Body, Controller, Get, Headers, Inject, Param, Post, UnauthorizedException } from '@nestjs/common';
+import { Job } from 'bullmq';
 import { PinoLogger } from 'nestjs-pino';
 import { PaymentService } from './payment.service';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
@@ -13,12 +14,15 @@ import { XenditQrisWebhookDto } from './dto/xendit-qris-webhook.dto';
 import { XenditEwalletWebhookDto } from './dto/xendit-ewallet-webhook.dto';
 import { CONFIG_SERVICE, ConfigService } from '~/infrastructure/config/config.provider';
 import { TResponse } from '~/common/types/response';
+import { PaymentWebhookProcessor } from './processors/payment-webhook.processor';
+import { WEBHOOK_JOB } from './payment.constant';
 
 @Controller('payments')
 export class PaymentController {
   constructor(
     private readonly logger: PinoLogger,
     private readonly paymentService: PaymentService,
+    private readonly paymentWebhookProcessor: PaymentWebhookProcessor,
     @Inject(CONFIG_SERVICE)
     private readonly configService: ConfigService,
   ) {}
@@ -51,7 +55,15 @@ export class PaymentController {
   @Post('webhook/invoice')
   async handleInvoiceWebhook(@Headers(XENDIT_CALLBACK_TOKEN_HEADER) token: string, @Body() payload: XenditInvoiceWebhookDto): Promise<TResponse> {
     this.validateToken(token);
-    await this.paymentService.enqueueWebhook(WebhookEventType.INVOICE, payload);
+    if (process.env.NODE_ENV === 'test') {
+      await this.paymentWebhookProcessor.process({
+        id: 'test-webhook',
+        name: WEBHOOK_JOB,
+        data: { type: WebhookEventType.INVOICE, payload },
+      } as Job);
+    } else {
+      await this.paymentService.enqueueWebhook(WebhookEventType.INVOICE, payload);
+    }
     return {
       message: 'received invoiced successfully',
       data: { received: true },

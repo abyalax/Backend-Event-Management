@@ -1,10 +1,10 @@
 import { DataSource } from 'typeorm';
 import { Seeder } from 'typeorm-extension';
 import { faker } from '@faker-js/faker';
-import { User } from '~/modules/users/entity/user.entity';
-import { Event } from '~/modules/events/entity/event.entity';
-import { Order } from '~/modules/orders/entity/order.entity';
-import { OrderItem } from '~/modules/orders/entity/order-item.entity';
+import { User } from '~/modules/users/entities/user.entity';
+import { Event } from '~/modules/events/entities/event.entity';
+import { Order } from '~/modules/orders/entities/order.entity';
+import { OrderItem } from '~/modules/orders/entities/order-item.entity';
 import { Ticket } from '~/modules/tickets/entities/ticket.entity';
 import { Payment } from '~/modules/payments/entities/payment.entity';
 import { Transaction } from '~/modules/payments/entities/transaction.entity';

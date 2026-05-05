@@ -2,11 +2,11 @@ import { Inject, Injectable, NotFoundException, BadRequestException } from '@nes
 import { Repository } from 'typeorm';
 import { paginate, PaginateQuery } from 'nestjs-paginate';
 import { REPOSITORY } from '~/common/constants/database';
-import { EventCategory } from '../event-categories/entity/event-category.entity';
+import { EventCategory } from '../event-categories/entities/event-category.entity';
 import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
-import { Event } from './entity/event.entity';
-import { EventMedia, EEventMediaType } from './entity/event-media.entity';
+import { Event } from './entities/event.entity';
+import { EventMedia, EEventMediaType } from './entities/event-media.entity';
 import { EventRepository } from './event.repository';
 import { EVENT_PAGINATION_CONFIG } from './event-pagination.config';
 import { QueueService } from '~/infrastructure/queue/queue.service';
@@ -72,7 +72,7 @@ export class EventService {
     return `${protocol}://${endpoint}:${port}/${media.bucket}/${media.objectKey}`;
   }
 
-  async create(payloadEvent: CreateEventDto, userEmail: string): Promise<any> {
+  async create(payloadEvent: CreateEventDto, userEmail: string) {
     const event = await this.eventRepositoryCustom.create(payloadEvent);
 
     // Load media relations and add bannerUrl
@@ -265,5 +265,17 @@ export class EventService {
       message: `Successfully deleted ${result.affected} events`,
       affected: result.affected || 0,
     };
+  }
+
+  async delete(id: string) {
+    const event = await this.eventRepository.findOne({ where: { id } });
+    if (!event) throw new NotFoundException(`Event with ID ${id} not found`);
+
+    const result = await this.eventRepository.softDelete([id]);
+    if (!result.affected || result.affected === 0) throw new NotFoundException('Event was not deleted');
+
+    this.logger.info({ eventId: id, affected: result.affected }, 'Event deleted successfully');
+
+    return result.affected > 0;
   }
 }

@@ -7,12 +7,7 @@ import { validateSchema } from '~/common/helpers/validation';
 import { ADMIN } from '~/infrastructure/database/const/shared-data';
 import { QueryUserDto } from '~/modules/users/dto/query-user.dto';
 import { cleanupApplication, setupApplication } from '~/test/setup_e2e';
-import { extractHttpOnlyCookie } from '~/test/utils';
-
-const USER = {
-  email: ADMIN.email,
-  password: ADMIN.password,
-};
+import { loginAdmin } from '../common/auth';
 
 describe('Module User', () => {
   let app: INestApplication<App>;
@@ -24,21 +19,11 @@ describe('Module User', () => {
 
   describe('Response Success', () => {
     let access_token: string;
-    let refresh_token: string;
 
     beforeAll(async () => {
-      const credentials = {
-        email: USER.email,
-        password: USER.password,
-      };
-      const res = await request(app.getHttpServer()).post('/auth/login').send(credentials);
+      const session = await loginAdmin(app);
+      access_token = session.accessToken;
 
-      expect(res.headers['set-cookie']).toBeDefined();
-      const cookies = res.headers['set-cookie'];
-      access_token = extractHttpOnlyCookie('access_token', cookies);
-      refresh_token = extractHttpOnlyCookie('refresh_token', cookies);
-
-      expect(refresh_token).toBeDefined();
       expect(access_token).toBeDefined();
     });
 
@@ -103,7 +88,7 @@ describe('Module User', () => {
       const payload = {
         name: 'John Doe Ass',
         email: 'john.doe@example.com',
-        password: USER.password,
+        password: ADMIN.password,
       };
 
       const res = await request(app.getHttpServer())

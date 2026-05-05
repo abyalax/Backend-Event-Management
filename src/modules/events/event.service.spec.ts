@@ -1,15 +1,15 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { Repository } from 'typeorm';
 import { REPOSITORY } from '~/common/constants/database';
-import { mockRedis, mockRepository, mockConfigService, mockStorageService, mockRedisService, mockQueueService } from '~/test/common/mock';
-import { EventCategory } from '../event-categories/entity/event-category.entity';
-import { Event } from './entity/event.entity';
+import { CONFIG_SERVICE } from '~/infrastructure/config/config.provider';
+import { CONFIG_PROVIDER } from '~/common/constants/provider';
+import { mockRedis, mockRepository, mockStorageService, mockRedisService, mockQueueService } from '~/test/common/mock';
+import { EventCategory } from '../event-categories/entities/event-category.entity';
+import { Event } from './entities/event.entity';
 import { EventRepository } from './event.repository';
 import { EventService } from './event.service';
 import { PinoLogger } from 'nestjs-pino';
 import { JwtModule } from '@nestjs/jwt';
-import { CONFIG_SERVICE } from '~/infrastructure/config/config.provider';
-import { CONFIG_PROVIDER } from '~/common/constants/provider';
 import { StorageService } from '~/infrastructure/storage/storage.service';
 import { RedisService } from '~/infrastructure/redis/redis.service';
 import { CacheService } from '~/infrastructure/cache/cache.service';
@@ -32,8 +32,30 @@ describe('EventService', () => {
       providers: [
         EventService,
         {
+          provide: CONFIG_PROVIDER.STORAGE,
+          useValue: {
+            buckets: {
+              documents: 'documents',
+              images: 'images',
+              'images-public': 'images-public',
+              'tickets-public': 'tickets-public',
+              backups: 'backups',
+              videos: 'videos',
+            },
+            maxFileSize: 52428800,
+            allowedMimeTypes: ['image/jpeg', 'image/png', 'application/pdf'],
+          },
+        },
+        {
           provide: CONFIG_SERVICE,
-          useValue: mockConfigService,
+          useValue: {
+            get: jest.fn().mockImplementation((key: string) => {
+              const config = {
+                URL_API: 'http://localhost:4000',
+              };
+              return config[key as keyof typeof config];
+            }),
+          },
         },
         {
           provide: PinoLogger,

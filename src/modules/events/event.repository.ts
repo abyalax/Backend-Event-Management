@@ -1,8 +1,8 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { DataSource } from 'typeorm';
-import { Event } from './entity/event.entity';
-import { EventCategory } from '../event-categories/entity/event-category.entity';
-import { EventMedia, EEventMediaType } from './entity/event-media.entity';
+import { Event } from './entities/event.entity';
+import { EventCategory } from '../event-categories/entities/event-category.entity';
+import { EventMedia, EEventMediaType } from './entities/event-media.entity';
 import { CONFIG_PROVIDER } from '~/common/constants/provider';
 import { CreateEventDto } from './dto/create-event.dto';
 

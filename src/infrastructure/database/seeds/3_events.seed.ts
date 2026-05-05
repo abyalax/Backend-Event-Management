@@ -1,10 +1,10 @@
 import type { DataSource } from 'typeorm';
 import type { Seeder } from 'typeorm-extension';
 
-import { Event } from '~/modules/events/entity/event.entity';
-import { EventMedia } from '~/modules/events/entity/event-media.entity';
+import { Event } from '~/modules/events/entities/event.entity';
+import { EventMedia } from '~/modules/events/entities/event-media.entity';
 
-import { EventCategory } from '~/modules/event-categories/entity/event-category.entity';
+import { EventCategory } from '~/modules/event-categories/entities/event-category.entity';
 import { mockEventCategories } from '../mock/event-category.mock';
 import { mockEvents } from '../mock/event.mock';
 import { mockMediaObjects } from '../mock/media-object.mock';

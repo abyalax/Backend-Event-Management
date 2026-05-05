@@ -27,6 +27,8 @@ import { PdfModule } from './modules/pdf/pdf.module';
 import { CheckInModule } from './modules/check-in/check-in.module';
 import { QrModule } from './modules/qr-code/qr-code.module';
 import { DashboardModule } from './modules/dashboard/dashboard.module';
+import { NotificationModule } from './modules/notifications/notification.module';
+import { ReminderModule } from './modules/reminders/reminder.module';
 
 const gracefulShutdownImports =
   process.env.NODE_ENV === 'test'
@@ -89,6 +91,8 @@ const gracefulShutdownImports =
     QrModule,
     CheckInModule,
     DashboardModule,
+    NotificationModule,
+    ReminderModule,
   ],
   controllers: [AppController],
   providers: [

@@ -2,7 +2,7 @@ import { Provider } from '@nestjs/common';
 import { DataSource } from 'typeorm';
 import { REPOSITORY } from '~/common/constants/database';
 import { PostgreeConnection } from '~/infrastructure/database/database.provider';
-import { EventCategory } from './entity/event-category.entity';
+import { EventCategory } from './entities/event-category.entity';
 import { CacheService } from '~/infrastructure/cache/cache.service';
 import { RedisService } from '~/infrastructure/redis/redis.service';
 import { EventCategoryCacheService } from './event-category-cache.service';

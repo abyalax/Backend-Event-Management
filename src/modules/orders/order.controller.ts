@@ -9,6 +9,7 @@ import '~/common/types/global';
 import { TResponse } from '~/common/types/response';
 import { QueryUserOrdersDto } from './dto/query-user-orders.dto';
 import { Paginated } from '~/common/types/meta';
+import { GeneratedEventTicket } from '../tickets/entities/generated-event-ticket.entity';
 
 @Controller('orders')
 @UseGuards(JwtGuard)
@@ -17,35 +18,55 @@ export class OrderController {
 
   @Post()
   @HttpCode(HttpStatus.CREATED)
-  async createOrder(@Body() createOrderDto: CreateOrderDto, @Request() req: Request): Promise<OrderResponseDto> {
+  async createOrder(@Body() createOrderDto: CreateOrderDto, @Request() req: Request): Promise<TResponse<OrderResponseDto>> {
     const userId = req.user.id;
     const userEmail = req.user.email;
-    return await this.orderService.createOrder(createOrderDto, userId, userEmail);
+    const data = await this.orderService.createOrder(createOrderDto, userId, userEmail);
+    return {
+      message: 'order created successfully',
+      data,
+    };
   }
 
   @Get(':id')
-  async getOrderById(@Param('id') id: string, @Request() req: Request): Promise<OrderResponseDto> {
+  async getOrderById(@Param('id') id: string, @Request() req: Request): Promise<TResponse<OrderResponseDto>> {
     const userId = req.user.id;
-    return this.orderService.getOrderById(id, userId);
+    const data = await this.orderService.getOrderById(id, userId);
+    return {
+      message: 'get order successfully',
+      data,
+    };
   }
 
   @Get(':id/status')
-  async getOrderStatus(@Param('id') id: string, @Request() req: Request): Promise<OrderStatusResponseDto> {
+  async getOrderStatus(@Param('id') id: string, @Request() req: Request): Promise<TResponse<OrderStatusResponseDto>> {
     const userId = req.user.id;
-    return this.orderService.getOrderStatus(id, userId);
+    const data = await this.orderService.getOrderStatus(id, userId);
+    return {
+      message: 'get order status successfully',
+      data,
+    };
   }
 
   @Get(':id/tickets')
-  async getOrderTickets(@Param('id') id: string, @Request() req: Request) {
+  async getOrderTickets(@Param('id') id: string, @Request() req: Request): Promise<TResponse<GeneratedEventTicket[]>> {
     const userId = req.user.id;
-    return this.orderService.getOrderTickets(id, userId);
+    const data = await this.orderService.getOrderTickets(id, userId);
+    return {
+      message: 'get data ticket successfully',
+      data,
+    };
   }
 
   @Post(':id/cancel')
   @HttpCode(HttpStatus.OK)
-  async cancelOrder(@Param('id') id: string, @Request() req: Request): Promise<OrderResponseDto> {
+  async cancelOrder(@Param('id') id: string, @Request() req: Request): Promise<TResponse<OrderResponseDto>> {
     const userId = req.user.id;
-    return this.orderService.cancelOrder(id, userId);
+    const data = await this.orderService.cancelOrder(id, userId);
+    return {
+      message: 'order cancelled successfully',
+      data,
+    };
   }
 
   @Get('user/my-orders')
@@ -80,7 +101,7 @@ export class OrderController {
 
     const data = await this.orderService.createOrder(createOrderDto, userId, userEmail);
     return {
-      message: 'buy ticket succesfully',
+      message: 'buy ticket successfully',
       data,
     };
   }

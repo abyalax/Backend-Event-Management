@@ -1,16 +1,21 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { PinoLogger } from 'nestjs-pino';
 import { REPOSITORY } from '~/common/constants/database';
+import { CONFIG_PROVIDER } from '~/common/constants/provider';
+import { CONFIG_SERVICE } from '~/infrastructure/config/config.provider';
 import { PaymentService } from '~/modules/payments/payment.service';
 import { OrderService } from './order.service';
 import { QRService } from '../qr-code/qr-code.service';
 import { EmailService } from '~/infrastructure/email/email.service';
-import { mockConfigService, mockEmailService, mockPdfService, mockRepository, mockStorageService } from '~/test/common/mock';
+import { mockEmailService, mockPdfService, mockRepository, mockStorageService } from '~/test/common/mock';
 import { StorageService } from '~/infrastructure/storage/storage.service';
 import { PdfService } from '../pdf/pdf.service';
-import { CONFIG_SERVICE } from '~/infrastructure/config/config.provider';
 import { JwtModule } from '@nestjs/jwt';
 import { UserService } from '../users/user.service';
+import { DashboardCacheService } from '../dashboard/dashboard-cache.service';
+import { DashboardService } from '../dashboard/dashboard.service';
+import { CacheService } from '~/infrastructure/cache/cache.service';
+import { ReminderService } from '~/modules/reminders/reminder.service';
 
 describe('OrderService', () => {
   let service: OrderService;
@@ -29,6 +34,9 @@ describe('OrderService', () => {
         PaymentService,
         OrderService,
         QRService,
+        ReminderService,
+        DashboardCacheService,
+        DashboardService,
         {
           provide: EmailService,
           useValue: mockEmailService,
@@ -42,8 +50,51 @@ describe('OrderService', () => {
           useValue: mockPdfService,
         },
         {
+          provide: CONFIG_PROVIDER.QR,
+          useValue: { secret: 'test-qr-secret' },
+        },
+        {
+          provide: CONFIG_PROVIDER.EMAIL,
+          useValue: {
+            host: 'localhost',
+            port: 1025,
+            secure: false,
+            auth: {
+              user: 'test',
+              pass: 'test',
+            },
+            from: 'test@example.com',
+            fromName: 'Test',
+          },
+        },
+        {
+          provide: CONFIG_PROVIDER.ORDER,
+          useValue: {
+            urlApi: 'http://localhost:4000',
+          },
+        },
+        {
           provide: CONFIG_SERVICE,
-          useValue: mockConfigService,
+          useValue: {
+            get: jest.fn().mockImplementation((key: string) => {
+              const config = {
+                PAYMENT_PROVIDER: 'mock',
+                XENDIT_SECRET_KEY: 'test-secret',
+                XENDIT_CALLBACK_TOKEN: 'test-token',
+              };
+              return config[key as keyof typeof config];
+            }),
+          },
+        },
+        {
+          provide: CacheService,
+          useValue: {
+            get: jest.fn(),
+            set: jest.fn(),
+            getOrSet: jest.fn(),
+            clearByPattern: jest.fn(),
+            del: jest.fn(),
+          },
         },
         {
           provide: PinoLogger,
@@ -88,11 +139,27 @@ describe('OrderService', () => {
           useValue: mockRepository,
         },
         {
+          provide: REPOSITORY.PAYMENT,
+          useValue: mockRepository,
+        },
+        {
           provide: 'BullQueue_payment',
           useValue: {
             add: jest.fn(),
             process: jest.fn(),
             close: jest.fn(),
+          },
+        },
+        {
+          provide: ReminderService,
+          useValue: {
+            scheduleRemindersForOrder: jest.fn(),
+            createReminder: jest.fn(),
+            cancelReminder: jest.fn(),
+            cancelRemindersForOrder: jest.fn(),
+            processReminder: jest.fn(),
+            getUserReminders: jest.fn(),
+            getPendingReminders: jest.fn(),
           },
         },
       ],

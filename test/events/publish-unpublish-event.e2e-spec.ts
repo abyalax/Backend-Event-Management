@@ -4,16 +4,10 @@ import * as request from 'supertest';
 import { App } from 'supertest/types';
 import z from 'zod';
 import { validateSchema } from '~/common/helpers/validation';
-import { ADMIN } from '~/infrastructure/database/const/shared-data';
 import { QueryEventDto } from '~/modules/events/dto/query-event.dto';
-import { Event } from '~/modules/events/entity/event.entity';
+import { Event } from '~/modules/events/entities/event.entity';
 import { cleanupApplication, setupApplication } from '~/test/setup_e2e';
-import { extractHttpOnlyCookie } from '~/test/utils';
-
-const USER = {
-  email: ADMIN.email,
-  password: ADMIN.password,
-};
+import { loginAdmin } from '../common/auth';
 
 describe('Management Event Publication', () => {
   let app: INestApplication<App>;
@@ -25,21 +19,11 @@ describe('Management Event Publication', () => {
 
   describe('Response Success', () => {
     let access_token: string;
-    let refresh_token: string;
 
     beforeAll(async () => {
-      const credentials = {
-        email: USER.email,
-        password: USER.password,
-      };
-      const res = await request(app.getHttpServer()).post('/auth/login').send(credentials);
+      const session = await loginAdmin(app);
+      access_token = session.accessToken;
 
-      expect(res.headers['set-cookie']).toBeDefined();
-      const cookies = res.headers['set-cookie'];
-      access_token = extractHttpOnlyCookie('access_token', cookies);
-      refresh_token = extractHttpOnlyCookie('refresh_token', cookies);
-
-      expect(refresh_token).toBeDefined();
       expect(access_token).toBeDefined();
     });
 

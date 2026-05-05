@@ -6,5 +6,5 @@ export class CheckInDto {
   @Expose()
   @IsString()
   @IsNotEmpty()
-  qr: any;
+  qrCode: string;
 }

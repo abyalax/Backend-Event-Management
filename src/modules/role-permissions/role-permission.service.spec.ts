@@ -5,7 +5,7 @@ import { CONFIG_PROVIDER } from '~/common/constants/provider';
 import { mockRedis, mockRepository, mockConfigService, mockCacheService } from '~/test/common/mock';
 import { Permission } from '../auth/entity/permission.entity';
 import { RoleService } from './role-permission.service';
-import { Role } from './entity/role.entity';
+import { Role } from './entities/role.entity';
 import { RoleCacheService } from './role-permission-cache.service';
 import { CONFIG_SERVICE } from '~/infrastructure/config/config.provider';
 import { CacheService } from '~/infrastructure/cache/cache.service';

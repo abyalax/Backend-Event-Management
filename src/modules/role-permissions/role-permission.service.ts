@@ -7,8 +7,8 @@ import type { FindOneOptions, Repository } from 'typeorm';
 import type { CreateRoleDto } from './dto/create-role-permission.dto';
 import type { UpdateRoleDto } from './dto/update-role-permission.dto';
 import { ROLE_PAGINATION_CONFIG } from './role-permission-pagination.config';
-import { Role } from './entity/role.entity';
-import { RolePermission } from './entity/role-permissions.entity';
+import { Role } from './entities/role.entity';
+import { RolePermission } from './entities/role-permissions.entity';
 import { RoleDto } from './dto/role-permission.dto';
 
 @Injectable()

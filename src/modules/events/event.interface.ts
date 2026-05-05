@@ -1,4 +1,4 @@
-import { EEventMediaType } from './entity/event-media.entity';
+import { EEventMediaType } from './entities/event-media.entity';
 
 export interface AttachMediaRequest {
   mediaId: string;

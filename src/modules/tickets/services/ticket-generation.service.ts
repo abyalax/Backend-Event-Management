@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { OrderItem } from '~/modules/orders/entity/order-item.entity';
+import { OrderItem } from '~/modules/orders/entities/order-item.entity';
 import { GeneratedEventTicket } from '../entities/generated-event-ticket.entity';
 import { PinoLogger } from 'nestjs-pino';
 

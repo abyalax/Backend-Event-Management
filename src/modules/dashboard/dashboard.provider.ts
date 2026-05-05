@@ -6,7 +6,7 @@ import { PermissionsGuard } from '~/common/guards/permission.guard';
 import { CacheService } from '~/infrastructure/cache/cache.service';
 import { RedisService } from '~/infrastructure/redis/redis.service';
 import { Provider } from '@nestjs/common';
-import { Order } from '../orders/entity/order.entity';
+import { Order } from '../orders/entities/order.entity';
 import { Payment } from '../payments/entities/payment.entity';
 import { DashboardCacheService } from './dashboard-cache.service';
 import { DashboardService } from './dashboard.service';

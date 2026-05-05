@@ -10,6 +10,7 @@ import { PdfModule } from '../pdf/pdf.module';
 import { EmailModule } from '~/infrastructure/email/email.module';
 import { StorageModule } from '~/infrastructure/storage/storage.module';
 import { DashboardModule } from '../dashboard/dashboard.module';
+import { ReminderModule } from '../reminders/reminder.module';
 import { CONFIG_SERVICE, ConfigService } from '~/infrastructure/config/config.provider';
 import { OrderController } from './order.controller';
 import { orderProvider } from './order.provider';
@@ -27,6 +28,7 @@ import { OrderService } from './order.service';
     EmailModule,
     StorageModule,
     DashboardModule,
+    ReminderModule,
     JwtModule.registerAsync({
       inject: [CONFIG_SERVICE],
       useFactory: (configService: ConfigService) => ({

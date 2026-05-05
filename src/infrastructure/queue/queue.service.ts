@@ -2,7 +2,8 @@ import { Injectable, OnModuleDestroy, Inject } from '@nestjs/common';
 import { Queue, Worker, QueueOptions, WorkerOptions, JobsOptions } from 'bullmq';
 import { PinoLogger } from 'nestjs-pino';
 import Redis from 'ioredis';
-import { ConfigService, CONFIG_SERVICE } from '../config/config.provider';
+import { CONFIG_PROVIDER } from '~/common/constants/provider';
+import { QueueConfig } from './queue.interface';
 import { QUEUE_DEFAULTS } from './queue.constants';
 
 export interface JobConfig<T = unknown> {
@@ -28,13 +29,13 @@ export class QueueService implements OnModuleDestroy {
   private isShuttingDown = false;
 
   constructor(
-    @Inject(CONFIG_SERVICE) private readonly config: ConfigService,
+    @Inject(CONFIG_PROVIDER.QUEUE) private readonly config: QueueConfig,
     private readonly logger: PinoLogger,
   ) {
     this.connection = new Redis({
-      host: this.config.get('REDIS_HOST'),
-      port: this.config.get('REDIS_PORT'),
-      password: this.config.get('REDIS_PASSWORD'),
+      host: this.config.redis.host,
+      port: this.config.redis.port,
+      password: this.config.redis.password,
       maxRetriesPerRequest: null,
       enableReadyCheck: false,
       retryStrategy: (times) => {
@@ -82,7 +83,7 @@ export class QueueService implements OnModuleDestroy {
     jobConfigs.forEach((config) => {
       const workerOptions: WorkerOptions = {
         connection: this.connection,
-        concurrency: this.config.get('QUEUE_CONCURRENCY') || QUEUE_DEFAULTS.CONCURRENCY,
+        concurrency: this.config.concurrency || QUEUE_DEFAULTS.CONCURRENCY,
       };
 
       const worker = new Worker(

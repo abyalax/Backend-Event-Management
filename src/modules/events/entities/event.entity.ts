@@ -10,7 +10,7 @@ import {
   PrimaryGeneratedColumn,
   UpdateDateColumn,
 } from 'typeorm';
-import { EventCategory } from '~/modules/event-categories/entity/event-category.entity';
+import { EventCategory } from '~/modules/event-categories/entities/event-category.entity';
 import type { Ticket } from '~/modules/tickets/entities/ticket.entity';
 import { EventMedia } from './event-media.entity';
 

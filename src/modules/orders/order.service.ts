@@ -5,7 +5,7 @@ import { paginate, PaginateQuery } from 'nestjs-paginate';
 import { REPOSITORY } from '~/common/constants/database';
 import { ORDER_STATUS_TRANSITIONS, ORDER_TTL_MINUTES, OrderStatus } from '~/common/constants/order-status.enum';
 import { PaymentService } from '~/modules/payments/payment.service';
-import { Event } from '~/modules/events/entity/event.entity';
+import { Event } from '~/modules/events/entities/event.entity';
 import { GeneratedEventTicket } from '~/modules/tickets/entities/generated-event-ticket.entity';
 import { Ticket } from '~/modules/tickets/entities/ticket.entity';
 import { QRService } from '~/modules/qr-code/qr-code.service';
@@ -16,16 +16,19 @@ import { UserService } from '~/modules/users/user.service';
 import { CreateOrderDto } from './dto/create-order.dto';
 import { OrderItemResponseDto, OrderResponseDto } from './dto/order-response.dto';
 import { OrderStatusResponseDto } from './dto/order-status-response.dto';
-import { Order } from './entity/order.entity';
-import { OrderItem } from './entity/order-item.entity';
+import { Order } from './entities/order.entity';
+import { OrderItem } from './entities/order-item.entity';
 import { ORDER_PAGINATION_CONFIG } from './order-pagination.config';
 import { PaymentStatus } from '~/modules/payments/payment.enum';
 import type { Transaction } from '~/modules/payments/entities/transaction.entity';
 import { QueryUserOrdersDto } from './dto/query-user-orders.dto';
 import * as PDFDocument from 'pdfkit';
 import * as QRCode from 'qrcode';
-import { CONFIG_SERVICE, ConfigService } from '~/infrastructure/config/config.provider';
+import { CONFIG_PROVIDER } from '~/common/constants/provider';
+import { OrderConfig } from './order.interface';
 import { DashboardCacheService } from '~/modules/dashboard/dashboard-cache.service';
+import { ReminderService } from '~/modules/reminders/reminder.service';
+import { ClockProvider } from '~/infrastructure/clock/clock.provider';
 
 type LoadedOrder = Order & {
   orderItems?: Array<
@@ -56,8 +59,8 @@ export class OrderService {
     @Inject(REPOSITORY.GENERATED_EVENT_TICKET)
     private readonly generatedTicketRepository: Repository<GeneratedEventTicket>,
 
-    @Inject(CONFIG_SERVICE)
-    private readonly config: ConfigService,
+    @Inject(CONFIG_PROVIDER.ORDER)
+    private readonly config: OrderConfig,
 
     private readonly paymentService: PaymentService,
     private readonly qrService: QRService,
@@ -66,6 +69,7 @@ export class OrderService {
     private readonly storageService: StorageService,
     private readonly userService: UserService,
     private readonly dashboardCacheService: DashboardCacheService,
+    private readonly reminderService: ReminderService,
   ) {}
 
   async createOrder(dto: CreateOrderDto, userId: string, userEmail: string): Promise<OrderResponseDto> {
@@ -75,7 +79,7 @@ export class OrderService {
 
     if (dto.eventId && !event) throw new NotFoundException(`Event ${dto.eventId} not found`);
 
-    const now = new Date();
+    const now = ClockProvider.now();
     const expiration = new Date(now.getTime() + ORDER_TTL_MINUTES * 60 * 1000);
 
     let createdOrder: Order | undefined;
@@ -193,16 +197,7 @@ export class OrderService {
       }
     }
 
-    const generated = await this.generateTicketsForOrder(order.id);
-    return generated.map((ticket) => ({
-      id: ticket.id,
-      orderItemId: ticket.orderItemId,
-      ticketId: ticket.ticketId,
-      qrCodeUrl: ticket.qrCodeUrl,
-      pdfUrl: ticket.pdfUrl,
-      isUsed: ticket.isUsed,
-      issuedAt: ticket.issuedAt,
-    }));
+    return await this.listGeneratedTicketsForOrder(order.id);
   }
 
   async cancelOrder(id: string, userId: string): Promise<OrderResponseDto> {
@@ -249,7 +244,7 @@ export class OrderService {
   async findOrderById(orderId: string, userId?: string): Promise<LoadedOrder> {
     const order = await this.orderRepository.findOne({
       where: { id: orderId },
-      relations: ['orderItems', 'orderItems.ticket', 'orderItems.generatedTickets'],
+      relations: ['orderItems', 'orderItems.ticket', 'orderItems.ticket.event', 'orderItems.generatedTickets'],
     });
 
     if (!order) {
@@ -267,7 +262,7 @@ export class OrderService {
     return this.orderRepository.find({
       where: {
         status: OrderStatus.PENDING,
-        expiredAt: LessThan(new Date()),
+        expiredAt: LessThan(ClockProvider.now()),
       },
       order: { expiredAt: 'ASC' },
       take: 100,
@@ -379,7 +374,11 @@ export class OrderService {
     // Send email to user with tickets
     if (generatedTickets.length > 0) await this.sendTicketEmail(order.userId, order, generatedTickets);
 
-    return generatedTickets;
+    if (generatedTickets.length > 0) {
+      return generatedTickets;
+    }
+
+    return this.listGeneratedTicketsForOrder(orderId);
   }
 
   async handleSuccessfulPayment(orderId: string): Promise<void> {
@@ -410,6 +409,32 @@ export class OrderService {
 
     // Now generate tickets after quota is deducted
     await this.generateTicketsForOrder(orderId);
+
+    // Schedule reminders for paid orders with future events
+    // Track scheduled events to avoid duplicate reminders for same event in one order
+    const scheduledEventIds = new Set<string>();
+
+    for (const orderItem of order.orderItems ?? []) {
+      const event = orderItem.ticket?.event;
+
+      if (event && new Date(event.startDate) > ClockProvider.now() && !scheduledEventIds.has(event.id)) {
+        try {
+          await this.reminderService.scheduleRemindersForOrder(orderId, event.id, order.userId);
+          scheduledEventIds.add(event.id);
+          this.logger.info({ orderId, eventId: event.id, userId: order.userId }, 'Reminders scheduled for paid order');
+        } catch (error) {
+          this.logger.error(
+            {
+              orderId,
+              eventId: event.id,
+              error: error instanceof Error ? error.message : String(error),
+            },
+            'Failed to schedule reminders',
+          );
+          // Don't fail the payment flow if reminder scheduling fails
+        }
+      }
+    }
   }
 
   async handleExpiredPayment(orderId: string): Promise<void> {
@@ -527,7 +552,7 @@ export class OrderService {
 
       // Return the full download URL
       if (uploadResult.filename) {
-        const baseUrl = this.config.get('URL_API');
+        const baseUrl = this.config.urlApi;
         const downloadUrl = `${baseUrl}/storage/download/tickets-public/${uploadResult.filename}`;
         this.logger.info({ ticketId, filename: uploadResult.filename }, 'PDF stored successfully');
         return downloadUrl;
@@ -587,5 +612,18 @@ export class OrderService {
         issuedAt: ticket.issuedAt,
       })),
     };
+  }
+
+  private async listGeneratedTicketsForOrder(orderId: string): Promise<GeneratedEventTicket[]> {
+    const order = await this.orderRepository.findOne({
+      where: { id: orderId },
+      relations: ['orderItems', 'orderItems.generatedTickets'],
+    });
+
+    if (!order?.orderItems?.length) {
+      return [];
+    }
+
+    return order.orderItems.flatMap((item) => item.generatedTickets ?? []);
   }
 }

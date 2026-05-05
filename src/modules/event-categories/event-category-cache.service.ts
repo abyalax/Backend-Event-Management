@@ -2,7 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { PaginateQuery } from 'nestjs-paginate';
 import { CacheService } from '~/infrastructure/cache/cache.service';
 import { QueryEventCategoryDto } from './dto/query-event-category.dto';
-import { EventCategory } from './entity/event-category.entity';
+import { EventCategory } from './entities/event-category.entity';
 import { EventCategoryService } from './event-category.service';
 import { CreateEventCategoryDto } from './dto/create-event-category.dto';
 import { UpdateEventCategoryDto } from './dto/update-event-category.dto';

@@ -1,5 +1,5 @@
 import { FilterOperator, PaginateConfig } from 'nestjs-paginate';
-import { Order } from './entity/order.entity';
+import { Order } from './entities/order.entity';
 
 export const ORDER_PAGINATION_CONFIG: PaginateConfig<Order> = {
   sortableColumns: ['id', 'status', 'totalAmount', 'createdAt', 'updatedAt'],

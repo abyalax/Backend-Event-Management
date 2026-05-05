@@ -66,6 +66,16 @@ export class TicketController {
     };
   }
 
+  @HttpCode(HttpStatus.OK)
+  @Get('event/:eventId')
+  async findByEventId(@Param('eventId') eventId: string): Promise<TResponse<Ticket[]>> {
+    const tickets = await this.ticketService.findByEventId(eventId);
+    return {
+      message: 'get data tickets successfully',
+      data: tickets,
+    };
+  }
+
   @HttpCode(HttpStatus.NO_CONTENT)
   @Patch(':id')
   async update(@Param('id') id: string, @Body() payload: UpdateTicketDto): Promise<TResponse<Ticket>> {

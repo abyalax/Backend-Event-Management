@@ -9,14 +9,9 @@ import z from 'zod';
 import { validateSchema } from '~/common/helpers/validation';
 import { QueryEventDto } from '~/modules/events/dto/query-event.dto';
 import { cleanupApplication, setupApplication } from '~/test/setup_e2e';
-import { extractHttpOnlyCookie } from '~/test/utils';
 import { EventDto } from '~/modules/events/dto/event.dto';
-import { ADMIN, ADMIN_ID } from '~/infrastructure/database/const/shared-data';
-
-const USER = {
-  email: ADMIN.email,
-  password: ADMIN.password,
-};
+import { ADMIN_ID } from '~/infrastructure/database/const/shared-data';
+import { loginAdmin } from '../common/auth';
 
 describe('Module Events', () => {
   let app: INestApplication<App>;
@@ -28,21 +23,11 @@ describe('Module Events', () => {
 
   describe('Response Success', () => {
     let access_token: string;
-    let refresh_token: string;
 
     beforeAll(async () => {
-      const credentials = {
-        email: USER.email,
-        password: USER.password,
-      };
-      const res = await request(app.getHttpServer()).post('/auth/login').send(credentials);
+      const session = await loginAdmin(app);
+      access_token = session.accessToken;
 
-      expect(res.headers['set-cookie']).toBeDefined();
-      const cookies = res.headers['set-cookie'];
-      access_token = extractHttpOnlyCookie('access_token', cookies);
-      refresh_token = extractHttpOnlyCookie('refresh_token', cookies);
-
-      expect(refresh_token).toBeDefined();
       expect(access_token).toBeDefined();
     });
 
@@ -344,8 +329,93 @@ describe('Module Events', () => {
     });
 
     test('POST /events/:id/media (Attach Media to Event)', async () => {
+      // First create an event if createdEventId is not set
+      if (!createdEventId) {
+        // Create a simple event without media for testing
+        // First create a media to use as banner
+        const imagePath = path.join(process.cwd(), 'assets', 'banner.jpg');
+        const imageBuffer = fs.readFileSync(imagePath);
+
+        const presignedPayload = {
+          filename: 'test-banner.jpg',
+          mimeType: 'image/jpeg',
+          size: imageBuffer.length,
+          accessType: 'public',
+        };
+
+        const presignedRes = await request(app.getHttpServer())
+          .post('/media/presigned')
+          .set('Cookie', [`access_token=s:${access_token}`])
+          .send(presignedPayload);
+
+        expect(presignedRes.status).toBe(201);
+        const mediaId = presignedRes.body.data.mediaId;
+
+        // Upload the image to get a real media
+        await axios.put(presignedRes.body.data.url as string, imageBuffer, {
+          headers: { 'Content-Type': 'image/jpeg' },
+        });
+
+        // Confirm the upload
+        await request(app.getHttpServer())
+          .patch(`/media/${mediaId}/confirm`)
+          .set('Cookie', [`access_token=s:${access_token}`]);
+
+        const eventPayload = {
+          title: 'Test Event for Media Attachment',
+          description: 'Test event description',
+          startDate: '2024-12-01T10:00:00.000Z',
+          endDate: '2024-12-01T12:00:00.000Z',
+          location: 'Test Location',
+          categoryId: 1,
+          status: 'DRAFT',
+          createdBy: ADMIN_ID,
+          bannerMediaId: mediaId, // Use the real mediaId we just created
+        };
+
+        const eventRes = await request(app.getHttpServer())
+          .post('/events')
+          .set('Cookie', [`access_token=s:${access_token}`])
+          .send(eventPayload);
+
+        expect(eventRes.status).toBe(201);
+        createdEventId = eventRes.body.data.id;
+      }
+
+      // Create a second media for attachment test
+      const imagePath2 = path.join(process.cwd(), 'assets', 'banner.jpg');
+      const imageBuffer2 = fs.readFileSync(imagePath2);
+
+      const presignedPayload2 = {
+        filename: 'test-banner-attachment.jpg',
+        mimeType: 'image/jpeg',
+        size: imageBuffer2.length,
+        accessType: 'public',
+      };
+
+      const presignedRes2 = await request(app.getHttpServer())
+        .post('/media/presigned')
+        .set('Cookie', [`access_token=s:${access_token}`])
+        .send(presignedPayload2);
+
+      expect(presignedRes2.status).toBe(201);
+      const attachmentMediaId = presignedRes2.body.data.mediaId;
+
+      console.log('Second media created with ID:', attachmentMediaId);
+
+      // Upload the second image to get a real media
+      await axios.put(presignedRes2.body.data.url as string, imageBuffer2, {
+        headers: { 'Content-Type': 'image/jpeg' },
+      });
+
+      // Confirm the second upload
+      await request(app.getHttpServer())
+        .patch(`/media/${attachmentMediaId}/confirm`)
+        .set('Cookie', [`access_token=s:${access_token}`])
+        .send({ uploaded: true, actualSize: imageBuffer2.length });
+
       const mediaPayload = {
-        mediaId: '550e8400-e29b-41d4-a716-446655440003', // Assuming this exists
+        mediaId: attachmentMediaId,
         type: 'banner',
       };
 
@@ -360,10 +430,57 @@ describe('Module Events', () => {
     });
 
     test('DELETE /events/:id (Delete Event)', async () => {
-      expect(createdEventId).toBeDefined();
+      // Always create a new event for deletion test to avoid conflicts
+      const imagePath = path.join(process.cwd(), 'assets', 'banner.jpg');
+      const imageBuffer = fs.readFileSync(imagePath);
+
+      const presignedPayload = {
+        filename: 'test-delete-event.jpg',
+        mimeType: 'image/jpeg',
+        size: imageBuffer.length,
+        accessType: 'public',
+      };
+
+      const presignedRes = await request(app.getHttpServer())
+        .post('/media/presigned')
+        .set('Cookie', [`access_token=s:${access_token}`])
+        .send(presignedPayload);
+
+      expect(presignedRes.status).toBe(201);
+      const mediaId = presignedRes.body.data.mediaId;
+
+      // Upload the image to get a real media
+      await axios.put(presignedRes.body.data.url as string, imageBuffer, {
+        headers: { 'Content-Type': 'image/jpeg' },
+      });
+
+      // Confirm the upload
+      await request(app.getHttpServer())
+        .patch(`/media/${mediaId}/confirm`)
+        .set('Cookie', [`access_token=s:${access_token}`]);
+
+      const eventPayload = {
+        title: 'Test Event for Deletion',
+        description: 'Test event description for deletion',
+        startDate: '2024-12-01T10:00:00.000Z',
+        endDate: '2024-12-01T12:00:00.000Z',
+        location: 'Test Location',
+        categoryId: 1,
+        status: 'DRAFT',
+        createdBy: ADMIN_ID,
+        bannerMediaId: mediaId,
+      };
+
+      const eventRes = await request(app.getHttpServer())
+        .post('/events')
+        .set('Cookie', [`access_token=s:${access_token}`])
+        .send(eventPayload);
+
+      expect(eventRes.status).toBe(201);
+      const eventIdToDelete = eventRes.body.data.id;
 
       const res = await request(app.getHttpServer())
-        .delete(`/events/${createdEventId}`)
+        .delete(`/events/${eventIdToDelete}`)
         .set('Cookie', [`access_token=s:${access_token}`]);
 
       expect(res.status).toBe(204);

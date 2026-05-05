@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { REPOSITORY } from '~/common/constants/database';
 import { CreateEventCategoryDto } from './dto/create-event-category.dto';
 import { UpdateEventCategoryDto } from './dto/update-event-category.dto';
-import { EventCategory } from './entity/event-category.entity';
+import { EventCategory } from './entities/event-category.entity';
 import { EVENT_CATEGORY_PAGINATION_CONFIG } from './event-category-pagination.config';
 
 @Injectable()

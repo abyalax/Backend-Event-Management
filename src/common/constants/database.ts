@@ -12,4 +12,6 @@ export const REPOSITORY = {
   GENERATED_EVENT_TICKET: 'generated_event_ticket_repository',
   PAYMENT: 'payment_repository',
   TRANSACTION: 'transaction_repository',
+  EVENT_REMINDER: 'event_reminder_repository',
+  NOTIFICATION: 'notification_repository',
 };

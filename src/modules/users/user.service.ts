@@ -1,8 +1,8 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { REPOSITORY } from '~/common/constants/database';
 import { Permission } from '../auth/entity/permission.entity';
-import { Role } from '../role-permissions/entity/role.entity';
-import { User } from './entity/user.entity';
+import { Role } from '../role-permissions/entities/role.entity';
+import { User } from './entities/user.entity';
 
 import { paginate, PaginateQuery } from 'nestjs-paginate';
 import type { FindOneOptions, Repository } from 'typeorm';
@@ -11,7 +11,7 @@ import type { UpdateUserDto } from './dto/update-user.dto';
 import { USER_PAGINATION_CONFIG } from './user-pagination.config';
 import { plainToInstance } from 'class-transformer';
 import { UserDto } from './dto/user.dto';
-import { RolePermission } from '../role-permissions/entity/role-permissions.entity';
+import { RolePermission } from '../role-permissions/entities/role-permissions.entity';
 
 @Injectable()
 export class UserService {

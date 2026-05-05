@@ -4,7 +4,7 @@ import { plainToInstance } from 'class-transformer';
 import { CacheService } from '~/infrastructure/cache/cache.service';
 import { QueryRolePermissionDto } from './dto/query-role-permission.dto';
 import { RoleService } from './role-permission.service';
-import { Role } from './entity/role.entity';
+import { Role } from './entities/role.entity';
 import { CreateRoleDto } from './dto/create-role-permission.dto';
 import { UpdateRoleDto } from './dto/update-role-permission.dto';
 import { RoleDto } from './dto/role-permission.dto';

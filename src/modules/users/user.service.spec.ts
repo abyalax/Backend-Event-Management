@@ -5,7 +5,7 @@ import { REPOSITORY } from '~/common/constants/database';
 import { CONFIG_SERVICE } from '~/infrastructure/config/config.provider';
 import { mockRedis, mockRepository, mockConfigService } from '~/test/common/mock';
 import { Permission } from '../auth/entity/permission.entity';
-import { User } from './entity/user.entity';
+import { User } from './entities/user.entity';
 import { UserCacheService } from './user-cache.service';
 import { UserService } from './user.service';
 import { CONFIG_PROVIDER } from '~/common/constants/provider';

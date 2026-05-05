@@ -3,7 +3,7 @@ import type { Seeder } from 'typeorm-extension';
 import { faker } from '@faker-js/faker';
 
 import { Ticket } from '~/modules/tickets/entities/ticket.entity';
-import { Event } from '~/modules/events/entity/event.entity';
+import { Event } from '~/modules/events/entities/event.entity';
 
 export default class TicketSeeder implements Seeder {
   track = true;

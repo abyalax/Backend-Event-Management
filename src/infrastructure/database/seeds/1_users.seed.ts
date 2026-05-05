@@ -2,9 +2,9 @@ import type { DataSource } from 'typeorm';
 import type { Seeder } from 'typeorm-extension';
 
 import { Permission } from '~/modules/auth/entity/permission.entity';
-import { Role } from '~/modules/role-permissions/entity/role.entity';
-import { RolePermission } from '~/modules/role-permissions/entity/role-permissions.entity';
-import { User } from '~/modules/users/entity/user.entity';
+import { Role } from '~/modules/role-permissions/entities/role.entity';
+import { RolePermission } from '~/modules/role-permissions/entities/role-permissions.entity';
+import { User } from '~/modules/users/entities/user.entity';
 
 import { mockPermissions } from '../mock/permission.mock';
 import { mockRoles } from '../mock/role.mock';
