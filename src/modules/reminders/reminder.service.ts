@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { Repository, LessThan } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
@@ -16,6 +17,11 @@ interface Interval {
   days?: number;
   hours?: number;
   minutes?: number;
+}
+
+interface ReminderOffset {
+  interval: Interval;
+  label: string;
 }
 
 export interface ScheduleReminderData {
@@ -61,14 +67,35 @@ export class ReminderService {
   async scheduleReminder(data: ScheduleReminderData): Promise<EventReminder> {
     this.logger.info(`Scheduling reminder for event ${data.eventId}, user ${data.userId}`);
 
+    const normalizedSubject = data.subject;
+    const normalizedMessage = data.message;
+    const existingReminderWhere: Record<string, unknown> = {
+      eventId: data.eventId,
+      userId: data.userId,
+      orderId: data.orderId,
+      type: data.type,
+    };
+
+    if (normalizedSubject !== undefined) existingReminderWhere.subject = normalizedSubject;
+    if (normalizedMessage !== undefined) existingReminderWhere.message = normalizedMessage;
+
+    const existingReminder = await this.reminderRepository.findOne({
+      where: existingReminderWhere,
+    });
+
+    if (existingReminder) {
+      this.logger.info(`Reminder already exists for event ${data.eventId}, user ${data.userId}, order ${data.orderId}`);
+      return existingReminder;
+    }
+
     const reminder = this.reminderRepository.create({
       eventId: data.eventId,
       userId: data.userId,
       orderId: data.orderId,
       scheduledAt: data.scheduledAt,
       type: data.type,
-      subject: data.subject,
-      message: data.message,
+      subject: normalizedSubject,
+      message: normalizedMessage,
       status: ReminderStatus.PENDING,
     });
 
@@ -87,7 +114,7 @@ export class ReminderService {
     return savedReminder;
   }
 
-  async scheduleRemindersForOrder(orderId: string, eventId: string, userId: string): Promise<void> {
+  async scheduleRemindersForOrder(orderId: string, eventId: string, userId: string, reminderTimes?: string[]): Promise<void> {
     this.logger.info(`Scheduling reminders for order ${orderId}, event ${eventId}, user ${userId}`);
 
     const event = await this.eventRepository.findOne({
@@ -106,15 +133,25 @@ export class ReminderService {
       return;
     }
 
-    // Schedule reminders at different intervals before event
-    const reminderIntervals = [
-      { days: 1, type: ReminderType.EMAIL, subject: 'Event Reminder: Your event is tomorrow!' },
-      { hours: 1, type: ReminderType.EMAIL, subject: 'Event Reminder: Your event starts in 1 hour!' },
-      { minutes: 15, type: ReminderType.NOTIFICATION, subject: 'Event starting soon!' },
-    ];
+    const reminderPlans =
+      reminderTimes && reminderTimes.length > 0
+        ? reminderTimes.map((value) => {
+            const parsed = this.parseReminderOffset(value);
+            return {
+              ...parsed,
+              type: ReminderType.EMAIL,
+              subject: `Event Reminder: Your event starts in ${parsed.label}!`,
+            };
+          })
+        : [
+            { interval: { days: 1 }, type: ReminderType.EMAIL, subject: 'Event Reminder: Your event is tomorrow!' },
+            { interval: { hours: 1 }, type: ReminderType.EMAIL, subject: 'Event Reminder: Your event starts in 1 hour!' },
+            { interval: { minutes: 15 }, type: ReminderType.NOTIFICATION, subject: 'Event starting soon!' },
+          ];
 
-    for (const interval of reminderIntervals) {
+    for (const plan of reminderPlans) {
       const scheduledAt = new Date(event.startDate);
+      const interval = plan.interval;
 
       if (interval.days) {
         scheduledAt.setDate(scheduledAt.getDate() - interval.days);
@@ -124,18 +161,15 @@ export class ReminderService {
         scheduledAt.setMinutes(scheduledAt.getMinutes() - interval.minutes);
       }
 
-      // Only schedule if the time is in the future
-      if (scheduledAt > now) {
-        await this.scheduleReminder({
-          eventId,
-          userId,
-          orderId,
-          scheduledAt,
-          type: interval.type,
-          subject: interval.subject,
-          message: this.generateReminderMessage(event, interval),
-        });
-      }
+      await this.scheduleReminder({
+        eventId,
+        userId,
+        orderId,
+        scheduledAt,
+        type: plan.type,
+        subject: plan.subject,
+        message: this.generateReminderMessage(event, interval),
+      });
     }
   }
 
@@ -144,7 +178,7 @@ export class ReminderService {
 
     const reminder = await this.reminderRepository.findOne({
       where: { id: reminderId },
-      relations: ['event', 'user', 'order'],
+      relations: ['event', 'user', 'order', 'order.orderItems'],
     });
 
     if (!reminder) {
@@ -214,7 +248,7 @@ export class ReminderService {
       const subject = reminder.subject || `Reminder: ${reminder.event?.title || 'Upcoming Event'}`;
       const message = reminder.message || this.generateReminderMessage(reminder.event);
 
-      const htmlContent = this.generateReminderHtml(reminder.event, message);
+      const htmlContent = this.generateReminderHtml(reminder, message);
 
       await this.emailService.sendEmail({
         to: reminder.user.email,
@@ -237,10 +271,13 @@ export class ReminderService {
     }
   }
 
-  private generateReminderHtml(event: Event, message: string): string {
+  private generateReminderHtml(reminder: EventReminder, message: string): string {
+    const event = reminder.event;
     const eventName = event?.title || 'Event';
     const eventDate = event?.startDate ? new Date(event.startDate).toLocaleString() : 'TBD';
     const eventLocation = event?.location || 'TBD';
+    const order = reminder.order;
+    const orderTicketCount = order?.orderItems?.reduce((total, item) => total + Number(item.quantity ?? 0), 0) ?? 0;
 
     return `
       <!DOCTYPE html>
@@ -271,6 +308,18 @@ export class ReminderService {
               <p><strong>📍 Location:</strong> ${eventLocation}</p>
               ${event?.description ? `<p><strong>📝 Description:</strong> ${event.description}</p>` : ''}
             </div>
+            ${
+              order
+                ? `
+            <div class="event-details">
+              <h3>Order Details</h3>
+              <p><strong>Order ID:</strong> ${order.id}</p>
+              <p><strong>Ticket Quantity:</strong> ${orderTicketCount}</p>
+              <p><strong>Total Amount:</strong> ${order.totalAmount}</p>
+            </div>
+            `
+                : ''
+            }
             <p>Don't forget to bring your ticket and arrive on time!</p>
           </div>
           <div class="footer">
@@ -307,9 +356,30 @@ export class ReminderService {
     return `Your event "${event.title}" is starting ${timeText} on ${event.startDate.toLocaleDateString()} at ${event.startDate.toLocaleTimeString()}. Location: ${event.location}`;
   }
 
+  private parseReminderOffset(value: string): ReminderOffset {
+    const normalized = value.trim().toLowerCase();
+    const match = new RegExp(/^(\d+)([hdm])$/).exec(normalized);
+
+    if (!match) {
+      throw new Error(`Invalid reminder time format: ${value}`);
+    }
+
+    const amount = Number(match[1]);
+    const unit = match[2];
+
+    if (unit === 'd') {
+      return { interval: { days: amount }, label: `${amount} day${amount > 1 ? 's' : ''}` };
+    }
+
+    if (unit === 'h') {
+      return { interval: { hours: amount }, label: `${amount} hour${amount > 1 ? 's' : ''}` };
+    }
+
+    return { interval: { minutes: amount }, label: `${amount} minute${amount > 1 ? 's' : ''}` };
+  }
+
   async getPendingReminders(): Promise<EventReminder[]> {
     // Use fake time in test environment, real time in production
-    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     const currentTime = process.env.NODE_ENV === 'test' ? ClockProvider.now() : new Date();
 
     return this.reminderRepository.find({

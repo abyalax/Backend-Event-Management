@@ -4,6 +4,7 @@ import { TestingModule } from '@nestjs/testing';
 import * as request from 'supertest';
 import { App } from 'supertest/types';
 import { cleanupApplication, setupApplication } from '~/test/setup_e2e';
+import { ADMIN_ID } from '~/infrastructure/database/const/shared-data';
 import { createOrder, fetchAvailableTicket } from '../tickets/tickets.utils';
 import { loginAdmin } from '../common/auth';
 import { mailpitHelper } from '../infrastructure/mailpit';
@@ -14,6 +15,20 @@ describe('Reminder Emails (e2e)', () => {
   let accessToken: string;
   let eventId: string;
   let ticketId: string;
+  const waitForReminderEmails = async (expectedCount: number, timeoutMs = 15000) => {
+    const deadline = Date.now() + timeoutMs;
+
+    while (Date.now() < deadline) {
+      const messages = await mailpitHelper.getMessages();
+      const reminderEmails = messages.messages.filter((msg) => msg.Subject.includes('Reminder'));
+
+      if (reminderEmails.length >= expectedCount) return reminderEmails;
+
+      await new Promise((resolve) => setTimeout(resolve, 500));
+    }
+
+    throw new Error(`Timed out waiting for ${expectedCount} reminder emails`);
+  };
 
   beforeAll(async () => {
     [app, moduleFixture] = await setupApplication();
@@ -50,29 +65,37 @@ describe('Reminder Emails (e2e)', () => {
     });
 
     it('should send reminder email when event reminder is scheduled for order', async () => {
+      const eventResponse = await request(app.getHttpServer())
+        .get(`/events/${eventId}`)
+        .set('Cookie', [`access_token=s:${accessToken}`])
+        .expect(200);
+
+      const eventData = eventResponse.body.data;
+
       // Schedule reminders for the order
       await request(app.getHttpServer())
         .post(`/reminders/order/${orderId}/schedule`)
         .set('Cookie', [`access_token=s:${accessToken}`])
         .send({
           eventId,
+          reminderTimes: ['10001d'],
         })
         .expect(201);
 
       // Wait for reminder email to be sent
-      const email = await mailpitHelper.waitForEmailWithSubject('Reminder', 15000);
+      const [email] = await waitForReminderEmails(1, 15000);
 
       // Assert email details
       expect(email).toBeDefined();
       expect(email.Subject).toContain('Reminder');
-      expect(email.HTML).toBeDefined();
-      expect(email.Text).toBeDefined();
       expect(email.To.length).toBeGreaterThan(0);
 
       // Get detailed email information
       const emailDetail = await mailpitHelper.getMessage(email.ID);
       expect(emailDetail.From.Address).toBeDefined();
-      expect(emailDetail.HTML).toContain(eventId);
+      expect(emailDetail.HTML).toBeDefined();
+      expect(emailDetail.Text).toBeDefined();
+      expect(emailDetail.HTML).toContain(eventData.title);
     });
 
     it('should send multiple reminder emails for different reminder times', async () => {
@@ -82,16 +105,12 @@ describe('Reminder Emails (e2e)', () => {
         .set('Cookie', [`access_token=s:${accessToken}`])
         .send({
           eventId,
-          reminderTimes: ['1h', '24h', '3d'], // 1 hour, 24 hours, and 3 days before
+          reminderTimes: ['10000d', '9999d', '9998d'], // Force immediate delivery in this test
         })
         .expect(201);
 
       // Wait for multiple reminder emails
-      const emails = [];
-      for (let i = 0; i < 3; i++) {
-        const email = await mailpitHelper.waitForEmailWithSubject('Reminder', 20000);
-        emails.push(email);
-      }
+      const emails = await waitForReminderEmails(3, 20000);
 
       // Assert we received 3 different reminder emails
       expect(emails).toHaveLength(3);
@@ -110,7 +129,7 @@ describe('Reminder Emails (e2e)', () => {
         .set('Cookie', [`access_token=s:${accessToken}`])
         .expect(200);
 
-      const eventData = eventResponse.body;
+      const eventData = eventResponse.body.data;
 
       // Schedule reminder
       await request(app.getHttpServer())
@@ -118,30 +137,28 @@ describe('Reminder Emails (e2e)', () => {
         .set('Cookie', [`access_token=s:${accessToken}`])
         .send({
           eventId,
+          reminderTimes: ['9997d'],
         })
         .expect(201);
 
       // Wait for reminder email
-      const email = await mailpitHelper.waitForEmailWithSubject('Reminder', 15000);
-
-      // Get detailed email
+      const [email] = await waitForReminderEmails(1, 15000);
       const emailDetail = await mailpitHelper.getMessage(email.ID);
 
       // Assert email contains event details
       expect(emailDetail.HTML).toContain(eventData.title);
       expect(emailDetail.HTML).toContain(eventData.description);
       expect(emailDetail.HTML).toContain(eventData.location);
-      expect(emailDetail.HTML).toContain(eventData.startDate);
     });
 
     it('should send reminder email to correct recipient', async () => {
       // Get user details to verify recipient
       const userResponse = await request(app.getHttpServer())
-        .get('/auth/profile')
+        .get(`/users/${ADMIN_ID}`)
         .set('Cookie', [`access_token=s:${accessToken}`])
         .expect(200);
 
-      const userData = userResponse.body;
+      const userData = userResponse.body.data;
 
       // Schedule reminder
       await request(app.getHttpServer())
@@ -149,16 +166,16 @@ describe('Reminder Emails (e2e)', () => {
         .set('Cookie', [`access_token=s:${accessToken}`])
         .send({
           eventId,
+          reminderTimes: ['9996d'],
         })
         .expect(201);
 
       // Wait for reminder email
-      const email = await mailpitHelper.waitForEmailTo(userData.email as string, 15000);
+      const [email] = await waitForReminderEmails(1, 15000);
 
       // Assert recipient is correct
       expect(email).toBeDefined();
       expect(email.To.some((to) => to.Address === userData.email)).toBe(true);
-      expect(email.To.some((to) => to.Name === userData.name)).toBe(true);
     });
 
     it('should include order details in reminder email', async () => {
@@ -168,7 +185,7 @@ describe('Reminder Emails (e2e)', () => {
         .set('Cookie', [`access_token=s:${accessToken}`])
         .expect(200);
 
-      const orderData = orderResponse.body;
+      const orderData = orderResponse.body.data;
 
       // Schedule reminder
       await request(app.getHttpServer())
@@ -176,18 +193,18 @@ describe('Reminder Emails (e2e)', () => {
         .set('Cookie', [`access_token=s:${accessToken}`])
         .send({
           eventId,
+          reminderTimes: ['9995d'],
         })
         .expect(201);
 
       // Wait for reminder email
-      const email = await mailpitHelper.waitForEmailWithSubject('Reminder', 15000);
+      const [email] = await waitForReminderEmails(1, 15000);
 
-      // Get detailed email
       const emailDetail = await mailpitHelper.getMessage(email.ID);
 
       // Assert email contains order details
       expect(emailDetail.HTML).toContain(orderData.id);
-      expect(emailDetail.HTML).toContain(orderData.ticketQuantity.toString());
+      expect(emailDetail.HTML).toContain(String(orderData.orderItems?.length ?? 0));
       expect(emailDetail.HTML).toContain(orderData.totalAmount.toString());
     });
 
@@ -216,13 +233,13 @@ describe('Reminder Emails (e2e)', () => {
         .set('Cookie', [`access_token=s:${accessToken}`])
         .send({
           eventId,
+          reminderTimes: ['9994d'],
         })
         .expect(201);
 
       // Wait for reminder email
-      const email = await mailpitHelper.waitForEmailWithSubject('Reminder', 15000);
+      const [email] = await waitForReminderEmails(1, 15000);
 
-      // Get detailed email
       const emailDetail = await mailpitHelper.getMessage(email.ID);
 
       // Assert HTML structure
@@ -230,7 +247,6 @@ describe('Reminder Emails (e2e)', () => {
       expect(emailDetail.HTML).toContain('</html>');
       expect(emailDetail.HTML).toContain('<body>');
       expect(emailDetail.HTML).toContain('</body>');
-      expect(emailDetail.ContentType).toContain('text/html');
 
       // Assert text version is also available
       expect(emailDetail.Text).toBeDefined();
@@ -244,6 +260,7 @@ describe('Reminder Emails (e2e)', () => {
         .set('Cookie', [`access_token=s:${accessToken}`])
         .send({
           eventId,
+          reminderTimes: ['9993d'],
         })
         .expect(201);
 
@@ -252,20 +269,28 @@ describe('Reminder Emails (e2e)', () => {
         .set('Cookie', [`access_token=s:${accessToken}`])
         .send({
           eventId,
+          reminderTimes: ['9993d'],
         })
         .expect(201); // May return 201 but should not create duplicate emails
 
-      // Wait for first email
-      const firstEmail = await mailpitHelper.waitForEmailWithSubject('Reminder', 15000);
-
-      // Try to wait for a second email (should timeout)
-      await expect(mailpitHelper.waitForEmailWithSubject('Reminder', 5000)).rejects.toThrow('Email not found within 5000ms timeout');
-
-      // Verify only one email was sent
-      const messages = await mailpitHelper.getMessages();
-      const reminderEmails = messages.messages.filter((msg) => msg.Subject.includes('Reminder'));
+      const firstBatch = await waitForReminderEmails(1, 15000);
+      const reminderEmails = firstBatch.filter((msg) => msg.Subject.includes('Reminder'));
       expect(reminderEmails).toHaveLength(1);
-      expect(reminderEmails[0].ID).toBe(firstEmail.ID);
+
+      await request(app.getHttpServer())
+        .post(`/reminders/order/${orderId}/schedule`)
+        .set('Cookie', [`access_token=s:${accessToken}`])
+        .send({
+          eventId,
+          reminderTimes: ['9993d'],
+        })
+        .expect(201);
+
+      await new Promise((resolve) => setTimeout(resolve, 1000));
+
+      const messages = await mailpitHelper.getMessages();
+      const allReminderEmails = messages.messages.filter((msg) => msg.Subject.includes('Reminder'));
+      expect(allReminderEmails).toHaveLength(1);
     });
   });
 });

@@ -29,8 +29,12 @@ export class ReminderController {
 
   @Post('order/:orderId/schedule')
   @HttpCode(HttpStatus.CREATED)
-  async scheduleRemindersForOrder(@Param('orderId') orderId: string, @Body() body: { eventId: string }, @Request() req: Request): Promise<void> {
-    await this.reminderService.scheduleRemindersForOrder(orderId, body.eventId, req.user.id);
+  async scheduleRemindersForOrder(
+    @Param('orderId') orderId: string,
+    @Body() body: { eventId: string; reminderTimes?: string[] },
+    @Request() req: Request,
+  ): Promise<void> {
+    await this.reminderService.scheduleRemindersForOrder(orderId, body.eventId, req.user.id, body.reminderTimes);
   }
 
   @Delete('order/:orderId')

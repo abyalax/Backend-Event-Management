@@ -1,12 +1,3 @@
-/**
- * Todo
- * Flow testing with Fake Time System
- * 1. login admin
- * 2. create event with date mock/faketime, include tickets
- * 3. order ticket for this event, and pay
- * 4. user must receive email reminder for event, verify that message ada di mailpit dan jangan clear setelah test selesai supaya saya bisa verify
- */
-
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import axios from 'axios';
