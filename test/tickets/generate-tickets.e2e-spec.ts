@@ -62,6 +62,7 @@ describe('Module Ticket Generation', () => {
       .get(`/orders/${orderId}/tickets`)
       .set('Cookie', [`access_token=s:${accessToken}`])
       .expect(200);
+    // eslint-disable-next-line @typescript-eslint/no-unsafe-call
     const updatedTicket = updatedTicketsResponse.body.data.find((item: { id: string }) => item.id === generatedTicket.id);
     expect(updatedTicket.isUsed).toBe(true);
 

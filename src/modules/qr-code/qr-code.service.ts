@@ -37,6 +37,37 @@ export class QRService {
     return Promise.resolve(payload);
   }
 
+  revoke(encoded: string): { revoked: boolean; ticketId?: string; eventId?: string } {
+    const decoded = this.decode(encoded);
+
+    if (!decoded.valid || !decoded.ticketId || !decoded.eventId) {
+      return { revoked: false };
+    }
+
+    const key = this.key(decoded.ticketId, decoded.eventId);
+    const signatures = this.issuedSignatures.get(key);
+
+    if (!signatures) {
+      return { revoked: false };
+    }
+
+    const decodedPayload = Buffer.from(encoded, 'base64').toString('utf-8');
+    const [, , signature] = decodedPayload.split(':');
+    const removed = signatures.delete(signature);
+
+    if (signatures.size === 0) {
+      this.issuedSignatures.delete(key);
+    }
+
+    if (!removed) {
+      return { revoked: false };
+    }
+
+    this.logger.info({ ticketId: decoded.ticketId, eventId: decoded.eventId }, 'Revoked QR code');
+
+    return { revoked: true, ticketId: decoded.ticketId, eventId: decoded.eventId };
+  }
+
   decode(encoded: string): { ticketId: string; eventId: string; valid: boolean } {
     try {
       const decoded = Buffer.from(encoded, 'base64').toString('utf-8');
