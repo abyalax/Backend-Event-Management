@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { MulterModule } from '@nestjs/platform-express';
 import { CheckInController } from './check-in.controller';
 import { QrModule } from '../qr-code/qr-code.module';
 import { DatabaseModule } from '~/infrastructure/database/database.module';
@@ -6,7 +7,16 @@ import { LoggerModule } from '~/common/logger/logger.module';
 import { checkInProviders } from './check-in.providers';
 
 @Module({
-  imports: [QrModule, DatabaseModule, LoggerModule],
+  imports: [
+    QrModule,
+    DatabaseModule,
+    LoggerModule,
+    MulterModule.register({
+      limits: {
+        fileSize: 10 * 1024 * 1024, // 10MB limit
+      },
+    }),
+  ],
   controllers: [CheckInController],
   providers: checkInProviders,
 })

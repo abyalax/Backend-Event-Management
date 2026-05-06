@@ -1,10 +1,10 @@
-import { Inject, Injectable } from '@nestjs/common';
+import { BadRequestException, Inject, Injectable } from '@nestjs/common';
+import { PinoLogger } from 'nestjs-pino';
 import { Repository } from 'typeorm';
+import { REPOSITORY } from '~/common/constants/database';
 import { QRService } from '~/modules/qr-code/qr-code.service';
 import { GeneratedEventTicket } from '~/modules/tickets/entities/generated-event-ticket.entity';
-import { REPOSITORY } from '~/common/constants/database';
-import { PinoLogger } from 'nestjs-pino';
-import { CheckInResponseDto } from './dto/check-in-response.dto';
+import { CheckInResponse } from './check-in.interface';
 
 @Injectable()
 export class CheckInService {
@@ -15,8 +15,7 @@ export class CheckInService {
     private readonly logger: PinoLogger,
   ) {}
 
-  async validateTicket(qrCode: string): Promise<CheckInResponseDto> {
-    // Decode and verify QR code
+  async validateTicket(qrCode: string): Promise<CheckInResponse> {
     const decoded = this.qrService.decode(qrCode);
 
     if (!decoded.valid) {
@@ -29,7 +28,6 @@ export class CheckInService {
       return { status: 'INVALID', valid: false };
     }
 
-    // Find the generated ticket
     const ticket = await this.generatedTicketRepo.findOne({
       where: { id: decoded.ticketId },
       relations: ['ticket', 'ticket.event'],
@@ -40,13 +38,11 @@ export class CheckInService {
       return { status: 'INVALID', valid: false };
     }
 
-    // Verify event ID matches
     if (ticket.ticket.eventId !== decoded.eventId) {
-      this.logger.warn(`Event ID mismatch - Expected: ${decoded.eventId}, Actual: ${ticket.ticket.eventId}, Ticket: ${decoded.ticketId}`);
+      this.logger.warn(`Event ID mismatch - expected: ${decoded.eventId}, actual: ${ticket.ticket.eventId}, ticket: ${decoded.ticketId}`);
       return { status: 'INVALID', valid: false };
     }
 
-    // Atomic validation - mark as used if not already used
     const result = await this.generatedTicketRepo
       .createQueryBuilder()
       .update(GeneratedEventTicket)
@@ -67,7 +63,7 @@ export class CheckInService {
       };
     }
 
-    this.logger.info(`Ticket validated successfully - Ticket: ${decoded.ticketId}, Event: ${decoded.eventId}`);
+    this.logger.info(`Ticket validated successfully - ticket: ${decoded.ticketId}, event: ${decoded.eventId}`);
 
     return {
       status: 'VALID',
@@ -75,5 +71,34 @@ export class CheckInService {
       ticketId: decoded.ticketId,
       eventId: decoded.eventId,
     };
+  }
+
+  async processPdfTicket(pdfBuffer: Buffer): Promise<CheckInResponse> {
+    try {
+      const qrCode = this.extractQrFromPdfText(pdfBuffer.toString('latin1'));
+
+      if (!qrCode) {
+        this.logger.warn('No QR code marker found in PDF ticket');
+        return { status: 'INVALID', valid: false };
+      }
+
+      return await this.validateTicket(qrCode);
+    } catch (error) {
+      if (error instanceof BadRequestException) throw error;
+
+      this.logger.error({ error: error instanceof Error ? error.message : String(error) }, 'Failed to process PDF ticket');
+      throw new BadRequestException('Invalid PDF file or unable to extract QR code');
+    }
+  }
+
+  private extractQrFromPdfText(text: string): string | null {
+    const markers = [/CHECKIN_QR:([A-Za-z0-9+/=]+)/, /QR_PAYLOAD:([A-Za-z0-9+/=]+)/, /QR_CODE:([A-Za-z0-9+/=]+)/];
+
+    for (const pattern of markers) {
+      const match = text.match(pattern);
+      if (match?.[1]) return match[1].trim();
+    }
+
+    return null;
   }
 }

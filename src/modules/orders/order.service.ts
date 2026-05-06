@@ -505,7 +505,7 @@ export class OrderService {
       });
 
       return new Promise((resolve, reject) => {
-        const doc = new PDFDocument({ margin: 50 });
+        const doc = new PDFDocument({ margin: 50, compress: false });
         const chunks: Buffer[] = [];
 
         doc.on('data', (chunk: Buffer) => chunks.push(chunk));
@@ -523,6 +523,8 @@ export class OrderService {
         doc.moveDown(1);
 
         doc.image(qrBuffer, { width: 150, align: 'center' });
+        doc.moveDown(0.5);
+        doc.fontSize(1).fillColor('white').text(`CHECKIN_QR:${qrCodePayload}`, { align: 'center' });
 
         doc.end();
       });

@@ -55,13 +55,9 @@ export class QRService {
     const [, , signature] = decodedPayload.split(':');
     const removed = signatures.delete(signature);
 
-    if (signatures.size === 0) {
-      this.issuedSignatures.delete(key);
-    }
+    if (signatures.size === 0) this.issuedSignatures.delete(key);
 
-    if (!removed) {
-      return { revoked: false };
-    }
+    if (!removed) return { revoked: false };
 
     this.logger.info({ ticketId: decoded.ticketId, eventId: decoded.eventId }, 'Revoked QR code');
 

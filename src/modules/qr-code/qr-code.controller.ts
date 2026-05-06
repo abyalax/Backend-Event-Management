@@ -2,6 +2,7 @@ import { Body, Controller, HttpCode, HttpStatus, Post } from '@nestjs/common';
 import { QRService } from './qr-code.service';
 import { GenerateQrDto } from './dto/generate-qr.dto';
 import { RevokeQrDto } from './dto/revoke-qr.dto';
+import { TResponse } from '~/common/types/response';
 
 @Controller('qr')
 export class QrCodeController {
@@ -16,10 +17,13 @@ export class QrCodeController {
 
   @Post('revoke')
   @HttpCode(HttpStatus.OK)
-  async revokeQrCode(@Body() revokeQrDto: RevokeQrDto): Promise<{ revoked: boolean }> {
+  revokeQrCode(@Body() revokeQrDto: RevokeQrDto): TResponse<{ revoked: boolean }> {
     const result = this.qrService.revoke(revokeQrDto.qrCode);
     return {
-      revoked: result.revoked,
+      message: 'QR Code revoked successfully',
+      data: {
+        revoked: result.revoked,
+      },
     };
   }
 }
