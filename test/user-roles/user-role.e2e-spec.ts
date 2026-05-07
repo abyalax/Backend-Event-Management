@@ -2,7 +2,7 @@ import { INestApplication } from '@nestjs/common';
 import { TestingModule } from '@nestjs/testing';
 import * as request from 'supertest';
 import { App } from 'supertest/types';
-import { Permission } from '~/modules/auth/entity/permission.entity';
+import { Permission } from '~/modules/auth/entities/permission.entity';
 import { RoleDto } from '~/modules/role-permissions/dto/role-permission.dto';
 import { Role } from '~/modules/role-permissions/entities/role.entity';
 import { cleanupApplication, setupApplication } from '~/test/setup_e2e';

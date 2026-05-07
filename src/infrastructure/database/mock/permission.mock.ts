@@ -1,4 +1,4 @@
-import { Permission } from '~/modules/auth/entity/permission.entity';
+import { Permission } from '~/modules/auth/entities/permission.entity';
 
 export const mockPermissions: Permission[] = [
   // User Management

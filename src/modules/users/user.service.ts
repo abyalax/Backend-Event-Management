@@ -1,6 +1,6 @@
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { REPOSITORY } from '~/common/constants/database';
-import { Permission } from '../auth/entity/permission.entity';
+import { Permission } from '../auth/entities/permission.entity';
 import { Role } from '../role-permissions/entities/role.entity';
 import { User } from './entities/user.entity';
 

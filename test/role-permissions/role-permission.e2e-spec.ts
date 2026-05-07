@@ -5,7 +5,7 @@ import { App } from 'supertest/types';
 import z from 'zod';
 import { validateSchema } from '~/common/helpers/validation';
 import { ADMIN } from '~/infrastructure/database/const/shared-data';
-import { Permission } from '~/modules/auth/entity/permission.entity';
+import { Permission } from '~/modules/auth/entities/permission.entity';
 import { QueryRolePermissionDto } from '~/modules/role-permissions/dto/query-role-permission.dto';
 import { cleanupApplication, setupApplication } from '~/test/setup_e2e';
 import { extractHttpOnlyCookie } from '~/test/utils';

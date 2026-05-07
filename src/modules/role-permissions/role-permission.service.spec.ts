@@ -3,7 +3,7 @@ import { Repository } from 'typeorm';
 import { REPOSITORY } from '~/common/constants/database';
 import { CONFIG_PROVIDER } from '~/common/constants/provider';
 import { mockRedis, mockRepository, mockConfigService, mockCacheService } from '~/test/common/mock';
-import { Permission } from '../auth/entity/permission.entity';
+import { Permission } from '../auth/entities/permission.entity';
 import { RoleService } from './role-permission.service';
 import { Role } from './entities/role.entity';
 import { RoleCacheService } from './role-permission-cache.service';

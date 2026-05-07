@@ -95,7 +95,7 @@ export class CheckInService {
     const markers = [/CHECKIN_QR:([A-Za-z0-9+/=]+)/, /QR_PAYLOAD:([A-Za-z0-9+/=]+)/, /QR_CODE:([A-Za-z0-9+/=]+)/];
 
     for (const pattern of markers) {
-      const match = text.match(pattern);
+      const match = new RegExp(pattern).exec(text);
       if (match?.[1]) return match[1].trim();
     }
 

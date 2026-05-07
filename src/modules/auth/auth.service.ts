@@ -3,19 +3,21 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import { plainToInstance } from 'class-transformer';
 import { UserPayload } from '~/common/types/global';
-import { CONFIG_SERVICE, ConfigService } from '~/infrastructure/config/config.provider';
 import { UserDto } from '../users/dto/user.dto';
 import { UserService } from '../users/user.service';
 import { SignUpDto } from './dto/sign-up.dto';
 import { PermissionsDto } from '../role-permissions/dto/permission.dto';
+import { AuthConfig } from './auth.provider';
+import { CONFIG_PROVIDER } from '~/common/constants/provider';
 
 @Injectable()
 export class AuthService {
   constructor(
     private readonly userService: UserService,
     private readonly jwtService: JwtService,
-    @Inject(CONFIG_SERVICE)
-    private readonly configService: ConfigService,
+
+    @Inject(CONFIG_PROVIDER.AUTH)
+    private readonly config: AuthConfig,
   ) {}
 
   async signUp(signUpDto: SignUpDto): Promise<UserDto> {
@@ -67,8 +69,8 @@ export class AuthService {
     };
 
     const [access_token, refresh_token] = await Promise.all([
-      this.jwtService.signAsync(payload, { expiresIn: '30m', secret: this.configService.get('JWT_SECRET') }),
-      this.jwtService.signAsync(payload, { expiresIn: '1d', secret: this.configService.get('JWT_REFRESH_SECRET') }),
+      this.jwtService.signAsync(payload, { expiresIn: this.config.jwtExpiration, secret: this.config.jwtSecret }),
+      this.jwtService.signAsync(payload, { expiresIn: this.config.jwtRefreshExpiration, secret: this.config.jwtRefreshSecret }),
     ]);
 
     return { access_token, refresh_token, user };
@@ -77,12 +79,20 @@ export class AuthService {
   async refreshToken(refresh_token?: string): Promise<{ access_token: string }> {
     if (refresh_token === undefined) throw new UnauthorizedException();
     const verifyToken = this.jwtService.verify(refresh_token, {
-      secret: this.configService.get('JWT_REFRESH_SECRET'),
+      secret: this.config.jwtRefreshSecret,
     });
     if (!verifyToken) throw new UnauthorizedException();
-    const payload = { email: verifyToken.email, sub: verifyToken.sub };
+
+    const payload = {
+      name: verifyToken.name,
+      email: verifyToken.email,
+      id: verifyToken.id,
+      permissions: verifyToken.permissions || [],
+    };
+
     const access_token = await this.jwtService.signAsync(payload, {
-      expiresIn: '2h',
+      expiresIn: this.config.jwtExpiration,
+      secret: this.config.jwtSecret,
     });
     return {
       access_token,

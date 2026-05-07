@@ -1,5 +1,5 @@
 import { faker } from '@faker-js/faker';
-import { INestApplication } from '@nestjs/common';
+import { HttpStatus, INestApplication } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { TestingModule } from '@nestjs/testing';
 import * as request from 'supertest';
@@ -89,6 +89,68 @@ describe('Module Authentication', () => {
         }),
       }),
     );
+  });
+
+  test('POST /auth/refresh - token refresh flow', async () => {
+    // Step 1: Login
+    const credentials = {
+      email: USER.LOGIN.email,
+      password: USER.LOGIN.password,
+    };
+
+    const loginRes = await request(app.getHttpServer()).post('/auth/login').send(credentials);
+    expect(loginRes.status).toBe(HttpStatus.ACCEPTED);
+    expect(loginRes.headers['set-cookie']).toBeDefined();
+
+    const cookies = loginRes.headers['set-cookie'];
+    const access_token = extractHttpOnlyCookie('access_token', cookies) ?? '';
+    const refresh_token = extractHttpOnlyCookie('refresh_token', cookies) ?? '';
+
+    expect(access_token).toBeDefined();
+    expect(refresh_token).toBeDefined();
+
+    // Step 2: Access protected endpoint immediately - should be accepted
+    const protectedRes = await request(app.getHttpServer()).get('/auth/permissions').set('Cookie', cookies);
+    expect(protectedRes.status).toBe(HttpStatus.OK);
+
+    // Step 3: Refresh token
+    const refreshRes = await request(app.getHttpServer()).post('/auth/refresh').set('Cookie', cookies);
+    expect(refreshRes.status).toBe(HttpStatus.OK);
+    expect(refreshRes.body.message).toBe('getting new access_token');
+
+    // Get new cookies from refresh response
+    const newCookies = refreshRes.headers['set-cookie'];
+    const new_access_token = extractHttpOnlyCookie('access_token', newCookies) ?? '';
+    expect(new_access_token).toBeDefined();
+
+    // Step 4: Access protected endpoint with new token - should be accepted
+    let combinedCookies: string[] = [];
+
+    // Handle original cookies (remove old access_token)
+    if (Array.isArray(cookies)) {
+      combinedCookies = [...cookies.filter((c: string) => !c.startsWith('access_token='))];
+    } else {
+      combinedCookies = [cookies];
+    }
+
+    // Add new cookies (only access_token)
+    if (Array.isArray(newCookies)) {
+      combinedCookies = [...combinedCookies, ...newCookies.filter((c: string) => c.startsWith('access_token='))];
+    } else {
+      combinedCookies = [...combinedCookies, newCookies];
+    }
+
+    const newProtectedRes = await request(app.getHttpServer()).get('/auth/permissions').set('Cookie', combinedCookies);
+
+    expect(newProtectedRes.status).toBe(HttpStatus.OK);
+
+    // Step 5: Try to refresh without cookies - should be rejected
+    const noCookieRefreshRes = await request(app.getHttpServer()).post('/auth/refresh');
+    expect(noCookieRefreshRes.status).toBe(HttpStatus.UNAUTHORIZED);
+
+    // Step 6: Try to refresh with invalid refresh token - should be rejected
+    const invalidRefreshRes = await request(app.getHttpServer()).post('/auth/refresh').set('Cookie', 'refresh_token=invalid_token');
+    expect(invalidRefreshRes.status).toBe(HttpStatus.UNAUTHORIZED);
   });
 
   afterAll(async () => {

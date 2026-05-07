@@ -32,6 +32,17 @@ describe('AuthController', () => {
           useValue: mockConfigService,
         },
         {
+          provide: CONFIG_PROVIDER.AUTH,
+          useFactory: () => ({
+            jwtSecret: 'sdvcsdcsd',
+            jwtRefreshSecret: 'ergervhcnrgvg',
+            jwtPrivateKey: 'sdcsdvv',
+            jwtPublicKey: 'dvjcfehunerf',
+            jwtExpiration: '1m',
+            jwtRefreshExpiration: '2m',
+          }),
+        },
+        {
           provide: PinoLogger,
           useValue: {
             setContext: jest.fn(),

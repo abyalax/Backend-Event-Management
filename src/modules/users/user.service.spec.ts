@@ -4,7 +4,7 @@ import { Repository } from 'typeorm';
 import { REPOSITORY } from '~/common/constants/database';
 import { CONFIG_SERVICE } from '~/infrastructure/config/config.provider';
 import { mockRedis, mockRepository, mockConfigService } from '~/test/common/mock';
-import { Permission } from '../auth/entity/permission.entity';
+import { Permission } from '../auth/entities/permission.entity';
 import { User } from './entities/user.entity';
 import { UserCacheService } from './user-cache.service';
 import { UserService } from './user.service';

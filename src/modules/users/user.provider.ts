@@ -1,7 +1,7 @@
 import type { DataSource } from 'typeorm';
 import { REPOSITORY } from '~/common/constants/database';
 import { PostgreeConnection } from '~/infrastructure/database/database.provider';
-import { Permission } from '../auth/entity/permission.entity';
+import { Permission } from '../auth/entities/permission.entity';
 import { Role } from '../role-permissions/entities/role.entity';
 import { User } from './entities/user.entity';
 import { JwtGuard } from '~/common/guards/jwt.guard';

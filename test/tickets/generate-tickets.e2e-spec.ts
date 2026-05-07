@@ -5,6 +5,8 @@ import { App } from 'supertest/types';
 import { cleanupApplication, setupApplication } from '~/test/setup_e2e';
 import { createOrder, fetchAvailableTicket, payOrderWithWebhook, waitForOrderTickets } from './tickets.utils';
 import { loginAdmin } from '../common/auth';
+import { TResponse } from '~/common/types/response';
+import { CheckInResponse } from '~/modules/check-in/check-in.interface';
 
 describe('Module Ticket Generation', () => {
   let app: INestApplication<App>;
@@ -52,11 +54,12 @@ describe('Module Ticket Generation', () => {
     expect(generatedTicket.isUsed).toBe(false);
 
     const checkInResponse = await request(app.getHttpServer()).post('/check-in').send({ qrCode: qrCodePayload }).expect(200);
+    const checkInResponseBody: TResponse<CheckInResponse> = checkInResponse.body;
 
-    expect(checkInResponse.body.status).toBe('VALID');
-    expect(checkInResponse.body.valid).toBe(true);
-    expect(checkInResponse.body.ticketId).toBe(generatedTicket.id);
-    expect(checkInResponse.body.eventId).toBe(eventId);
+    expect(checkInResponseBody.data?.status).toBe('VALID');
+    expect(checkInResponseBody.data?.valid).toBe(true);
+    expect(checkInResponseBody.data?.ticketId).toBe(generatedTicket.id);
+    expect(checkInResponseBody.data?.eventId).toBe(eventId);
 
     const updatedTicketsResponse = await request(app.getHttpServer())
       .get(`/orders/${orderId}/tickets`)
@@ -67,11 +70,15 @@ describe('Module Ticket Generation', () => {
     expect(updatedTicket.isUsed).toBe(true);
 
     const duplicateCheckInResponse = await request(app.getHttpServer()).post('/check-in').send({ qrCode: qrCodePayload }).expect(200);
-    expect(duplicateCheckInResponse.body.status).toBe('ALREADY_USED');
-    expect(duplicateCheckInResponse.body.valid).toBe(false);
+    const duplicateCheckInResponseBody: TResponse<CheckInResponse> = duplicateCheckInResponse.body;
+
+    expect(duplicateCheckInResponseBody.data?.status).toBe('ALREADY_USED');
+    expect(duplicateCheckInResponseBody.data?.valid).toBe(false);
 
     const invalidCheckInResponse = await request(app.getHttpServer()).post('/check-in').send({ qrCode: 'invalid-qr-code-payload' }).expect(200);
-    expect(invalidCheckInResponse.body.status).toBe('INVALID');
-    expect(invalidCheckInResponse.body.valid).toBe(false);
+    const invalidCheckInResponseBody: TResponse<CheckInResponse> = invalidCheckInResponse.body;
+
+    expect(invalidCheckInResponseBody.data?.status).toBe('INVALID');
+    expect(invalidCheckInResponseBody.data?.valid).toBe(false);
   });
 });

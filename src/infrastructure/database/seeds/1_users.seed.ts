@@ -1,7 +1,7 @@
 import type { DataSource } from 'typeorm';
 import type { Seeder } from 'typeorm-extension';
 
-import { Permission } from '~/modules/auth/entity/permission.entity';
+import { Permission } from '~/modules/auth/entities/permission.entity';
 import { Role } from '~/modules/role-permissions/entities/role.entity';
 import { RolePermission } from '~/modules/role-permissions/entities/role-permissions.entity';
 import { User } from '~/modules/users/entities/user.entity';
