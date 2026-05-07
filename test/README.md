@@ -24,10 +24,16 @@ Sedangkan Unit dan Integration Test menggunakan format ( ada didalam folder modu
 <domain>.<service/controller>.spec.ts
 
 End To End Test
-Boilerplate untuk template testing
+Boilerplate untuk template testing, gunakan template yang ada di `test/feature/template.e2e-spec.ts`
 
 ```ts
-describe('Module Product', () => {
+import { INestApplication } from '@nestjs/common';
+import { TestingModule } from '@nestjs/testing';
+import { App } from 'supertest/types';
+import { cleanupApplication, setupApplication } from '~/test/setup_e2e';
+import { loginAdmin } from '../common/auth';
+
+describe('Feature/Module Name', () => {
   let app: INestApplication<App>;
   let moduleFixture: TestingModule;
 
@@ -35,71 +41,17 @@ describe('Module Product', () => {
     [app, moduleFixture] = await setupApplication();
   });
 
-  describe('Response Success', () => {
+  describe('Flow Feature', () => {
     let access_token: string;
-    let refresh_token: string;
-    let ids: number[] = [];
-    let newProduct: ProductDto | undefined = undefined;
 
-    beforeEach(async () => {
-      const credentials = {
-        email: USER.email,
-        password: USER.password,
-      };
-      const res = await request(app.getHttpServer()).post('/auth/login').send(credentials);
+    beforeAll(async () => {
+      const session = await loginAdmin(app);
+      access_token = session.accessToken;
 
-      expect(res.headers['set-cookie']).toBeDefined();
-      const cookies = res.headers['set-cookie'];
-      access_token = extractHttpOnlyCookie('access_token', cookies);
-      refresh_token = extractHttpOnlyCookie('refresh_token', cookies);
-
-      expect(refresh_token).toBeDefined();
       expect(access_token).toBeDefined();
-
-      await request(app.getHttpServer())
-        .get('/products/ids')
-        .set('Cookie', `access_token=s%3A${encodeURIComponent(access_token)}`)
-        .expect(200)
-        .expect((res) => {
-          ids = res.body.data;
-        });
     });
 
-    /**
-     * Di block ini lah test case di tulis
-     * contoh
-     */
-    test('GET /transaction + QueryTransactionDto', async () => {
-      const query: QueryTransactionDto = { page: 1, limit: 10, min_total_price: 15000, max_total_price: 100000 };
-      const res = await request(app.getHttpServer())
-        .get('/transaction')
-        .query(query)
-        .set('Cookie', `access_token=s%3A${encodeURIComponent(access_token)}`)
-        .expect(200);
-      const data = await res.body.data.data;
-      const transaction = data[0];
-
-      // Validasi tipe data menggunakan function helper base class validator, lihat di controller untuk tahu tipe dto apa yang
-      // dihasilkan oleh controller endpoint yang di test
-      const result = await validateDto(TransactionDto, transaction);
-      expect(result).toBeInstanceOf(TransactionDto);
-    });
-
-    // Case lainnya jika controller / endpoint tidak di validate dengan dto
-    test('GET /transaction/sales + QueryReportSales', async () => {
-      const query: QueryReportSales = { year: 2024, month: 5 };
-      const res = await request(app.getHttpServer())
-        .get('/transaction/sales')
-        .query(query)
-        .set('Cookie', `access_token=s%3A${encodeURIComponent(access_token)}`)
-        .expect(200);
-      const data = await res.body.data;
-
-      // Validate dengan fungsi validateSchema, cari tahu dari tipe return controller, schema dapat di temukan di setiap module
-      //  format file lokasi schema menggunakan pattern <domain>.schema.ts
-      const validate = validateSchema(ReportSalesSchema, data);
-      expect(validate).toBeDefined();
-    });
+    test('METHOD /ENDPOINT - Describe test case', async () => {});
   });
 
   afterAll(async () => {
@@ -107,3 +59,5 @@ describe('Module Product', () => {
   });
 });
 ```
+
+_Last Updated on 18.10 7 May 2026_
