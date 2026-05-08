@@ -21,23 +21,22 @@ export class JwtGuard implements CanActivate {
       const verifyToken = await this.jwtService.verifyAsync(token, {
         secret: this.configService.get('JWT_SECRET'),
       });
-      console.log({ verifyToken });
-
-      if (verifyToken) {
-        request.user = {
-          name: verifyToken.name,
-          email: verifyToken.email,
-          id: verifyToken.id,
-          permissions: verifyToken?.permissions ?? [],
-        };
-        return true;
-      }
-      throw new UnauthorizedException();
+      request.user = {
+        name: verifyToken.name,
+        email: verifyToken.email,
+        id: verifyToken.id,
+        permissions: verifyToken?.permissions ?? [],
+      };
+      return true;
     } catch (error) {
       if (error.name === 'TokenExpiredError') {
-        throw new UnauthorizedException('Token expired');
+        throw new UnauthorizedException(EMessage.TOKEN_EXPIRED);
+      } else if (error.name === 'JsonWebTokenError') {
+        throw new UnauthorizedException(EMessage.TOKEN_INVALID);
+      } else if (error.name === 'NotBeforeError') {
+        throw new UnauthorizedException(EMessage.TOKEN_NOT_BEFORE);
       } else {
-        return false;
+        throw new UnauthorizedException(EMessage.TOKEN_ERROR);
       }
     }
   }
