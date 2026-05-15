@@ -1,59 +1,42 @@
 # Repository Guidelines
 
-## Project Context
-This repository is the backend for an event management system built with NestJS.
+## Project Structure & Module Organization
+This is a NestJS backend. Application code lives in `src/`, with feature modules under `src/modules/` and shared code under `src/infrastructure/` and `src/common/`. Typical module files use `*.module.ts`, `*.controller.ts`, `*.service.ts`, `*.provider.ts`, `dto/`, and `entities/`.
 
-## Tech Stack
-- TypeScript
-- Node.js 20+
-- NestJS 11
-- PostgreSQL
-- TypeORM
-- Redis
-- BullMQ
-- MinIO
+Tests are split between colocated specs in `src/**` and E2E specs in `test/`. E2E helpers live in `test/common/`, `test/utils/`, and `test/setup_e2e.ts`. Migrations are in `migrations/`, seeds in `src/infrastructure/database/seeds/`, assets in `assets/`, and Bruno API collections in `bruno/Event Management API/`.
 
-## Product Scope
-The system covers:
-- Authentication with JWT
-- Role-based access control
-- User management
-- Event management
-- Order and ticket handling
-- QR code and PDF ticket generation
-- Notifications and background jobs
-- Admin dashboard reporting
+## Documentation & Domain Context
+Use `docs/business_model.md` for domain rules, actors, entities, and system responsibilities before changing events, tickets, orders, payments, notifications, RBAC, queues, storage, or tickets. Use `docs/order_ticket_purchase_flow.md` for the user purchase journey: discovery, `POST /orders/buy-ticket`, payment state, order polling, and ticket retrieval.
 
-## Core Actors
-- `ADMIN`: manages master data such as events, orders, tickets, and users.
-- `USER`: browses events and purchases tickets.
+When behavior changes, update the matching `docs/` file and affected Bruno examples. Document observable behavior, business rules, endpoint order, environment settings such as `PAYMENT_PROVIDER=mock`, and important response fields.
 
-## RBAC Rules
-- Use permission keys in the form `resource.action` or `resource:action` depending on the module convention already in use.
-- Permissions must be resolved through roles, not assigned directly to users.
-- Keep role and permission mappings explicit and many-to-many.
-- Avoid hardcoded role checks when a permission check is the correct abstraction.
+## Build, Test, and Development Commands
+Use `pnpm` (`packageManager` is `pnpm@10.14.0`).
 
-## Entity Rules
-- Every entity must include `createdAt`, `updatedAt`, and `deletedAt` audit fields.
-- Use UUIDs for core domain entities such as `User`, `Order`, and `Event`.
-- Use auto-increment integers for supporting entities such as `Role`, `Permission`, and `Category`.
-- Prefer `import type` for relation typing to avoid circular dependencies.
-- Define column names explicitly and use snake_case in the database.
-- Define join tables explicitly for many-to-many relations.
-- Use `nullable` explicitly and keep nullability clear in the TypeScript type.
-- Index foreign keys and high-traffic lookup fields, but avoid over-indexing.
+- `pnpm dev`: run Nest in watch mode.
+- `pnpm build`: compile into `dist/`.
+- `pnpm start:prod`: run the compiled app from `dist/main`.
+- `pnpm lint` / `pnpm format`: run ESLint and Prettier.
+- `pnpm test`: run `.spec.ts` tests with Jest.
+- `pnpm test:e2e`: run `.e2e-spec.ts` tests serially.
+- `pnpm test:cov`: run tests with coverage.
+- `pnpm migrate:generate|run|revert`: manage TypeORM migrations.
+- `pnpm seed:run`: run seeds.
 
-## Documentation References
-- `docs/context.md` defines the project objective, feature scope, and external integrations.
-- `docs/entity.md` defines TypeORM entity and indexing rules.
-- `docs/rbac.md` defines the authorization model and permission flow.
-- `docs/role-permissions.md` defines the initial seed roles and canonical permission list.
-- `docs/guide.md` contains implementation notes and framework expectations.
-- `docs/README.md` describes the API documentation collection and where to find request examples.
+Use `docker-compose.yaml` when Postgres, Redis, MinIO, or mail tooling is needed.
 
-## Working Rules
-- Follow the existing NestJS module structure.
-- Keep shared logic in `src/common/` or `src/infrastructure/` instead of duplicating it.
-- Add tests for new behavior and regressions.
-- Prefer explicit, predictable schema and authorization design over shortcuts.
+## Coding Style & Naming Conventions
+Use TypeScript with 2-space indentation, UTF-8, LF line endings, and final newlines. Prettier enforces single quotes, trailing commas, `printWidth: 150`, and parenthesized arrow parameters. ESLint uses type-checked `typescript-eslint` rules; avoid unsafe arguments and keep `any` exceptional.
+
+Name classes by NestJS role (`UserService`, `PaymentController`) and keep file names lowercase domain style, for example `event-category.service.ts`.
+
+## Testing Guidelines
+Unit and integration tests use `<domain>.<service|controller>.spec.ts` inside `src/modules/**`. E2E tests use `test/<domain>/<domain>.e2e-spec.ts`. New E2E flows should follow `test/feature/template.e2e-spec.ts`.
+
+Run targeted tests during development, then `pnpm test` or `pnpm test:e2e` before a PR.
+
+## Commit & Pull Request Guidelines
+Recent history uses Conventional Commit prefixes such as `fix:`, `feat:`, and `chore:`. Keep subjects imperative and scoped to one change, for example `fix: refresh token response structure`.
+
+PRs should include a summary, linked issue or task, test evidence, migration/seed notes if applicable, and API screenshots or Bruno examples for endpoint changes. Never commit `.env`; update `.env.example` when configuration changes.
+*Last Update at 2026-05-15 19:55:20*
