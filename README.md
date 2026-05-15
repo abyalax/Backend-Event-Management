@@ -88,6 +88,91 @@ Test coverage
 pnpm run test:cov
 ```
 
+## Xendit Webhook Setup with ngrok
+
+Use ngrok when you want Xendit to reach your local payment webhook endpoints during development.
+
+### 1. Run the backend locally
+
+Start the app on your local port, for example:
+
+```bash
+pnpm run dev
+```
+
+By default in this project, the API is available on `http://localhost:4000` when running locally.
+
+### 2. Expose the local server with ngrok
+
+Open a second terminal and run:
+
+```bash
+ngrok http 4000
+```
+
+Example successful output:
+
+```bash
+Session Status                online
+Account                       abyalaxx@gmail.com (Plan: Free)
+Version                       3.39.1-msix-stable
+Region                        Asia Pacific (ap)
+Latency                       25ms
+Web Interface                 http://127.0.0.1:4040
+Forwarding                    https://coactive-gayla-mischievous.ngrok-free.dev -> http://localhost:4000
+
+Connections                   ttl     opn     rt1     rt5     p50     p90
+                              18      0       0.00    0.00    6.02    6.05
+
+HTTP Requests
+-------------
+
+10:58:00.197 +07 POST /payments/webhook/ewallet         200 OK
+10:57:57.065 +07 POST /payments/webhook/ewallet         200 OK
+10:57:52.734 +07 POST /payments/webhook/qris            200 OK
+```
+
+Keep the forwarding URL from ngrok. This is the public base URL you register in Xendit.
+
+### 3. Configure Xendit callback URLs
+
+Point Xendit webhook callbacks to your ngrok URL plus the payment webhook route:
+
+- `https://<your-ngrok-domain>/payments/webhook/invoice`
+- `https://<your-ngrok-domain>/payments/webhook/virtual-account`
+- `https://<your-ngrok-domain>/payments/webhook/qris`
+- `https://<your-ngrok-domain>/payments/webhook/ewallet`
+
+If your ngrok domain changes, update the callback URL in Xendit before testing again.
+
+### 4. Set the payment environment variables
+
+Make sure these values are present in your `.env` file:
+
+```bash
+PAYMENT_PROVIDER=xendit
+XENDIT_SECRET_KEY=your_xendit_secret_key
+XENDIT_CALLBACK_TOKEN=your_webhook_callback_token
+```
+
+For local development, keep other dependencies such as database, Redis, and mail services running as needed.
+
+### 5. Test the webhook flow
+
+1. Create a payment through the API or Bruno collection.
+2. Trigger the payment in Xendit.
+3. Watch the ngrok request log to confirm Xendit reaches your local app.
+4. Verify the transaction status updates in the application and in the payment query endpoint.
+
+Useful endpoints for verification:
+
+- `POST /payments/invoice`
+- `POST /payments/virtual-account`
+- `POST /payments/qris`
+- `POST /payments/ewallet`
+- `GET /payments/transactions/:id`
+- `GET /payments/transactions/external/:externalId`
+
 ## Nest Script
 
 Generate Full Module CRUD Entity
