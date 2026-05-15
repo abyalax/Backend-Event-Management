@@ -182,4 +182,4 @@ This project is a comprehensive event management platform built with NestJS that
 - Expired orders automatically release locked quotas
 - All payment processing must be validated through webhooks
 - Generated tickets include QR codes and PDF downloads
-*Last Update at 2026-05-15 19:55:20*
+_Last Update at 2026-05-15 19:55:20_

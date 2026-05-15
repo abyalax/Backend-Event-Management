@@ -39,4 +39,4 @@ Run targeted tests during development, then `pnpm test` or `pnpm test:e2e` befor
 Recent history uses Conventional Commit prefixes such as `fix:`, `feat:`, and `chore:`. Keep subjects imperative and scoped to one change, for example `fix: refresh token response structure`.
 
 PRs should include a summary, linked issue or task, test evidence, migration/seed notes if applicable, and API screenshots or Bruno examples for endpoint changes. Never commit `.env`; update `.env.example` when configuration changes.
-*Last Update at 2026-05-15 19:55:20*
+_Last Update at 2026-05-15 19:55:20_

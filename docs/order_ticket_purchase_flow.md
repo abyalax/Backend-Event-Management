@@ -300,4 +300,4 @@ Setelah step 5 sampai 8, user bisa melihat:
 
 - Kalau payment provider masih `mock`, order akan lebih cepat sampai ke state siap lihat.
 - Kalau nanti pindah ke Xendit, step webhook/payment callback perlu ikut dijalankan sebelum `GET /orders/:id/tickets` bisa berhasil.
-*Last Update at 2026-05-15 19:55:20*
+_Last Update at 2026-05-15 19:55:20_
