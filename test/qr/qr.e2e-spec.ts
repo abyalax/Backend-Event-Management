@@ -13,7 +13,7 @@ type GeneratedTicket = {
   isUsed: boolean;
 };
 
-const buildPdfTicketBuffer = async (qrCodePayload: string): Promise<Buffer> => {
+const buildPdfTicketBuffer = (qrCodePayload: string): Buffer => {
   return Buffer.from(
     `%PDF-1.4
 % Event Ticket
@@ -85,7 +85,7 @@ describe('Module QR Check-in', () => {
 
   test('processes PDF ticket upload and rejects reused PDF', async () => {
     const { generatedTicket } = await createPaidGeneratedTicket();
-    const pdfBuffer = await buildPdfTicketBuffer(generatedTicket.qrCodeUrl);
+    const pdfBuffer = buildPdfTicketBuffer(generatedTicket.qrCodeUrl);
 
     const uploadResponse = await request(app.getHttpServer())
       .post('/check-in/pdf-upload')

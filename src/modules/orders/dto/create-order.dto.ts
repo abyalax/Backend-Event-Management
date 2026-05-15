@@ -1,5 +1,6 @@
 import { Exclude, Expose, Type } from 'class-transformer';
-import { IsArray, IsOptional, IsString, IsUUID, MaxLength, ValidateNested, ArrayMinSize, IsInt, Min } from 'class-validator';
+import { IsArray, IsEnum, IsInt, IsOptional, IsString, IsUUID, MaxLength, ValidateNested, ArrayMinSize, Min } from 'class-validator';
+import { EwalletType, PaymentMethod } from '~/modules/payments/payment.enum';
 
 @Exclude()
 export class CreateOrderItemDto {
@@ -45,4 +46,14 @@ export class CreateOrderDto {
   @IsString()
   @MaxLength(255)
   failureRedirectUrl?: string;
+
+  @Expose()
+  @IsOptional()
+  @IsEnum(PaymentMethod)
+  paymentMethod?: PaymentMethod;
+
+  @Expose()
+  @IsOptional()
+  @IsEnum(EwalletType)
+  ewalletType?: EwalletType;
 }

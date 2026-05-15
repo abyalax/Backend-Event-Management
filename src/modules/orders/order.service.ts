@@ -19,7 +19,7 @@ import { OrderStatusResponseDto } from './dto/order-status-response.dto';
 import { Order } from './entities/order.entity';
 import { OrderItem } from './entities/order-item.entity';
 import { ORDER_PAGINATION_CONFIG } from './order-pagination.config';
-import { PaymentStatus } from '~/modules/payments/payment.enum';
+import { EwalletType, PaymentMethod, PaymentStatus } from '~/modules/payments/payment.enum';
 import type { Transaction } from '~/modules/payments/entities/transaction.entity';
 import { QueryUserOrdersDto } from './dto/query-user-orders.dto';
 import * as PDFDocument from 'pdfkit';
@@ -146,14 +146,7 @@ export class OrderService {
     if (!createdOrder) throw new Error('Failed to create order');
 
     try {
-      const payment = await this.paymentService.createInvoice({
-        externalId: createdOrder.id,
-        amount: createdOrder.totalAmount,
-        payerEmail: userEmail,
-        description: dto.description ?? `Ticket order ${createdOrder.id}`,
-        successRedirectUrl: dto.successRedirectUrl,
-        failureRedirectUrl: dto.failureRedirectUrl,
-      });
+      const payment = await this.createPaymentForOrder(createdOrder, dto, userEmail);
 
       if ([PaymentStatus.PAID, PaymentStatus.SETTLED].includes(payment.status)) {
         await this.handleSuccessfulPayment(createdOrder.id);
@@ -168,6 +161,25 @@ export class OrderService {
 
     const order = await this.findOrderById(createdOrder.id, userId);
     return this.toOrderResponse(order);
+  }
+
+  async getOrderPaymentQris(id: string, userId: string): Promise<{ orderId: string; qrCodeDataUrl: string; qrString: string }> {
+    const order = await this.findOrderById(id, userId);
+    const payment = await this.getPaymentByOrderId(order.id);
+
+    if (payment?.paymentMethod !== PaymentMethod.QRIS || !payment.paymentUrl)
+      throw new BadRequestException('QRIS payment is not available for this order');
+
+    const qrCodeDataUrl = await QRCode.toDataURL(payment.paymentUrl, {
+      margin: 1,
+      width: 280,
+    });
+
+    return {
+      orderId: order.id,
+      qrCodeDataUrl,
+      qrString: payment.paymentUrl,
+    };
   }
 
   async getOrderById(id: string, userId: string): Promise<OrderResponseDto> {
@@ -230,7 +242,7 @@ export class OrderService {
     const ordersWithPayment = await Promise.all(
       paginatedOrders.data.map(async (order) => {
         const payment = await this.getPaymentByOrderId(order.id);
-        return this.toOrderResponse(order as LoadedOrder, payment);
+        return this.toOrderResponse(order, payment);
       }),
     );
 
@@ -255,7 +267,7 @@ export class OrderService {
       throw new ForbiddenException('You are not allowed to access this order');
     }
 
-    return order as LoadedOrder;
+    return order;
   }
 
   async findExpiredPendingOrders(): Promise<Order[]> {
@@ -455,6 +467,46 @@ export class OrderService {
     return this.paymentService.getTransactionByExternalId(orderId);
   }
 
+  private async createPaymentForOrder(order: Order, dto: CreateOrderDto, userEmail: string): Promise<Transaction> {
+    const paymentMethod = dto.paymentMethod ?? PaymentMethod.INVOICE;
+    const description = dto.description ?? `Ticket order ${order.id}`;
+    const successRedirectUrl = this.withOrderIdQuery(dto.successRedirectUrl, order.id);
+    const failureRedirectUrl = this.withOrderIdQuery(dto.failureRedirectUrl, order.id);
+
+    switch (paymentMethod) {
+      case PaymentMethod.INVOICE:
+        return this.paymentService.createInvoice({
+          externalId: order.id,
+          amount: order.totalAmount,
+          payerEmail: userEmail,
+          description,
+          successRedirectUrl,
+          failureRedirectUrl,
+        });
+      case PaymentMethod.QRIS:
+        return this.paymentService.createQris({
+          referenceId: order.id,
+          amount: order.totalAmount,
+          currency: 'IDR',
+        });
+      case PaymentMethod.EWALLET:
+        return this.paymentService.createEwallet({
+          referenceId: order.id,
+          channelCode: dto.ewalletType ?? EwalletType.SHOPEEPAY,
+          amount: order.totalAmount,
+          currency: 'IDR',
+          channelProperties: {
+            successReturnUrl: successRedirectUrl,
+            failureReturnUrl: failureRedirectUrl,
+            cancelReturnUrl: failureRedirectUrl,
+            pendingReturnUrl: successRedirectUrl,
+          },
+        });
+      default:
+        throw new BadRequestException(`Unsupported payment method: ${paymentMethod}`);
+    }
+  }
+
   private async cancelOrderInternal(orderId: string, dueToPaymentFailure: boolean): Promise<void> {
     const order = await this.findOrderById(orderId);
     if (order.status !== OrderStatus.PENDING) return;
@@ -465,6 +517,19 @@ export class OrderService {
 
     if (dueToPaymentFailure) {
       this.logger.warn({ orderId }, 'Order cancelled because payment creation failed');
+    }
+  }
+
+  private withOrderIdQuery(redirectUrl: string | undefined, orderId: string): string | undefined {
+    if (!redirectUrl) return undefined;
+
+    try {
+      const url = new URL(redirectUrl);
+      url.searchParams.set('order_id', orderId);
+      return url.toString();
+    } catch {
+      const separator = redirectUrl.includes('?') ? '&' : '?';
+      return `${redirectUrl}${separator}order_id=${encodeURIComponent(orderId)}`;
     }
   }
 

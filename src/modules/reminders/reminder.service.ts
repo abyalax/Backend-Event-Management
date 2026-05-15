@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
 import { Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { Repository, LessThan } from 'typeorm';
 import { Cron, CronExpression } from '@nestjs/schedule';
@@ -216,15 +215,17 @@ export class ReminderService {
       if (retryCount <= reminder.maxRetries) {
         // Schedule retry with exponential backoff
         const retryDelay = Math.pow(2, retryCount) * 60000; // 1min, 2min, 4min
+        const nextRetryAt = new Date(ClockProvider.now().getTime() + retryDelay);
 
         await this.reminderRepository.update(reminder.id, {
           retryCount,
           errorMessage,
+          scheduledAt: nextRetryAt,
         });
 
         await this.queueService.addJob(QUEUE.REMINDERS, 'send-reminder', { reminderId: reminder.id }, { delay: retryDelay });
 
-        this.logger.info(`Scheduled retry ${retryCount}/${reminder.maxRetries} for reminder ${reminderId}`);
+        this.logger.info(`Scheduled retry ${retryCount}/${reminder.maxRetries} for reminder ${reminderId} at ${nextRetryAt.toISOString()}`);
       } else {
         // Mark as failed
         await this.reminderRepository.update(reminder.id, {

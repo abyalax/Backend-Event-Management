@@ -3,22 +3,29 @@ import { LessThan, Repository } from 'typeorm';
 import { InjectQueue } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
 import { PinoLogger } from 'nestjs-pino';
-import { randomUUID } from 'crypto';
+import { randomUUID } from 'node:crypto';
 import Xendit from 'xendit-node';
-import type { XenditInvoiceApi, XenditPaymentMethodApi, XenditPaymentMethodResponse } from './interfaces/xendit-types.interface';
+import type {
+  XenditInvoiceApi,
+  XenditPaymentMethodApi,
+  XenditPaymentMethodResponse,
+  XenditPaymentRequestRequest,
+  XenditPaymentRequestResponse,
+} from './interfaces/xendit-types.interface';
 import { Transaction } from './entities/transaction.entity';
 import { CreateInvoiceDto } from './dto/create-invoice.dto';
 import { CreateVirtualAccountDto } from './dto/create-virtual-account.dto';
 import { CreateQrisDto } from './dto/create-qris.dto';
 import { CreateEwalletDto } from './dto/create-ewallet.dto';
 import { EwalletType, PaymentMethod, PaymentStatus, VirtualAccountBank, WebhookEventType } from './payment.enum';
+import { PaymentMethodReusability, PaymentMethodType, VirtualAccountChannelCode } from 'xendit-node/payment_method/models';
 import {
-  EWalletChannelCode,
-  PaymentMethodReusability,
-  PaymentMethodType,
-  QRCodeChannelCode,
-  VirtualAccountChannelCode,
-} from 'xendit-node/payment_method/models';
+  EWalletChannelCode as PaymentRequestEWalletChannelCode,
+  PaymentMethodReusability as PaymentRequestMethodReusability,
+  PaymentMethodType as PaymentRequestMethodType,
+  PaymentRequestCurrency,
+  QRCodeChannelCode as PaymentRequestQRCodeChannelCode,
+} from 'xendit-node/payment_request/models';
 import { WebhookJobData } from './interfaces/xendit-webhook.interface';
 import { XenditInvoiceWebhookDto } from './dto/xendit-invoice-webhook.dto';
 import { XenditVirtualAccountWebhookDto } from './dto/xendit-virtual-account-webhook.dto';
@@ -33,6 +40,7 @@ import { DashboardCacheService } from '~/modules/dashboard/dashboard-cache.servi
 export class PaymentService {
   private readonly invoice?: XenditInvoiceApi;
   private readonly paymentMethod?: XenditPaymentMethodApi;
+  private readonly paymentRequest?: XenditPaymentRequestApiLike;
   private readonly xenditSecretKey: string;
   private readonly paymentProvider: 'mock' | 'xendit';
 
@@ -56,6 +64,7 @@ export class PaymentService {
       const xendit = new Xendit({ secretKey: this.xenditSecretKey });
       this.invoice = xendit.Invoice;
       this.paymentMethod = xendit.PaymentMethod;
+      this.paymentRequest = xendit.PaymentRequest;
     }
   }
 
@@ -149,28 +158,36 @@ export class PaymentService {
       return this.transactionRepository.save(transaction);
     }
 
-    const xenditQr = await this.getPaymentMethodClient().createPaymentMethod({
+    const xenditQr: XenditPaymentRequestResponse = await this.getPaymentRequestClient().createPaymentRequest({
       data: {
-        type: PaymentMethodType.QrCode,
-        reusability: PaymentMethodReusability.OneTimeUse,
         referenceId: dto.referenceId,
-        qrCode: {
-          channelCode: QRCodeChannelCode.Qris,
-          currency: dto.currency ?? 'IDR',
-          amount: dto.amount,
+        amount: dto.amount,
+        currency: (dto.currency ?? 'IDR') as PaymentRequestCurrency,
+        paymentMethod: {
+          type: PaymentRequestMethodType.QrCode,
+          reusability: PaymentRequestMethodReusability.OneTimeUse,
+          referenceId: dto.referenceId,
+          qrCode: {
+            channelCode: PaymentRequestQRCodeChannelCode.Qris,
+          },
+        },
+        metadata: {
+          externalId: dto.referenceId,
         },
       },
     });
 
+    const qrString = this.extractPaymentRequestQrString(xenditQr);
+
     const transaction = this.transactionRepository.create({
       externalId: dto.referenceId,
-      xenditId: xenditQr.id,
+      xenditId: xenditQr.paymentMethod?.id ?? xenditQr.id,
       paymentMethod: PaymentMethod.QRIS,
       status: PaymentStatus.PENDING,
       amount: dto.amount,
       currency: dto.currency ?? 'IDR',
-      paymentUrl: xenditQr.qrCode?.channelProperties?.qrString,
-      expiresAt: xenditQr.qrCode?.channelProperties?.expiresAt,
+      paymentUrl: qrString,
+      expiresAt: xenditQr.paymentMethod?.qrCode?.channelProperties?.expiresAt,
       xenditResponse: { ...xenditQr },
     });
 
@@ -198,32 +215,39 @@ export class PaymentService {
       return this.transactionRepository.save(transaction);
     }
 
-    const xenditEwallet = await this.getPaymentMethodClient().createPaymentMethod({
+    const xenditEwallet: XenditPaymentRequestResponse = await this.getPaymentRequestClient().createPaymentRequest({
       data: {
-        type: PaymentMethodType.Ewallet,
-        reusability: PaymentMethodReusability.OneTimeUse,
         referenceId: dto.referenceId,
-        ewallet: {
-          channelCode: this.mapEwalletChannel(dto.channelCode),
-          channelProperties: {
-            successReturnUrl: dto.channelProperties?.successReturnUrl,
-            failureReturnUrl: dto.channelProperties?.failureReturnUrl,
-            cancelReturnUrl: dto.channelProperties?.cancelReturnUrl,
-            mobileNumber: dto.channelProperties?.mobileNumber,
-            cashtag: dto.channelProperties?.cashtag,
+        amount: dto.amount,
+        currency: dto.currency as PaymentRequestCurrency,
+        paymentMethod: {
+          type: PaymentRequestMethodType.Ewallet,
+          reusability: PaymentRequestMethodReusability.OneTimeUse,
+          referenceId: dto.referenceId,
+          ewallet: {
+            channelCode: this.mapPaymentRequestEwalletChannel(dto.channelCode),
           },
+        },
+        channelProperties: {
+          successReturnUrl: dto.channelProperties?.successReturnUrl,
+          failureReturnUrl: dto.channelProperties?.failureReturnUrl,
+          cancelReturnUrl: dto.channelProperties?.cancelReturnUrl,
+          pendingReturnUrl: dto.channelProperties?.pendingReturnUrl,
+        },
+        metadata: {
+          externalId: dto.referenceId,
         },
       },
     });
 
     const transaction = this.transactionRepository.create({
       externalId: dto.referenceId,
-      xenditId: xenditEwallet.id,
+      xenditId: xenditEwallet.paymentMethod?.id ?? xenditEwallet.id,
       paymentMethod: PaymentMethod.EWALLET,
       status: PaymentStatus.PENDING,
       amount: dto.amount,
       currency: dto.currency,
-      paymentUrl: this.extractPaymentUrl(xenditEwallet),
+      paymentUrl: this.extractPaymentRequestUrl(xenditEwallet),
       xenditResponse: { ...xenditEwallet },
     });
 
@@ -260,18 +284,19 @@ export class PaymentService {
     );
   }
 
-  async processInvoiceWebhook(payload: XenditInvoiceWebhookDto): Promise<void> {
-    const transaction = await this.transactionRepository.findOne({
-      where: { externalId: payload.external_id },
-    });
+  async processInvoiceWebhook(payload: XenditInvoiceWebhookDto): Promise<Transaction | null> {
+    const transaction = await this.findInvoiceWebhookTransaction(payload);
     if (!transaction) {
-      this.logger.warn({ externalId: payload.external_id }, 'Transaction not found for invoice webhook');
-      return;
+      this.logger.warn({ externalId: payload.external_id, xenditId: payload.id }, 'Transaction not found for invoice webhook');
+      return null;
     }
 
     if (transaction.status !== PaymentStatus.PENDING) {
-      this.logger.info({ externalId: payload.external_id, status: transaction.status }, 'Skipping idempotent invoice webhook');
-      return;
+      this.logger.info(
+        { transactionId: transaction.id, externalId: transaction.externalId, xenditId: transaction.xenditId, status: transaction.status },
+        'Skipping idempotent invoice webhook',
+      );
+      return transaction;
     }
 
     const statusMap: Record<string, PaymentStatus> = {
@@ -279,6 +304,8 @@ export class PaymentService {
       EXPIRED: PaymentStatus.EXPIRED,
       SETTLED: PaymentStatus.SETTLED,
     };
+
+    if (['PAID', 'SETTLED'].includes(payload.status)) this.validateInvoiceWebhookAmount(transaction, payload);
 
     transaction.status = statusMap[payload.status] ?? transaction.status;
     if (payload.paid_at) transaction.paidAt = new Date(payload.paid_at);
@@ -290,23 +317,29 @@ export class PaymentService {
       await this.dashboardCacheService.invalidate();
     }
 
-    this.logger.info({ transactionId: transaction.id, status: payload.status }, 'Invoice webhook processed');
+    this.logger.info(
+      { transactionId: transaction.id, externalId: transaction.externalId, xenditId: transaction.xenditId, status: payload.status },
+      'Invoice webhook processed',
+    );
+
+    return transaction;
   }
 
-  async processVirtualAccountWebhook(payload: XenditVirtualAccountWebhookDto): Promise<void> {
+  async processVirtualAccountWebhook(payload: XenditVirtualAccountWebhookDto): Promise<Transaction | null> {
     const transaction = await this.transactionRepository.findOne({
       where: { externalId: payload.external_id },
     });
     if (!transaction) {
       this.logger.warn({ externalId: payload.external_id }, 'Transaction not found for VA webhook');
-      return;
+      return null;
     }
 
     if (transaction.status !== PaymentStatus.PENDING) {
       this.logger.info({ externalId: payload.external_id }, 'Skipping idempotent VA webhook');
-      return;
+      return transaction;
     }
 
+    this.validatePaymentAmount(transaction, payload.amount, 'VA webhook amount mismatch');
     transaction.status = PaymentStatus.PAID;
     transaction.paidAt = new Date(payload.transaction_timestamp);
 
@@ -318,52 +351,57 @@ export class PaymentService {
     }
 
     this.logger.info({ transactionId: transaction.id }, 'VA webhook processed');
+    return transaction;
   }
 
-  async processQrisWebhook(payload: XenditQrisWebhookDto): Promise<void> {
+  async processQrisWebhook(payload: XenditQrisWebhookDto): Promise<Transaction | null> {
+    const data = payload.data;
     const transaction = await this.transactionRepository.findOne({
-      where: { externalId: payload.reference_id },
+      where: [{ externalId: data.reference_id }, { xenditId: data.qr_id ?? data.id }],
     });
     if (!transaction) {
-      this.logger.warn({ referenceId: payload.reference_id }, 'Transaction not found for QRIS webhook');
-      return;
+      this.logger.warn({ referenceId: data.reference_id, xenditId: data.qr_id ?? data.id }, 'Transaction not found for QRIS webhook');
+      return null;
     }
 
     if (transaction.status !== PaymentStatus.PENDING) {
-      this.logger.info({ referenceId: payload.reference_id }, 'Skipping idempotent QRIS webhook');
-      return;
+      this.logger.info({ transactionId: transaction.id, referenceId: data.reference_id }, 'Skipping idempotent QRIS webhook');
+      return transaction;
     }
 
     const statusMap: Record<string, PaymentStatus> = {
+      SUCCEEDED: PaymentStatus.PAID,
       COMPLETED: PaymentStatus.PAID,
       EXPIRED: PaymentStatus.EXPIRED,
     };
 
-    transaction.status = statusMap[payload.status] ?? transaction.status;
-    if (transaction.status === PaymentStatus.PAID) transaction.paidAt = new Date();
+    if (['SUCCEEDED', 'COMPLETED'].includes(data.status)) this.validatePaymentAmount(transaction, data.amount, 'QRIS webhook amount mismatch');
+
+    transaction.status = statusMap[data.status] ?? transaction.status;
+    if (transaction.status === PaymentStatus.PAID) transaction.paidAt = new Date(data.created ?? new Date().toISOString());
 
     await this.transactionRepository.save(transaction);
 
     // Invalidate dashboard cache when payment is completed
-    if (transaction.status === PaymentStatus.PAID) {
-      await this.dashboardCacheService.invalidate();
-    }
+    if (transaction.status === PaymentStatus.PAID) await this.dashboardCacheService.invalidate();
 
-    this.logger.info({ transactionId: transaction.id, status: payload.status }, 'QRIS webhook processed');
+    this.logger.info({ transactionId: transaction.id, referenceId: data.reference_id, status: data.status }, 'QRIS webhook processed');
+    return transaction;
   }
 
-  async processEwalletWebhook(payload: XenditEwalletWebhookDto): Promise<void> {
+  async processEwalletWebhook(payload: XenditEwalletWebhookDto): Promise<Transaction | null> {
+    const data = payload.data;
     const transaction = await this.transactionRepository.findOne({
-      where: { externalId: payload.data.reference_id },
+      where: [{ externalId: data.reference_id }, { xenditId: data.id }],
     });
     if (!transaction) {
-      this.logger.warn({ referenceId: payload.data.reference_id }, 'Transaction not found for e-wallet webhook');
-      return;
+      this.logger.warn({ referenceId: data.reference_id, xenditId: data.id }, 'Transaction not found for e-wallet webhook');
+      return null;
     }
 
     if (transaction.status !== PaymentStatus.PENDING) {
-      this.logger.info({ referenceId: payload.data.reference_id }, 'Skipping idempotent e-wallet webhook');
-      return;
+      this.logger.info({ transactionId: transaction.id, referenceId: data.reference_id }, 'Skipping idempotent e-wallet webhook');
+      return transaction;
     }
 
     const statusMap: Record<string, PaymentStatus> = {
@@ -372,9 +410,13 @@ export class PaymentService {
       VOIDED: PaymentStatus.FAILED,
     };
 
-    transaction.status = statusMap[payload.data.status] ?? transaction.status;
+    if (data.status === 'SUCCEEDED') {
+      this.validatePaymentAmount(transaction, data.capture_amount ?? data.charge_amount, 'E-wallet webhook amount mismatch');
+    }
+
+    transaction.status = statusMap[data.status] ?? transaction.status;
     if (transaction.status === PaymentStatus.PAID) {
-      transaction.paidAt = new Date(payload.data.updated);
+      transaction.paidAt = new Date(data.updated ?? new Date().toISOString());
     }
 
     await this.transactionRepository.save(transaction);
@@ -382,7 +424,8 @@ export class PaymentService {
     // Invalidate dashboard cache when payment is completed
     if (transaction.status === PaymentStatus.PAID) await this.dashboardCacheService.invalidate();
 
-    this.logger.info({ transactionId: transaction.id, status: payload.data.status }, 'E-wallet webhook processed');
+    this.logger.info({ transactionId: transaction.id, referenceId: data.reference_id, status: data.status }, 'E-wallet webhook processed');
+    return transaction;
   }
 
   async markExpired(transactionId: string): Promise<Transaction | null> {
@@ -390,9 +433,7 @@ export class PaymentService {
       where: { id: transactionId },
     });
 
-    if (transaction?.status !== PaymentStatus.PENDING) {
-      return null;
-    }
+    if (transaction?.status !== PaymentStatus.PENDING) return null;
 
     transaction.status = PaymentStatus.EXPIRED;
     return this.transactionRepository.save(transaction);
@@ -420,6 +461,10 @@ export class PaymentService {
     return this.transactionRepository.findOne({ where: { externalId } });
   }
 
+  async getTransactionByXenditId(xenditId: string): Promise<Transaction | null> {
+    return this.transactionRepository.findOne({ where: { xenditId } });
+  }
+
   async ping(): Promise<boolean> {
     try {
       await this.transactionRepository.count();
@@ -431,6 +476,14 @@ export class PaymentService {
 
   private extractPaymentUrl(paymentMethod: XenditPaymentMethodResponse): string | undefined {
     return paymentMethod.actions?.find((action) => action.url)?.url;
+  }
+
+  private extractPaymentRequestUrl(paymentRequest: XenditPaymentRequestResponse): string | undefined {
+    return paymentRequest.actions?.find((action) => action.url)?.url ?? undefined;
+  }
+
+  private extractPaymentRequestQrString(paymentRequest: XenditPaymentRequestResponse): string | undefined {
+    return paymentRequest.actions?.find((action) => action.qrCode)?.qrCode ?? paymentRequest.paymentMethod?.qrCode?.channelProperties?.qrString;
   }
 
   private buildMockInvoiceTransaction(dto: CreateInvoiceDto): Transaction {
@@ -530,6 +583,35 @@ export class PaymentService {
     });
   }
 
+  private async findInvoiceWebhookTransaction(payload: XenditInvoiceWebhookDto): Promise<Transaction | null> {
+    return this.transactionRepository.findOne({
+      where: [{ externalId: payload.external_id }, { xenditId: payload.id }],
+    });
+  }
+
+  private validateInvoiceWebhookAmount(transaction: Transaction, payload: XenditInvoiceWebhookDto): void {
+    this.validatePaymentAmount(transaction, payload.paid_amount ?? payload.amount, 'Invoice webhook amount mismatch');
+  }
+
+  private validatePaymentAmount(transaction: Transaction, payloadAmount: number | undefined, message: string): void {
+    const expectedAmount = Number(transaction.amount);
+    const paidAmount = Number(payloadAmount);
+
+    if (Number.isFinite(expectedAmount) && Number.isFinite(paidAmount) && expectedAmount === paidAmount) return;
+
+    this.logger.error(
+      {
+        transactionId: transaction.id,
+        externalId: transaction.externalId,
+        xenditId: transaction.xenditId,
+        expectedAmount,
+        paidAmount,
+      },
+      message,
+    );
+    throw new BadRequestException(message);
+  }
+
   private mapVirtualAccountBank(bankCode: CreateVirtualAccountDto['bankCode']): VirtualAccountChannelCode {
     switch (bankCode) {
       case VirtualAccountBank.BCA:
@@ -549,28 +631,34 @@ export class PaymentService {
     }
   }
 
-  private mapEwalletChannel(channelCode: CreateEwalletDto['channelCode']): EWalletChannelCode {
+  private mapPaymentRequestEwalletChannel(channelCode: CreateEwalletDto['channelCode']): PaymentRequestEWalletChannelCode {
     switch (channelCode) {
       case EwalletType.OVO:
-        return EWalletChannelCode.Ovo;
+        return PaymentRequestEWalletChannelCode.Ovo;
       case EwalletType.DANA:
-        return EWalletChannelCode.Dana;
+        return PaymentRequestEWalletChannelCode.Dana;
       case EwalletType.SHOPEEPAY:
-        return EWalletChannelCode.Shopeepay;
+        return PaymentRequestEWalletChannelCode.Shopeepay;
       case EwalletType.LINKAJA:
-        return EWalletChannelCode.Linkaja;
+        return PaymentRequestEWalletChannelCode.Linkaja;
       case EwalletType.GOPAY:
-        throw new BadRequestException('GOPAY is not supported by the current Xendit payment method API');
+        throw new BadRequestException('GOPAY is not supported by the current Xendit payment request API');
       default:
-        return EWalletChannelCode.Ovo;
+        return PaymentRequestEWalletChannelCode.Shopeepay;
     }
   }
 
   private getPaymentMethodClient(): XenditPaymentMethodApi {
-    if (!this.paymentMethod) {
-      throw new Error('Xendit payment method client is not initialized');
-    }
-
+    if (!this.paymentMethod) throw new Error('Xendit payment method client is not initialized');
     return this.paymentMethod;
   }
+
+  private getPaymentRequestClient(): XenditPaymentRequestApiLike {
+    if (!this.paymentRequest) throw new Error('Xendit payment request client is not initialized');
+    return this.paymentRequest;
+  }
+}
+
+interface XenditPaymentRequestApiLike {
+  createPaymentRequest(requestParameters?: XenditPaymentRequestRequest): Promise<XenditPaymentRequestResponse>;
 }

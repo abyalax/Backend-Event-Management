@@ -1,5 +1,6 @@
 import { Exclude, Expose, Type } from 'class-transformer';
-import { IsInt, IsOptional, IsString, IsUUID, MaxLength, Min } from 'class-validator';
+import { IsEnum, IsInt, IsOptional, IsString, IsUUID, MaxLength, Min } from 'class-validator';
+import { EwalletType, PaymentMethod } from '~/modules/payments/payment.enum';
 
 @Exclude()
 export class BuyTicketDto {
@@ -35,4 +36,14 @@ export class BuyTicketDto {
   @IsString()
   @MaxLength(255)
   failureRedirectUrl?: string;
+
+  @Expose()
+  @IsOptional()
+  @IsEnum(PaymentMethod)
+  paymentMethod?: PaymentMethod;
+
+  @Expose()
+  @IsOptional()
+  @IsEnum(EwalletType)
+  ewalletType?: EwalletType;
 }

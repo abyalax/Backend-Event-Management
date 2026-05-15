@@ -1,4 +1,4 @@
-import { JobsOptions, QueueOptions, WorkerOptions } from 'bullmq';
+import { JobsOptions, WorkerOptions } from 'bullmq';
 
 export enum QueueStatus {
   ACTIVE = 'active',

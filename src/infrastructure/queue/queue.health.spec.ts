@@ -1,18 +1,68 @@
-/* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { Test, TestingModule } from '@nestjs/testing';
 import { QueueHealthIndicator } from './queue.health';
 import { QueueService } from './queue.service';
 import { HealthIndicatorService } from '@nestjs/terminus';
 import { PinoLogger } from 'nestjs-pino';
 import { QueueStats } from './queue.types';
-import { HealthIndicatorSession } from '@nestjs/terminus/dist/health-indicator/health-indicator.service';
+
+type HealthIndicatorResult = {
+  status: 'up' | 'down';
+  [key: string]: unknown;
+};
+
+type HealthIndicatorSessionMock = {
+  up: jest.Mock<HealthIndicatorResult, [Record<string, unknown>]>;
+  down: jest.Mock<HealthIndicatorResult, [Record<string, unknown>]>;
+};
+
+type QueueServiceMock = {
+  registerQueue: jest.Mock;
+  addJob: jest.Mock;
+  getQueueStats: jest.Mock<Promise<QueueStats>, [string]>;
+  pauseQueue: jest.Mock;
+  resumeQueue: jest.Mock;
+  closeAll: jest.Mock;
+  config: {
+    get: jest.Mock;
+    getAll: jest.Mock;
+    isDevelopment: jest.Mock;
+    isProduction: jest.Mock;
+    isTest: jest.Mock;
+  };
+  connection: {
+    options: Record<string, unknown>;
+    status: string;
+    stream: Record<string, unknown>;
+    isCluster: boolean;
+  };
+  drainQueue: jest.Mock;
+  getQueue: jest.Mock;
+  getQueueNames: jest.Mock;
+  getWorker: jest.Mock;
+  isShuttingDown: boolean;
+  onModuleDestroy: jest.Mock;
+  queues: jest.Mock;
+  removeJob: jest.Mock;
+  workers: jest.Mock;
+};
+
+type PinoLoggerMock = {
+  error: jest.Mock;
+  setContext: jest.Mock;
+  assign: jest.Mock;
+  debug: jest.Mock;
+  fatal: jest.Mock;
+  info: jest.Mock;
+  trace: jest.Mock;
+  warn: jest.Mock;
+};
 
 describe('QueueHealthIndicator', () => {
   let indicator: QueueHealthIndicator;
-  let mockHealthIndicatorService: jest.Mocked<HealthIndicatorService>;
-  let mockLogger: jest.Mocked<PinoLogger>;
-  let mockQueueService: any;
-  let mockIndicator: any;
+  let mockHealthIndicatorService: { check: jest.Mock<HealthIndicatorSessionMock, [string]> };
+  let mockLogger: PinoLoggerMock;
+  let mockQueueService: QueueServiceMock;
+  let mockIndicator: HealthIndicatorSessionMock;
 
   beforeEach(async () => {
     mockQueueService = {
@@ -59,8 +109,7 @@ describe('QueueHealthIndicator', () => {
       info: jest.fn(),
       trace: jest.fn(),
       warn: jest.fn(),
-      logger: {} as any,
-    } as unknown as jest.Mocked<PinoLogger>;
+    };
 
     mockIndicator = {
       up: jest.fn().mockImplementation((data) => ({
@@ -71,7 +120,7 @@ describe('QueueHealthIndicator', () => {
         status: 'down',
         ...data,
       })),
-    } as unknown as HealthIndicatorSession<string>;
+    };
     mockHealthIndicatorService.check.mockReturnValue(mockIndicator);
 
     const module: TestingModule = await Test.createTestingModule({

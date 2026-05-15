@@ -22,11 +22,7 @@ export class ReminderWorker implements OnModuleInit {
           await this.reminderService.processReminder(data.reminderId);
         },
         options: {
-          attempts: 3,
-          backoff: {
-            type: 'exponential',
-            delay: 60000, // 1 minute
-          },
+          attempts: 1,
           removeOnComplete: true,
           removeOnFail: true,
           timeout: 30000, // 30 seconds

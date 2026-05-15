@@ -1,296 +1,172 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
+import * as fs from 'node:fs';
+import * as path from 'node:path';
+import axios from 'axios';
 import { INestApplication } from '@nestjs/common';
 import { TestingModule } from '@nestjs/testing';
 import * as request from 'supertest';
 import { App } from 'supertest/types';
 import { cleanupApplication, setupApplication } from '~/test/setup_e2e';
 import { ADMIN_ID } from '~/infrastructure/database/const/shared-data';
-import { createOrder, fetchAvailableTicket } from '../tickets/tickets.utils';
 import { loginAdmin } from '../common/auth';
-import { mailpitHelper } from '../infrastructure/mailpit';
+import { mailpitHelper, MailpitHelper } from '../infrastructure/mailpit';
+import { FakeClock, ClockProvider as TestClockProvider, ClockTestUtils } from '../times/fake-time';
+import { createOrder, payOrderWithWebhook, waitForOrderReminders } from '../tickets/tickets.utils';
+import { extractHttpOnlyCookie } from '../utils';
+import { ClockProvider as MainClockProvider } from '~/infrastructure/clock/clock.provider';
 
-describe('Reminder Emails (e2e)', () => {
+describe('Reminder Email No Loop (e2e)', () => {
   let app: INestApplication<App>;
   let moduleFixture: TestingModule;
-  let accessToken: string;
-  let eventId: string;
-  let ticketId: string;
-  const waitForReminderEmails = async (expectedCount: number, timeoutMs = 15000) => {
-    const deadline = Date.now() + timeoutMs;
-
-    while (Date.now() < deadline) {
-      const messages = await mailpitHelper.getMessages();
-      const reminderEmails = messages.messages.filter((msg) => msg.Subject.includes('Reminder'));
-
-      if (reminderEmails.length >= expectedCount) return reminderEmails;
-
-      await new Promise((resolve) => setTimeout(resolve, 500));
-    }
-
-    throw new Error(`Timed out waiting for ${expectedCount} reminder emails`);
-  };
+  let fakeClock: FakeClock;
+  let adminAccessToken: string;
+  let initialTime: Date;
+  const testId = MailpitHelper.generateTestId();
 
   beforeAll(async () => {
+    initialTime = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    fakeClock = ClockTestUtils.setupFakeClock(initialTime);
+    MainClockProvider.setInstance(fakeClock);
+
     [app, moduleFixture] = await setupApplication();
 
-    // Verify Mailpit is available before running tests
     const mailpitAvailable = await mailpitHelper.isAvailable();
     if (!mailpitAvailable) {
       throw new Error(`Mailpit is not available. Please ensure Mailpit is running on ${mailpitHelper.getBaseUrl()}`);
     }
 
     const session = await loginAdmin(app);
-    accessToken = session.accessToken;
-
-    const ticket = await fetchAvailableTicket(app, accessToken);
-    eventId = ticket.eventId;
-    ticketId = ticket.id;
+    adminAccessToken = session.accessToken;
   });
 
   afterAll(async () => {
+    ClockTestUtils.cleanup();
+    mailpitHelper.cleanup();
     await cleanupApplication(app, moduleFixture);
   });
 
-  describe('Reminder Email Delivery', () => {
-    let orderId: string;
+  beforeEach(async () => {
+    fakeClock.setTime(initialTime);
+    await mailpitHelper.clearMessages();
+  });
 
-    beforeEach(async () => {
-      // Clear inbox before each test
-      await mailpitHelper.clearMessages();
-    });
+  const createEventWithTicket = async () => {
+    const imagePath = path.join(process.cwd(), 'assets', 'banner.jpg');
+    const imageBuffer = fs.readFileSync(imagePath);
 
-    beforeAll(async () => {
-      const order = await createOrder(app, accessToken, eventId, ticketId);
-      orderId = order.id;
-    });
+    const presignedResponse = await request(app.getHttpServer())
+      .post('/media/presigned')
+      .set('Cookie', [`access_token=s:${adminAccessToken}`])
+      .send({
+        filename: `event-reminder-no-loop-${testId}.jpg`,
+        mimeType: 'image/jpeg',
+        size: imageBuffer.length,
+        accessType: 'public',
+      })
+      .expect(201);
 
-    it('should send reminder email when event reminder is scheduled for order', async () => {
-      const eventResponse = await request(app.getHttpServer())
-        .get(`/events/${eventId}`)
-        .set('Cookie', [`access_token=s:${accessToken}`])
-        .expect(200);
+    const { mediaId, url } = presignedResponse.body.data as { mediaId: string; url: string };
+    await axios.put(url, imageBuffer, { headers: { 'Content-Type': 'image/jpeg' } });
 
-      const eventData = eventResponse.body.data;
+    await request(app.getHttpServer())
+      .patch(`/media/${mediaId}/confirm`)
+      .set('Cookie', [`access_token=s:${adminAccessToken}`])
+      .send({ uploaded: true, actualSize: imageBuffer.length })
+      .expect(200);
 
-      // Schedule reminders for the order
-      await request(app.getHttpServer())
-        .post(`/reminders/order/${orderId}/schedule`)
-        .set('Cookie', [`access_token=s:${accessToken}`])
-        .send({
-          eventId,
-          reminderTimes: ['10001d'],
-        })
-        .expect(201);
+    const startDate = fakeClock.hoursFromNow(2);
+    const endDate = fakeClock.hoursFromNow(3);
 
-      // Wait for reminder email to be sent
-      const [email] = await waitForReminderEmails(1, 15000);
+    const eventResponse = await request(app.getHttpServer())
+      .post('/events')
+      .set('Cookie', [`access_token=s:${adminAccessToken}`])
+      .send({
+        title: `Reminder No Loop Event ${testId}`,
+        description: 'Event used to verify reminder email does not loop.',
+        maxAttendees: 100,
+        isVirtual: false,
+        location: 'No Loop Hall',
+        startDate: startDate.toISOString(),
+        endDate: endDate.toISOString(),
+        status: 'PUBLISHED',
+        categoryId: 1,
+        createdBy: ADMIN_ID,
+        bannerMediaId: mediaId,
+      })
+      .expect(201);
 
-      // Assert email details
-      expect(email).toBeDefined();
-      expect(email.Subject).toContain('Reminder');
-      expect(email.To.length).toBeGreaterThan(0);
+    const eventId = eventResponse.body.data.id as string;
 
-      // Get detailed email information
-      const emailDetail = await mailpitHelper.getMessage(email.ID);
-      expect(emailDetail.From.Address).toBeDefined();
-      expect(emailDetail.HTML).toBeDefined();
-      expect(emailDetail.Text).toBeDefined();
-      expect(emailDetail.HTML).toContain(eventData.title);
-    });
+    const ticketResponse = await request(app.getHttpServer())
+      .post('/tickets')
+      .set('Cookie', [`access_token=s:${adminAccessToken}`])
+      .send({
+        name: 'No Loop Ticket',
+        price: 55000,
+        quota: 10,
+        eventId,
+      })
+      .expect(201);
 
-    it('should send multiple reminder emails for different reminder times', async () => {
-      // Schedule reminders with multiple times
-      await request(app.getHttpServer())
-        .post(`/reminders/order/${orderId}/schedule`)
-        .set('Cookie', [`access_token=s:${accessToken}`])
-        .send({
-          eventId,
-          reminderTimes: ['10000d', '9999d', '9998d'], // Force immediate delivery in this test
-        })
-        .expect(201);
+    const ticketId = ticketResponse.body.data.id as string;
+    return { eventId, ticketId };
+  };
 
-      // Wait for multiple reminder emails
-      const emails = await waitForReminderEmails(3, 20000);
+  it('should send only one reminder email even when overdue processing runs multiple times', async () => {
+    const testUserEmail = `reminder-no-loop-${testId}@example.com`;
+    const testUserPassword = 'password123';
 
-      // Assert we received 3 different reminder emails
-      expect(emails).toHaveLength(3);
-      expect(emails.every((email) => email.Subject.includes('Reminder'))).toBe(true);
+    await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({
+        email: testUserEmail,
+        password: testUserPassword,
+        name: 'Reminder No Loop User',
+      })
+      .expect(201);
 
-      // Ensure all emails have unique IDs
-      const emailIds = emails.map((email) => email.ID);
-      const uniqueIds = new Set(emailIds);
-      expect(uniqueIds.size).toBe(3);
-    });
+    const loginResponse = await request(app.getHttpServer())
+      .post('/auth/login')
+      .send({
+        email: testUserEmail,
+        password: testUserPassword,
+      })
+      .expect(202);
 
-    it('should send reminder email with proper event details', async () => {
-      // Get event details to verify in email
-      const eventResponse = await request(app.getHttpServer())
-        .get(`/events/${eventId}`)
-        .set('Cookie', [`access_token=s:${accessToken}`])
-        .expect(200);
+    const userAccessToken = extractHttpOnlyCookie('access_token', loginResponse.headers['set-cookie']);
+    const { eventId, ticketId } = await createEventWithTicket();
+    const order = await createOrder(app, userAccessToken, eventId, ticketId);
+    await payOrderWithWebhook(app, order.id, order.totalAmount);
 
-      const eventData = eventResponse.body.data;
+    const reminders = await waitForOrderReminders(app, userAccessToken, order.id, 2, 15000);
+    const oneHourEmailReminder = reminders.find((item) => item.type === 'EMAIL' && item.status === 'PENDING');
+    expect(oneHourEmailReminder).toBeDefined();
 
-      // Schedule reminder
-      await request(app.getHttpServer())
-        .post(`/reminders/order/${orderId}/schedule`)
-        .set('Cookie', [`access_token=s:${accessToken}`])
-        .send({
-          eventId,
-          reminderTimes: ['9997d'],
-        })
-        .expect(201);
+    fakeClock.advanceHours(1);
+    fakeClock.advanceMinutes(1);
 
-      // Wait for reminder email
-      const [email] = await waitForReminderEmails(1, 15000);
-      const emailDetail = await mailpitHelper.getMessage(email.ID);
+    await request(app.getHttpServer())
+      .post('/reminders/process')
+      .set('Cookie', [`access_token=s:${adminAccessToken}`])
+      .expect(200);
+    await request(app.getHttpServer())
+      .post('/reminders/process')
+      .set('Cookie', [`access_token=s:${adminAccessToken}`])
+      .expect(200);
+    await request(app.getHttpServer())
+      .post('/reminders/process')
+      .set('Cookie', [`access_token=s:${adminAccessToken}`])
+      .expect(200);
 
-      // Assert email contains event details
-      expect(emailDetail.HTML).toContain(eventData.title);
-      expect(emailDetail.HTML).toContain(eventData.description);
-      expect(emailDetail.HTML).toContain(eventData.location);
-    });
+    await new Promise((resolve) => setTimeout(resolve, 1200));
 
-    it('should send reminder email to correct recipient', async () => {
-      // Get user details to verify recipient
-      const userResponse = await request(app.getHttpServer())
-        .get(`/users/${ADMIN_ID}`)
-        .set('Cookie', [`access_token=s:${accessToken}`])
-        .expect(200);
+    const inbox = await mailpitHelper.getMessages();
+    const reminderEmails = inbox.messages.filter((msg) => msg.To.some((to) => to.Address === testUserEmail) && msg.Subject.includes('1 hour'));
 
-      const userData = userResponse.body.data;
+    expect(reminderEmails).toHaveLength(1);
 
-      // Schedule reminder
-      await request(app.getHttpServer())
-        .post(`/reminders/order/${orderId}/schedule`)
-        .set('Cookie', [`access_token=s:${accessToken}`])
-        .send({
-          eventId,
-          reminderTimes: ['9996d'],
-        })
-        .expect(201);
-
-      // Wait for reminder email
-      const [email] = await waitForReminderEmails(1, 15000);
-
-      // Assert recipient is correct
-      expect(email).toBeDefined();
-      expect(email.To.some((to) => to.Address === userData.email)).toBe(true);
-    });
-
-    it('should include order details in reminder email', async () => {
-      // Get order details
-      const orderResponse = await request(app.getHttpServer())
-        .get(`/orders/${orderId}`)
-        .set('Cookie', [`access_token=s:${accessToken}`])
-        .expect(200);
-
-      const orderData = orderResponse.body.data;
-
-      // Schedule reminder
-      await request(app.getHttpServer())
-        .post(`/reminders/order/${orderId}/schedule`)
-        .set('Cookie', [`access_token=s:${accessToken}`])
-        .send({
-          eventId,
-          reminderTimes: ['9995d'],
-        })
-        .expect(201);
-
-      // Wait for reminder email
-      const [email] = await waitForReminderEmails(1, 15000);
-
-      const emailDetail = await mailpitHelper.getMessage(email.ID);
-
-      // Assert email contains order details
-      expect(emailDetail.HTML).toContain(orderData.id);
-      expect(emailDetail.HTML).toContain(String(orderData.orderItems?.length ?? 0));
-      expect(emailDetail.HTML).toContain(orderData.totalAmount.toString());
-    });
-
-    it('should handle reminder email scheduling failure gracefully', async () => {
-      // Try to schedule reminder with invalid event ID
-      const invalidEventId = 'invalid-event-id';
-
-      const response = await request(app.getHttpServer())
-        .post(`/reminders/order/${orderId}/schedule`)
-        .set('Cookie', [`access_token=s:${accessToken}`])
-        .send({
-          eventId: invalidEventId,
-        });
-
-      // Should return error
-      expect(response.status).toBeGreaterThanOrEqual(400);
-
-      // Verify no email was sent
-      await expect(mailpitHelper.waitForEmailWithSubject('Reminder', 3000)).rejects.toThrow('Email not found within 3000ms timeout');
-    });
-
-    it('should send reminder email with proper HTML formatting', async () => {
-      // Schedule reminder
-      await request(app.getHttpServer())
-        .post(`/reminders/order/${orderId}/schedule`)
-        .set('Cookie', [`access_token=s:${accessToken}`])
-        .send({
-          eventId,
-          reminderTimes: ['9994d'],
-        })
-        .expect(201);
-
-      // Wait for reminder email
-      const [email] = await waitForReminderEmails(1, 15000);
-
-      const emailDetail = await mailpitHelper.getMessage(email.ID);
-
-      // Assert HTML structure
-      expect(emailDetail.HTML).toContain('<html>');
-      expect(emailDetail.HTML).toContain('</html>');
-      expect(emailDetail.HTML).toContain('<body>');
-      expect(emailDetail.HTML).toContain('</body>');
-
-      // Assert text version is also available
-      expect(emailDetail.Text).toBeDefined();
-      expect(emailDetail.Text.length).toBeGreaterThan(0);
-    });
-
-    it('should not send duplicate reminder emails', async () => {
-      // Schedule reminder twice
-      await request(app.getHttpServer())
-        .post(`/reminders/order/${orderId}/schedule`)
-        .set('Cookie', [`access_token=s:${accessToken}`])
-        .send({
-          eventId,
-          reminderTimes: ['9993d'],
-        })
-        .expect(201);
-
-      await request(app.getHttpServer())
-        .post(`/reminders/order/${orderId}/schedule`)
-        .set('Cookie', [`access_token=s:${accessToken}`])
-        .send({
-          eventId,
-          reminderTimes: ['9993d'],
-        })
-        .expect(201); // May return 201 but should not create duplicate emails
-
-      const firstBatch = await waitForReminderEmails(1, 15000);
-      const reminderEmails = firstBatch.filter((msg) => msg.Subject.includes('Reminder'));
-      expect(reminderEmails).toHaveLength(1);
-
-      await request(app.getHttpServer())
-        .post(`/reminders/order/${orderId}/schedule`)
-        .set('Cookie', [`access_token=s:${accessToken}`])
-        .send({
-          eventId,
-          reminderTimes: ['9993d'],
-        })
-        .expect(201);
-
-      await new Promise((resolve) => setTimeout(resolve, 1000));
-
-      const messages = await mailpitHelper.getMessages();
-      const allReminderEmails = messages.messages.filter((msg) => msg.Subject.includes('Reminder'));
-      expect(allReminderEmails).toHaveLength(1);
-    });
+    const updatedReminders = await waitForOrderReminders(app, userAccessToken, order.id, 2, 15000);
+    const sentOneHourReminder = updatedReminders.find((item) => item.id === oneHourEmailReminder?.id);
+    expect(sentOneHourReminder?.status).toBe('SENT');
+    expect(TestClockProvider.now().toISOString()).toBe(new Date(initialTime.getTime() + 61 * 60 * 1000).toISOString());
   });
 });

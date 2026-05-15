@@ -1,4 +1,16 @@
-import { BadRequestException, Body, Controller, Get, Headers, Inject, Param, Post, UnauthorizedException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Headers,
+  HttpCode,
+  HttpStatus,
+  Inject,
+  Param,
+  Post,
+  UnauthorizedException,
+} from '@nestjs/common';
 import { Job } from 'bullmq';
 import { PinoLogger } from 'nestjs-pino';
 import { PaymentService } from './payment.service';
@@ -7,7 +19,7 @@ import { CreateVirtualAccountDto } from './dto/create-virtual-account.dto';
 import { CreateQrisDto } from './dto/create-qris.dto';
 import { CreateEwalletDto } from './dto/create-ewallet.dto';
 import { WebhookEventType } from './payment.enum';
-import { XENDIT_CALLBACK_TOKEN_HEADER } from './payment.constant';
+import { XENDIT_CALLBACK_TOKEN_HEADER, WEBHOOK_JOB } from './payment.constant';
 import { XenditInvoiceWebhookDto } from './dto/xendit-invoice-webhook.dto';
 import { XenditVirtualAccountWebhookDto } from './dto/xendit-virtual-account-webhook.dto';
 import { XenditQrisWebhookDto } from './dto/xendit-qris-webhook.dto';
@@ -15,7 +27,6 @@ import { XenditEwalletWebhookDto } from './dto/xendit-ewallet-webhook.dto';
 import { CONFIG_SERVICE, ConfigService } from '~/infrastructure/config/config.provider';
 import { TResponse } from '~/common/types/response';
 import { PaymentWebhookProcessor } from './processors/payment-webhook.processor';
-import { WEBHOOK_JOB } from './payment.constant';
 
 @Controller('payments')
 export class PaymentController {
@@ -53,6 +64,7 @@ export class PaymentController {
   }
 
   @Post('webhook/invoice')
+  @HttpCode(HttpStatus.OK)
   async handleInvoiceWebhook(@Headers(XENDIT_CALLBACK_TOKEN_HEADER) token: string, @Body() payload: XenditInvoiceWebhookDto): Promise<TResponse> {
     this.validateToken(token);
     if (process.env.NODE_ENV === 'test') {
@@ -71,6 +83,7 @@ export class PaymentController {
   }
 
   @Post('webhook/virtual-account')
+  @HttpCode(HttpStatus.OK)
   async handleVirtualAccountWebhook(@Headers(XENDIT_CALLBACK_TOKEN_HEADER) token: string, @Body() payload: XenditVirtualAccountWebhookDto) {
     this.validateToken(token);
     await this.paymentService.enqueueWebhook(WebhookEventType.VIRTUAL_ACCOUNT, payload);
@@ -78,6 +91,7 @@ export class PaymentController {
   }
 
   @Post('webhook/qris')
+  @HttpCode(HttpStatus.OK)
   async handleQrisWebhook(@Headers(XENDIT_CALLBACK_TOKEN_HEADER) token: string, @Body() payload: XenditQrisWebhookDto) {
     this.validateToken(token);
     await this.paymentService.enqueueWebhook(WebhookEventType.QRIS, payload);
@@ -85,6 +99,7 @@ export class PaymentController {
   }
 
   @Post('webhook/ewallet')
+  @HttpCode(HttpStatus.OK)
   async handleEwalletWebhook(@Headers(XENDIT_CALLBACK_TOKEN_HEADER) token: string, @Body() payload: XenditEwalletWebhookDto) {
     this.validateToken(token);
     await this.paymentService.enqueueWebhook(WebhookEventType.EWALLET, payload);
@@ -92,10 +107,11 @@ export class PaymentController {
   }
 
   @Post('webhook/expiry')
+  @HttpCode(HttpStatus.OK)
   async handleExpiryWebhook(@Headers(XENDIT_CALLBACK_TOKEN_HEADER) token: string, @Body() payload: XenditInvoiceWebhookDto) {
     this.validateToken(token);
     if (payload.status !== 'EXPIRED') return { skipped: true };
-    await this.paymentService.enqueueExpiry(payload.id, payload.external_id);
+    await this.paymentService.enqueueWebhook(WebhookEventType.INVOICE, payload);
     return { received: true };
   }
 

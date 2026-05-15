@@ -1,3 +1,4 @@
+import { NotFoundException } from '@nestjs/common';
 import { Processor, WorkerHost } from '@nestjs/bullmq';
 import { Job } from 'bullmq';
 import { PinoLogger } from 'nestjs-pino';
@@ -38,47 +39,47 @@ export class PaymentWebhookProcessor extends WorkerHost {
     switch (type) {
       case WebhookEventType.INVOICE: {
         const p = payload as XenditInvoiceWebhookDto;
-        await this.paymentService.processInvoiceWebhook(p);
-        externalId = p.external_id;
+        const transaction = await this.paymentService.processInvoiceWebhook(p);
+        externalId = transaction?.externalId;
         paidStatus = ['PAID', 'SETTLED'].includes(p.status);
         if (paidStatus && externalId) {
-          await this.orderService.handleSuccessfulPayment(externalId);
+          await this.handleSuccessfulOrderPayment(externalId);
         } else if (p.status === 'EXPIRED' && externalId) {
-          await this.orderService.handleExpiredPayment(externalId);
+          await this.handleExpiredOrderPayment(externalId);
         }
         break;
       }
       case WebhookEventType.VIRTUAL_ACCOUNT: {
         const p = payload as XenditVirtualAccountWebhookDto;
-        await this.paymentService.processVirtualAccountWebhook(p);
-        externalId = p.external_id;
-        paidStatus = true;
+        const transaction = await this.paymentService.processVirtualAccountWebhook(p);
+        externalId = transaction?.externalId;
+        paidStatus = Boolean(transaction);
         if (externalId) {
-          await this.orderService.handleSuccessfulPayment(externalId);
+          await this.handleSuccessfulOrderPayment(externalId);
         }
         break;
       }
       case WebhookEventType.QRIS: {
         const p = payload as XenditQrisWebhookDto;
-        await this.paymentService.processQrisWebhook(p);
-        externalId = p.reference_id;
-        paidStatus = p.status === 'COMPLETED';
+        const transaction = await this.paymentService.processQrisWebhook(p);
+        externalId = transaction?.externalId;
+        paidStatus = Boolean(transaction) && ['SUCCEEDED', 'COMPLETED'].includes(p.data.status);
         if (paidStatus && externalId) {
-          await this.orderService.handleSuccessfulPayment(externalId);
-        } else if (p.status === 'EXPIRED' && externalId) {
-          await this.orderService.handleExpiredPayment(externalId);
+          await this.handleSuccessfulOrderPayment(externalId);
+        } else if (p.data.status === 'EXPIRED' && externalId) {
+          await this.handleExpiredOrderPayment(externalId);
         }
         break;
       }
       case WebhookEventType.EWALLET: {
         const p = payload as XenditEwalletWebhookDto;
-        await this.paymentService.processEwalletWebhook(p);
-        externalId = p.data.reference_id;
-        paidStatus = p.data.status === 'SUCCEEDED';
+        const transaction = await this.paymentService.processEwalletWebhook(p);
+        externalId = transaction?.externalId;
+        paidStatus = Boolean(transaction) && p.data.status === 'SUCCEEDED';
         if (paidStatus && externalId) {
-          await this.orderService.handleSuccessfulPayment(externalId);
+          await this.handleSuccessfulOrderPayment(externalId);
         } else if ((p.data.status === 'FAILED' || p.data.status === 'VOIDED') && externalId) {
-          await this.orderService.handleFailedPayment(externalId);
+          await this.handleFailedOrderPayment(externalId);
         }
         break;
       }
@@ -92,6 +93,42 @@ export class PaymentWebhookProcessor extends WorkerHost {
     }
 
     this.logger.info({ jobId: job.id, type }, 'Webhook job completed');
+  }
+
+  private async handleSuccessfulOrderPayment(externalId: string): Promise<void> {
+    try {
+      await this.orderService.handleSuccessfulPayment(externalId);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        this.logger.warn({ externalId }, 'Payment webhook has no matching order, skipping order success handling');
+        return;
+      }
+      throw error;
+    }
+  }
+
+  private async handleExpiredOrderPayment(externalId: string): Promise<void> {
+    try {
+      await this.orderService.handleExpiredPayment(externalId);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        this.logger.warn({ externalId }, 'Payment webhook has no matching order, skipping order expiry handling');
+        return;
+      }
+      throw error;
+    }
+  }
+
+  private async handleFailedOrderPayment(externalId: string): Promise<void> {
+    try {
+      await this.orderService.handleFailedPayment(externalId);
+    } catch (error) {
+      if (error instanceof NotFoundException) {
+        this.logger.warn({ externalId }, 'Payment webhook has no matching order, skipping order failure handling');
+        return;
+      }
+      throw error;
+    }
   }
 
   private async sendPaymentEmail(externalId: string): Promise<void> {

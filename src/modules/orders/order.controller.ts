@@ -28,6 +28,19 @@ export class OrderController {
     };
   }
 
+  @Get(':id/payment-qris')
+  async getOrderPaymentQris(
+    @Param('id') id: string,
+    @Request() req: Request,
+  ): Promise<TResponse<{ orderId: string; qrCodeDataUrl: string; qrString: string }>> {
+    const userId = req.user.id;
+    const data = await this.orderService.getOrderPaymentQris(id, userId);
+    return {
+      message: 'get order qris payment successfully',
+      data,
+    };
+  }
+
   @Get(':id')
   async getOrderById(@Param('id') id: string, @Request() req: Request): Promise<TResponse<OrderResponseDto>> {
     const userId = req.user.id;
@@ -97,6 +110,8 @@ export class OrderController {
       description: buyTicketDto.description || `Purchase ticket: ${buyTicketDto.ticketId}`,
       successRedirectUrl: buyTicketDto.successRedirectUrl,
       failureRedirectUrl: buyTicketDto.failureRedirectUrl,
+      paymentMethod: buyTicketDto.paymentMethod,
+      ewalletType: buyTicketDto.ewalletType,
     };
 
     const data = await this.orderService.createOrder(createOrderDto, userId, userEmail);

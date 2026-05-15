@@ -1,8 +1,8 @@
 import { Exclude, Expose, Type } from 'class-transformer';
-import { IsString, IsNumber, IsNotEmpty, IsOptional, IsBoolean, ValidateNested } from 'class-validator';
+import { IsBoolean, IsNotEmpty, IsNumber, IsOptional, IsString, ValidateNested } from 'class-validator';
 
 @Exclude()
-export class XenditEwalletDataDto {
+export class XenditEwalletWebhookDataDto {
   @Expose()
   @IsString()
   @IsNotEmpty()
@@ -56,8 +56,8 @@ export class XenditEwalletDataDto {
   @Expose()
   @Type(() => Boolean)
   @IsBoolean()
-  @IsNotEmpty()
-  is_redirect_customer: boolean;
+  @IsOptional()
+  is_redirect_required?: boolean;
 
   @Expose()
   @IsString()
@@ -66,24 +66,24 @@ export class XenditEwalletDataDto {
 
   @Expose()
   @IsString()
-  @IsNotEmpty()
-  created: string;
+  @IsOptional()
+  created?: string;
 
   @Expose()
   @IsString()
-  @IsNotEmpty()
-  updated: string;
+  @IsOptional()
+  updated?: string;
 }
 
 @Exclude()
 export class XenditEwalletWebhookDto {
   @Expose()
   @IsString()
-  @IsNotEmpty()
-  event: string;
+  @IsOptional()
+  event?: string;
 
   @Expose()
   @ValidateNested()
-  @Type(() => XenditEwalletDataDto)
-  data: XenditEwalletDataDto;
+  @Type(() => XenditEwalletWebhookDataDto)
+  data: XenditEwalletWebhookDataDto;
 }

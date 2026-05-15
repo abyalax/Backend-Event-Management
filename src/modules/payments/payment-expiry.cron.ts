@@ -1,8 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PinoLogger } from 'nestjs-pino';
-import { PaymentService } from './payment.service';
 import { EXPIRY_CRON } from './payment.constant';
+import { PaymentService } from './payment.service';
 
 const cronExpiry = process.env.NODE_ENV === 'test' ? () => () => undefined : () => Cron(EXPIRY_CRON);
 

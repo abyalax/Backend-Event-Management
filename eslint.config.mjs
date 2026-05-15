@@ -5,7 +5,7 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['eslint.config.mjs', './migrations/*.ts'],
+    ignores: ['eslint.config.mjs', './migrations/*.ts', 'dist/**', 'coverage/**', 'src/assets/js/pdf/**'],
   },
   eslint.configs.recommended,
   ...tseslint.configs.recommendedTypeChecked,

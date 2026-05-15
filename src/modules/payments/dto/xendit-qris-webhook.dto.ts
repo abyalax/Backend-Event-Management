@@ -1,12 +1,17 @@
 import { Exclude, Expose, Type } from 'class-transformer';
-import { IsString, IsNumber, IsNotEmpty, IsOptional } from 'class-validator';
+import { IsNotEmpty, IsNumber, IsOptional, IsString, ValidateNested } from 'class-validator';
 
 @Exclude()
-export class XenditQrisWebhookDto {
+export class XenditQrisWebhookDataDto {
   @Expose()
   @IsString()
   @IsNotEmpty()
   id: string;
+
+  @Expose()
+  @IsString()
+  @IsOptional()
+  qr_id?: string;
 
   @Expose()
   @IsString()
@@ -35,9 +40,32 @@ export class XenditQrisWebhookDto {
   expires_at?: string;
 
   @Expose()
+  @IsString()
   @IsOptional()
-  payment_details?: {
-    receipt_id: string;
-    source: string;
+  created?: string;
+
+  @Expose()
+  @IsString()
+  @IsOptional()
+  channel_code?: string;
+
+  @Expose()
+  @IsOptional()
+  payment_detail?: {
+    receipt_id?: string;
+    source?: string;
   };
+}
+
+@Exclude()
+export class XenditQrisWebhookDto {
+  @Expose()
+  @IsString()
+  @IsOptional()
+  event?: string;
+
+  @Expose()
+  @ValidateNested()
+  @Type(() => XenditQrisWebhookDataDto)
+  data: XenditQrisWebhookDataDto;
 }
