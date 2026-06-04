@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-unsafe-call */
 import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { PinoLogger } from 'nestjs-pino';
 import { In, LessThan, Repository } from 'typeorm';
@@ -241,7 +242,7 @@ export class OrderService {
     const paymentsByOrderId = new Map(payments.map((payment) => [payment.externalId, payment]));
 
     const ordersWithPayment = await Promise.all(
-      paginatedOrders.data.map(async (order) => this.toOrderResponse(order, paymentsByOrderId.get(order.id) ?? null)),
+      paginatedOrders.data.map((order) => this.toOrderResponse(order, paymentsByOrderId.get(order.id) ?? null)),
     );
 
     return {
