@@ -1,6 +1,6 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { PinoLogger } from 'nestjs-pino';
-import * as crypto from 'node:crypto';
+import crypto from 'node:crypto';
 import { CONFIG_PROVIDER } from '~/common/constants/provider';
 import { QRConfig } from './qr.interface';
 

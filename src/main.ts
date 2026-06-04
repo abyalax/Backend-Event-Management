@@ -1,11 +1,13 @@
 import { NestFactory } from '@nestjs/core';
-import * as cookieParser from 'cookie-parser';
+import { Logger } from '@nestjs/common';
+import cookieParser from 'cookie-parser';
 import { setupGracefulShutdown } from 'nestjs-graceful-shutdown';
 import 'reflect-metadata';
 import { AppModule } from './app.module';
 import { envSchema } from './infrastructure/config/config.schema';
 
 async function bootstrap() {
+  const logger = new Logger('Bootstrap');
   const env = envSchema.parse(process.env);
   const app = await NestFactory.create(AppModule, {
     rawBody: true,
@@ -16,7 +18,7 @@ async function bootstrap() {
   app.use(cookieParser(env.COOKIE_SECRET));
 
   app.enableCors({
-    origin: ['http://localhost:3000'],
+    origin: env.CORS_ORIGIN.split(',').map((origin) => origin.trim()),
     credentials: true,
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
   });
@@ -24,7 +26,10 @@ async function bootstrap() {
   app.enableShutdownHooks();
 
   await app.listen(env.PORT);
-  console.log(`Nest Application running on http://localhost:${env.PORT}`);
+  logger.log(`Nest Application running on http://localhost:${env.PORT}`);
 }
 
-bootstrap().catch((err) => console.error(err));
+bootstrap().catch((err) => {
+  const logger = new Logger('Bootstrap');
+  logger.error('Bootstrap failed', err);
+});

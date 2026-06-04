@@ -1,14 +1,17 @@
 import { Provider } from '@nestjs/common';
 import { PinoLogger } from 'nestjs-pino';
+import { DataSource } from 'typeorm';
+import { REPOSITORY } from '~/common/constants/database';
 import { CONFIG_PROVIDER } from '~/common/constants/provider';
 import { ConfigProvider, CONFIG_SERVICE, ConfigService } from '../config/config.provider';
+import { PostgreeConnection } from '../database/database.provider';
 import { StorageHealthIndicator } from './indicators/health.indicator';
-import { MediaRepository } from './media/media.repository';
 import { FileValidationMiddleware } from './middleware/file-validation.middleware';
 import { MinioProvider } from './providers/minio.provider';
 import { StorageService } from './storage.service';
 import { RetryStrategy } from './strategies/retry.strategy';
 import { UrlGenerationService } from './url-generation.service';
+import { MediaObject } from './entitiy/media-objects.entity';
 
 export const storageProvider: Provider[] = [
   ConfigProvider,
@@ -16,10 +19,14 @@ export const storageProvider: Provider[] = [
   MinioProvider,
   StorageService,
   UrlGenerationService,
-  MediaRepository,
   RetryStrategy,
   StorageHealthIndicator,
   FileValidationMiddleware,
+  {
+    provide: REPOSITORY.MEDIA_OBJECT,
+    useFactory: (dataSource: DataSource) => dataSource.getRepository(MediaObject),
+    inject: [PostgreeConnection.provide],
+  },
   {
     inject: [CONFIG_SERVICE],
     provide: CONFIG_PROVIDER.STORAGE,

@@ -1,7 +1,7 @@
 import { INestApplication } from '@nestjs/common';
 import { TestingModule } from '@nestjs/testing';
 
-import * as request from 'supertest';
+import request from 'supertest';
 import { App } from 'supertest/types';
 
 import { cleanupApplication, setupApplication } from './setup_e2e';

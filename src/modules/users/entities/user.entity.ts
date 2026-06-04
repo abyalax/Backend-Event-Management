@@ -1,7 +1,8 @@
-import { Column, CreateDateColumn, DeleteDateColumn, Entity, JoinTable, ManyToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
+import { Column, CreateDateColumn, DeleteDateColumn, Entity, Index, JoinTable, ManyToMany, PrimaryGeneratedColumn, UpdateDateColumn } from 'typeorm';
 import type { Role } from '~/modules/role-permissions/entities/role.entity';
 
 @Entity({ name: 'users' })
+@Index('UQ_users_email', ['email'], { unique: true })
 export class User {
   @PrimaryGeneratedColumn('uuid')
   id: string;
@@ -15,7 +16,7 @@ export class User {
   @Column({ type: 'varchar', length: 100, nullable: false })
   password: string;
 
-  @ManyToMany('Role', 'users', { eager: true })
+  @ManyToMany('Role', 'users')
   @JoinTable({
     name: 'user_roles',
     joinColumn: { name: 'id_user', referencedColumnName: 'id' },

@@ -1,13 +1,23 @@
 import { INestApplication } from '@nestjs/common';
 import { TestingModule } from '@nestjs/testing';
-import * as request from 'supertest';
+import request from 'supertest';
 import { App } from 'supertest/types';
+import { DataSource } from 'typeorm';
 import z from 'zod';
+import { CONFIG_PROVIDER } from '~/common/constants/provider';
 import { validateSchema } from '~/common/helpers/validation';
 import { ADMIN } from '~/infrastructure/database/const/shared-data';
 import { QueryUserDto } from '~/modules/users/dto/query-user.dto';
 import { cleanupApplication, setupApplication } from '~/test/setup_e2e';
 import { loginAdmin } from '../common/auth';
+
+const testUserEmail = 'john.doe@example.com';
+
+const cleanupTestUser = async (moduleFixture: TestingModule): Promise<void> => {
+  const dataSource = moduleFixture.get<DataSource>(CONFIG_PROVIDER.PSQL_CONNECTION, { strict: false });
+  await dataSource.query('DELETE FROM user_roles WHERE id_user IN (SELECT id FROM users WHERE email = $1)', [testUserEmail]);
+  await dataSource.query('DELETE FROM users WHERE email = $1', [testUserEmail]);
+};
 
 describe('Module User', () => {
   let app: INestApplication<App>;
@@ -15,6 +25,7 @@ describe('Module User', () => {
 
   beforeAll(async () => {
     [app, moduleFixture] = await setupApplication();
+    await cleanupTestUser(moduleFixture);
   });
 
   describe('Response Success', () => {
@@ -87,7 +98,7 @@ describe('Module User', () => {
     test('POST /users (Create User)', async () => {
       const payload = {
         name: 'John Doe Ass',
-        email: 'john.doe@example.com',
+        email: testUserEmail,
         password: ADMIN.password,
       };
 
@@ -156,6 +167,7 @@ describe('Module User', () => {
   });
 
   afterAll(async () => {
+    if (moduleFixture) await cleanupTestUser(moduleFixture);
     await cleanupApplication(app, moduleFixture);
   });
 });

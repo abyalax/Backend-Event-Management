@@ -54,8 +54,8 @@ This project is a comprehensive event management platform built with NestJS that
 1. **Event Creation**: Admin creates events with ticket types and pricing
 2. **Event Discovery**: Users browse and search for events
 3. **Ticket Purchase**: Users select tickets and complete checkout process
-4. **Order Processing**: System creates orders and processes payments
-5. **Ticket Generation**: System generates QR-coded tickets upon successful payment
+4. **Order Processing**: System creates orders, reserves ticket quota with Redis TTL locks, and processes payments
+5. **Ticket Generation**: System generates QR-coded tickets and PDF files upon successful payment
 6. **Event Management**: Admin monitors attendance and manages event logistics
 
 ## Key Features
@@ -81,10 +81,11 @@ This project is a comprehensive event management platform built with NestJS that
 ## Business Rules
 
 - Events must have valid date ranges and location information
-- Tickets have limited quotas and track sold quantities
-- Orders have expiration times for payment completion
+- Tickets have limited quotas and track sold quantities. Pending orders reserve quota through Redis locks; paid orders update `sold` atomically in PostgreSQL.
+- Orders have expiration times for payment completion. Expired or cancelled pending orders release reserved Redis quota.
 - Users must have appropriate roles to perform actions
 - All entities maintain audit trails (created/updated/deleted timestamps)
+- Refresh tokens are stored as hashes; existing plaintext refresh tokens are invalid after this behavior.
 
 ## Technical Architecture
 
@@ -104,7 +105,7 @@ This project is a comprehensive event management platform built with NestJS that
 
 ### Core Flow Architecture
 
-**User selects ticket → Order creation (PENDING) → Seat/quota lock with TTL → Xendit invoice generation → Payment completion → Webhook processing → Order validation → Ticket generation**
+**User selects ticket → Order creation (PENDING) → quota lock with TTL → payment transaction generation → payment completion → webhook processing → atomic quota confirmation → ticket generation**
 
 ### Implementation Components
 
@@ -116,8 +117,8 @@ This project is a comprehensive event management platform built with NestJS that
 
 #### 2. Seat/Quota Locking System
 
-- **Redis-based Distributed Locking**: Handle concurrent ticket selection
-- **Atomic Quota Management**: Decrement with rollback capability
+- **Redis-based Distributed Locking**: Handle concurrent ticket selection while orders are pending
+- **Atomic Quota Management**: Confirm paid quota with incremental database updates guarded by `sold + quantity <= quota`
 - **Lock Expiration**: Tied to order TTL for automatic release
 
 #### 3. Xendit Integration
@@ -178,8 +179,8 @@ This project is a comprehensive event management platform built with NestJS that
 - Orders must be created with `PENDING` status
 - Ticket quotas are locked immediately upon order creation
 - Orders expire after 15 minutes if unpaid
-- Tickets are only generated after successful payment validation
-- Expired orders automatically release locked quotas
+- Tickets are only generated after successful payment validation. Each generated ticket gets its UUID before QR/PDF creation.
+- Expired or cancelled pending orders automatically release locked quotas
 - All payment processing must be validated through webhooks
 - Generated tickets include QR codes and PDF downloads
-_Last Update at 2026-05-15 19:55:20_
+  _Last Update at 2026-05-15 19:55:20_

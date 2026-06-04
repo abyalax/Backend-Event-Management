@@ -5,8 +5,8 @@ import { SchedulerRegistry } from '@nestjs/schedule';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getQueueToken } from '@nestjs/bullmq';
 import { Queue } from 'bullmq';
-import * as cookieParser from 'cookie-parser';
-import * as Minio from 'minio';
+import cookieParser from 'cookie-parser';
+import { Client } from 'minio';
 import { DataSource } from 'typeorm';
 import { AppModule } from '~/app.module';
 import { CONFIG_PROVIDER } from '~/common/constants/provider';
@@ -39,7 +39,7 @@ export const waitForMinIO = async (endpoint: string, port: number): Promise<bool
   // FIX: baca credentials dari env, bukan hardcode
   const env = envSchema.parse(process.env);
   try {
-    const client = new Minio.Client({
+    const client = new Client({
       endPoint: endpoint,
       port: port,
       useSSL: false,
@@ -62,7 +62,7 @@ export const cleanupUploadedFiles = async (
   accessKey: string,
   secretKey: string,
 ): Promise<void> => {
-  const client = new Minio.Client({
+  const client = new Client({
     endPoint: endpoint,
     port: port,
     useSSL: false,

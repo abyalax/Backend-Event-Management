@@ -1,6 +1,6 @@
 import { BadRequestException, Inject, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import * as bcrypt from 'bcrypt';
+import bcrypt from 'bcrypt';
 import { plainToInstance } from 'class-transformer';
 import { UserPayload } from '~/common/types/global';
 import { UserDto } from '../users/dto/user.dto';
@@ -35,7 +35,6 @@ export class AuthService {
   }
 
   async signIn(email: string, password: string): Promise<{ access_token: string; refresh_token: string; user: UserDto }> {
-    // User + Roles + Permissions (via eager)
     const userEntity = await this.userService.findByEmail(email);
     if (!userEntity) throw new NotFoundException('Email not found');
 
@@ -45,21 +44,9 @@ export class AuthService {
     const user = plainToInstance(UserDto, userEntity, {
       excludeExtraneousValues: true,
     });
+    user.roles = [];
 
-    // Manually set permissions for the API response
-    if (user.roles) {
-      user.roles.forEach((role) => {
-        role.permissions = userEntity.roles?.find((r) => r.id === role.id)?.rolePermissions?.map((rp) => rp.permission) || [];
-      });
-    }
-
-    // Extract permissions from all roles
-    const permissions: string[] = [];
-    userEntity.roles?.forEach((role) => {
-      role.rolePermissions?.forEach((rolePermission) => {
-        if (rolePermission.permission.key) permissions.push(rolePermission.permission.key);
-      });
-    });
+    const permissions = await this.userService.getPermissionKeys(userEntity.id);
 
     const payload: UserPayload = {
       name: user.name,
@@ -73,15 +60,31 @@ export class AuthService {
       this.jwtService.signAsync(payload, { expiresIn: this.config.jwtRefreshExpiration, secret: this.config.jwtRefreshSecret }),
     ]);
 
+    const hashedRefreshToken = await bcrypt.hash(refresh_token, 10);
+    await this.userService.saveRefreshToken(userEntity.id, hashedRefreshToken);
+
     return { access_token, refresh_token, user };
   }
 
   async refreshToken(refresh_token?: string): Promise<{ access_token: string }> {
     if (refresh_token === undefined) throw new UnauthorizedException();
-    const verifyToken = this.jwtService.verify(refresh_token, {
-      secret: this.config.jwtRefreshSecret,
-    });
+
+    let verifyToken: UserPayload;
+    try {
+      verifyToken = this.jwtService.verify<UserPayload>(refresh_token, {
+        secret: this.config.jwtRefreshSecret,
+      });
+    } catch {
+      throw new UnauthorizedException();
+    }
+
     if (!verifyToken) throw new UnauthorizedException();
+
+    const storedRefreshToken = await this.userService.getRefreshToken(verifyToken.id);
+    if (!storedRefreshToken) throw new UnauthorizedException();
+
+    const isRefreshTokenMatched = await bcrypt.compare(refresh_token, storedRefreshToken);
+    if (!isRefreshTokenMatched) throw new UnauthorizedException();
 
     const payload = {
       name: verifyToken.name,
@@ -97,6 +100,17 @@ export class AuthService {
     return {
       access_token,
     };
+  }
+
+  async logout(refresh_token: string): Promise<void> {
+    try {
+      const verifyToken = this.jwtService.verify<UserPayload>(refresh_token, {
+        secret: this.config.jwtRefreshSecret,
+      });
+      if (verifyToken?.id) await this.userService.removeRefreshToken(verifyToken.id);
+    } catch {
+      return;
+    }
   }
 
   async getFullPermissions(id: string): Promise<PermissionsDto[] | undefined> {

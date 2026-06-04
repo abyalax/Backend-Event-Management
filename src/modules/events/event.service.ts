@@ -7,7 +7,6 @@ import { CreateEventDto } from './dto/create-event.dto';
 import { UpdateEventDto } from './dto/update-event.dto';
 import { Event } from './entities/event.entity';
 import { EventMedia, EEventMediaType } from './entities/event-media.entity';
-import { EventRepository } from './event.repository';
 import { EVENT_PAGINATION_CONFIG } from './event-pagination.config';
 import { QueueService } from '~/infrastructure/queue/queue.service';
 import { PinoLogger } from 'nestjs-pino';
@@ -35,7 +34,6 @@ export class EventService {
     @Inject(CONFIG_SERVICE) private readonly configService: ConfigService,
     private readonly storageService: StorageService,
 
-    private readonly eventRepositoryCustom: EventRepository,
     private readonly queueService: QueueService,
     private readonly logger: PinoLogger,
   ) {}
@@ -73,7 +71,30 @@ export class EventService {
   }
 
   async create(payloadEvent: CreateEventDto, userEmail: string) {
-    const event = await this.eventRepositoryCustom.create(payloadEvent);
+    const event = await this.eventRepository.manager.transaction(async (manager) => {
+      const category = await manager.findOne(EventCategory, {
+        where: { id: Number(payloadEvent.categoryId) },
+      });
+
+      if (!category) throw new NotFoundException(`Category with ID ${payloadEvent.categoryId} not found`);
+
+      const createdEvent = await manager.save(Event, {
+        ...payloadEvent,
+        categoryId: payloadEvent.categoryId.toString(),
+        category,
+      });
+
+      if (payloadEvent.bannerMediaId) {
+        await manager.save(EventMedia, {
+          eventId: createdEvent.id,
+          mediaId: payloadEvent.bannerMediaId,
+          type: EEventMediaType.BANNER,
+          order: 0,
+        });
+      }
+
+      return createdEvent;
+    });
 
     // Load media relations and add bannerUrl
     const media = await this.eventMediaRepository.find({
@@ -123,6 +144,30 @@ export class EventService {
       media,
       bannerUrl,
     };
+  }
+
+  async attachMedia(eventId: string, mediaId: string, type: EEventMediaType): Promise<EventMedia> {
+    return this.eventRepository.manager.transaction(async (manager) => {
+      const event = await manager.findOne(Event, {
+        where: { id: eventId },
+      });
+
+      if (!event) throw new NotFoundException(`Event with ID ${eventId} not found`);
+
+      if (type === EEventMediaType.BANNER) {
+        await manager.delete(EventMedia, {
+          eventId,
+          type: EEventMediaType.BANNER,
+        });
+      }
+
+      return manager.save(EventMedia, {
+        eventId,
+        mediaId,
+        type,
+        order: 0,
+      });
+    });
   }
 
   async findOneByID(id: string) {

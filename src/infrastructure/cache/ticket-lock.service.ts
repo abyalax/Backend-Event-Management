@@ -10,6 +10,16 @@ export class TicketLockService {
     private readonly logger: PinoLogger,
   ) {}
 
+  async initializeQuotaIfAbsent(ticketId: string, availableQuota: number): Promise<void> {
+    const quotaKey = `ticket_quota:${ticketId}`;
+
+    try {
+      await this.redisService.getClient().set(quotaKey, Math.max(0, availableQuota).toString(), 'NX');
+    } catch (error) {
+      this.logger.error(`Error initializing quota for ticket ${ticketId}:`, error);
+    }
+  }
+
   async lockTicketQuota(ticketId: string, orderId: string, quantity: number): Promise<boolean> {
     const lockKey = `ticket_lock:${ticketId}:${orderId}`;
     const quotaKey = `ticket_quota:${ticketId}`;
@@ -59,6 +69,17 @@ export class TicketLockService {
       }
     } catch (error) {
       this.logger.error(`Error releasing ticket quota for ticket ${ticketId}, order ${orderId}:`, error);
+    }
+  }
+
+  async confirmTicketQuota(ticketId: string, orderId: string): Promise<void> {
+    const lockKey = `ticket_lock:${ticketId}:${orderId}`;
+
+    try {
+      await this.redisService.getClient().del(lockKey);
+      this.logger.info(`Confirmed ${ticketId} quota lock for order ${orderId}`);
+    } catch (error) {
+      this.logger.error(`Error confirming ticket quota for ticket ${ticketId}, order ${orderId}:`, error);
     }
   }
 

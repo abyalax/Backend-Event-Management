@@ -1,5 +1,5 @@
 import { Inject, Injectable, OnModuleInit, OnModuleDestroy } from '@nestjs/common';
-import * as Minio from 'minio';
+import Minio, { Client } from 'minio';
 import { PinoLogger } from 'nestjs-pino';
 import { CONFIG_PROVIDER } from '~/common/constants/provider';
 import { CONFIG_SERVICE, ConfigService } from '~/infrastructure/config/config.provider';
@@ -35,7 +35,7 @@ export interface MinioConfig {
  */
 @Injectable()
 export class MinioProvider implements OnModuleInit, OnModuleDestroy {
-  private client: Minio.Client;
+  private client: Client;
   private isConnected = false;
   private initializationPromise: Promise<void>;
 
@@ -55,7 +55,7 @@ export class MinioProvider implements OnModuleInit, OnModuleDestroy {
       // Force SSL to false for development environment
       const useSSL = this.configMinio.useSSL && this.configEnv.get('NODE_ENV') === 'production';
 
-      this.client = new Minio.Client({
+      this.client = new Client({
         endPoint: this.configMinio.endpoint,
         port: this.configMinio.port,
         useSSL: useSSL,
@@ -141,9 +141,9 @@ export class MinioProvider implements OnModuleInit, OnModuleDestroy {
 
       await this.client.makeBucket(bucketName, this.configMinio.region);
       this.logger.info(`Bucket created successfully: ${bucketName}`);
-    } catch (error) {
+    } catch (error: unknown) {
       // Ignore if bucket already exists (race condition)
-      if (error.code !== 'BucketAlreadyExists') {
+      if ((error as Minio.S3Error).code !== 'BucketAlreadyExists') {
         this.logger.error(`Failed to create bucket: ${bucketName}`, error);
         throw error;
       }

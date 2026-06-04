@@ -1,4 +1,4 @@
-import { Module, ValidationPipe } from '@nestjs/common';
+import { Logger, Module, ValidationPipe } from '@nestjs/common';
 import { APP_FILTER, APP_GUARD, APP_PIPE } from '@nestjs/core';
 import { BullModule } from '@nestjs/bullmq';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
@@ -36,9 +36,10 @@ const gracefulShutdownImports =
     : [
         GracefulShutdownModule.forRoot({
           cleanup: async (_, signal) => {
-            console.log(`Shutting down gracefully due to signal: ${signal}`);
+            const logger = new Logger('GracefulShutdown');
+            logger.log(`Shutting down gracefully due to signal: ${signal}`);
             await closeConnection();
-            console.log('Database connection closed.');
+            logger.log('Database connection closed.');
           },
           gracefulShutdownTimeout: Number(process.env.GRACEFUL_SHUTDOWN_TIMEOUT ?? 10000),
           keepNodeProcessAlive: true,
@@ -49,8 +50,16 @@ const gracefulShutdownImports =
   imports: [
     ConfigModule,
     LoggerModule,
-    ThrottlerModule.forRoot({
-      throttlers: [{ ttl: 60000, limit: 20 }],
+    ThrottlerModule.forRootAsync({
+      inject: [CONFIG_SERVICE],
+      useFactory: (configService: ConfigService) => ({
+        throttlers: [
+          {
+            ttl: configService.get('RATE_LIMIT_WINDOW_MS'),
+            limit: configService.get('RATE_LIMIT_MAX_REQUESTS'),
+          },
+        ],
+      }),
     }),
     TerminusModule,
     ScheduleModule.forRoot(),

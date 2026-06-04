@@ -3,6 +3,7 @@ import { BullModule } from '@nestjs/bullmq';
 import { PdfService } from './pdf.service';
 import { QrModule } from '../qr-code/qr-code.module';
 import { StorageModule } from '../../infrastructure/storage/storage.module';
+import { EmailModule } from '~/infrastructure/email/email.module';
 import { DatabaseModule } from '../../infrastructure/database/database.module';
 import { LoggerModule } from '~/common/logger/logger.module';
 import { pdfProviders } from './pdf.providers';
@@ -13,6 +14,7 @@ import { pdfProviders } from './pdf.providers';
     BullModule.registerQueue({ name: 'email' }),
     QrModule,
     StorageModule,
+    EmailModule,
     DatabaseModule,
     LoggerModule,
   ],

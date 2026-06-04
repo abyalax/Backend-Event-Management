@@ -67,6 +67,11 @@ export class UserService {
     return permissions;
   }
 
+  async getPermissionKeys(userId: string): Promise<string[]> {
+    const permissions = await this.getFullPermissions(userId);
+    return permissions.flatMap((permission) => (permission.key ? [permission.key] : []));
+  }
+
   async saveRefreshToken(userId: string, refreshToken: string) {
     return await this.userRepository.update(userId, { refreshToken });
   }
@@ -83,7 +88,6 @@ export class UserService {
   async findByEmail(email: string): Promise<User | null> {
     return await this.userRepository.findOne({
       where: { email },
-      relations: ['roles', 'roles.rolePermissions', 'roles.rolePermissions.permission'],
     });
   }
 

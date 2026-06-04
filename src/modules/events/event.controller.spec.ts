@@ -5,7 +5,6 @@ import { CONFIG_SERVICE } from '~/infrastructure/config/config.provider';
 import { mockRedis, mockRepository, mockConfigService, mockStorageService, mockRedisService, mockQueueService } from '~/test/common/mock';
 import { EventController } from './event.controller';
 import { EventService } from './event.service';
-import { EventRepository } from './event.repository';
 import { PinoLogger } from 'nestjs-pino';
 import { CONFIG_PROVIDER } from '~/common/constants/provider';
 import { StorageService } from '~/infrastructure/storage/storage.service';
@@ -61,13 +60,6 @@ describe('EventController', () => {
         {
           provide: REPOSITORY.MEDIA_OBJECT,
           useValue: mockRepository,
-        },
-        {
-          provide: EventRepository,
-          useValue: {
-            create: jest.fn(),
-            attachMedia: jest.fn(),
-          },
         },
         {
           provide: CONFIG_SERVICE,

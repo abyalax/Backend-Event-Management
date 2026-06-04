@@ -1,6 +1,6 @@
-import * as Minio from 'minio';
-import * as fs from 'node:fs';
-import * as path from 'node:path';
+import { Client } from 'minio';
+import fs from 'node:fs';
+import path from 'node:path';
 import { PinoLogger } from 'nestjs-pino';
 
 export interface MinioUploadConfig {
@@ -16,11 +16,11 @@ export interface MinioUploadConfig {
  * Utility untuk upload file ke MinIO saat seeding
  */
 export class MinioUploadUtil {
-  private readonly client: Minio.Client;
+  private readonly client: Client;
   private readonly logger = new PinoLogger({});
 
   constructor(private readonly config: MinioUploadConfig) {
-    this.client = new Minio.Client({
+    this.client = new Client({
       endPoint: config.endpoint,
       port: config.port,
       useSSL: config.useSSL,
@@ -63,8 +63,8 @@ export class MinioUploadUtil {
 
       this.logger.info(`File uploaded successfully: ${bucketName}/${objectKey} (${fileStats.size} bytes)`);
       return { success: true, size: fileStats.size };
-    } catch (error) {
-      const errorMessage = `Failed to upload ${objectKey}: ${error.message}`;
+    } catch (error: unknown) {
+      const errorMessage = `Failed to upload ${objectKey}: ${(error as Error).message}`;
       this.logger.error(errorMessage, error);
       return { success: false, error: errorMessage };
     }

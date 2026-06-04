@@ -13,7 +13,7 @@ export class Role {
   @ManyToMany('User', 'roles')
   users: User[];
 
-  @OneToMany('RolePermission', 'role', { eager: true })
+  @OneToMany('RolePermission', 'role')
   rolePermissions: RolePermission[];
 
   @CreateDateColumn({ type: 'timestamp with time zone', name: 'created_at' })

@@ -70,6 +70,11 @@ export const envSchema = z.object({
   // Queue Configuration
   QUEUE_CONCURRENCY: z.coerce.number().default(5),
 
+  // HTTP Configuration
+  CORS_ORIGIN: z.string().default('http://localhost:3000'),
+  RATE_LIMIT_WINDOW_MS: z.coerce.number().default(60000),
+  RATE_LIMIT_MAX_REQUESTS: z.coerce.number().default(20),
+
   // Xendit Payment Gateway Configuration
   PAYMENT_PROVIDER: z.enum(['mock', 'xendit']).default('mock'),
   XENDIT_SECRET_KEY: z.string({ message: 'XENDIT_SECRET_KEY is required' }),

@@ -1,6 +1,6 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { PinoLogger } from 'nestjs-pino';
-import * as nodemailer from 'nodemailer';
+import nodemailer from 'nodemailer';
 import { Transporter } from 'nodemailer';
 import { EmailConfig, SendEmailOptions } from './email.interface';
 import { CONFIG_PROVIDER } from '~/common/constants/provider';

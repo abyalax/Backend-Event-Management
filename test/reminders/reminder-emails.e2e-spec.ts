@@ -1,9 +1,9 @@
-import * as fs from 'node:fs';
-import * as path from 'node:path';
+import fs from 'node:fs';
+import path from 'node:path';
 import axios from 'axios';
 import { INestApplication } from '@nestjs/common';
 import { TestingModule } from '@nestjs/testing';
-import * as request from 'supertest';
+import request from 'supertest';
 import { App } from 'supertest/types';
 import { cleanupApplication, setupApplication } from '~/test/setup_e2e';
 import { ADMIN_ID } from '~/infrastructure/database/const/shared-data';

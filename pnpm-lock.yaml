@@ -41,9 +41,6 @@ importers:
       '@types/bcrypt':
         specifier: ^6.0.0
         version: 6.0.0
-      '@types/multer':
-        specifier: ^2.1.0
-        version: 2.1.0
       axios-mock-adapter:
         specifier: ^2.1.0
         version: 2.1.0(axios@1.12.2)
@@ -177,6 +174,9 @@ importers:
       '@types/jest':
         specifier: ^29.5.14
         version: 29.5.14
+      '@types/multer':
+        specifier: ^2.1.0
+        version: 2.1.0
       '@types/node':
         specifier: ^22.10.7
         version: 22.16.3
