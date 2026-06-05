@@ -134,31 +134,23 @@ export class PdfService {
 
   async sendGeneratedTicketsEmail(to: string, orderId: string, tickets: GeneratedEventTicket[]): Promise<void> {
     try {
-      await this.emailService.sendEmail({
+      await this.emailService.sendTemplateEmail({
         to,
         subject: `Your Tickets - Order ${orderId}`,
-        html: this.buildTicketEmailHtml(orderId, tickets),
+        template: 'order-tickets-ready',
+        props: {
+          orderId,
+          tickets: tickets.map((ticket) => ({
+            id: ticket.id,
+            pdfUrl: ticket.pdfUrl,
+          })),
+        },
       });
 
       this.logger.info({ to, orderId, ticketCount: tickets.length }, 'Ticket email sent successfully');
     } catch (error) {
       this.logger.error({ to, orderId, error }, 'Failed to send ticket email');
     }
-  }
-
-  private buildTicketEmailHtml(orderId: string, tickets: GeneratedEventTicket[]): string {
-    const ticketLinks = tickets.map((ticket) => `<li>Ticket ID: ${ticket.id} - <a href="${ticket.pdfUrl}">Download PDF</a></li>`).join('');
-
-    return `
-      <h2>Your Tickets Are Ready!</h2>
-      <p>Thank you for your purchase. Your tickets for order ${orderId} are now available.</p>
-      <h3>Ticket Details:</h3>
-      <ul>
-        ${ticketLinks}
-      </ul>
-      <p>Please present these tickets at the event entrance.</p>
-      <p>Best regards,<br>Event Management Team</p>
-    `;
   }
 
   private async buildPdf(ticket: Ticket, qrPayload: string): Promise<Buffer> {

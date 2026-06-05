@@ -138,16 +138,18 @@ export class PaymentWebhookProcessor extends WorkerHost {
     if (transaction.status !== PaymentStatus.PAID && transaction.status !== PaymentStatus.SETTLED) return;
 
     try {
-      await this.emailService.sendEmail({
+      await this.emailService.sendTemplateEmail({
         to: transaction.payerEmail,
         subject: 'Payment Confirmed',
-        html: `<h1>Payment Confirmed</h1>
-               <p>Your payment has been confirmed.</p>
-               <p>Transaction ID: ${transaction.id}</p>
-               <p>External ID: ${transaction.externalId}</p>
-               <p>Amount: ${transaction.amount} ${transaction.currency}</p>
-               <p>Payment Method: ${transaction.paymentMethod}</p>
-               <p>Paid At: ${transaction.paidAt?.toISOString()}</p>`,
+        template: 'payment-confirmed',
+        props: {
+          transactionId: transaction.id,
+          externalId: transaction.externalId,
+          amount: transaction.amount,
+          currency: transaction.currency,
+          paymentMethod: transaction.paymentMethod,
+          paidAt: transaction.paidAt,
+        },
       });
       this.logger.info({ transactionId: transaction.id, to: transaction.payerEmail }, 'Payment confirmation email sent');
     } catch (error) {

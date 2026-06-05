@@ -10,7 +10,7 @@ import { Role } from '~/modules/role-permissions/entities/role.entity';
 import { cleanupApplication, setupApplication } from '~/test/setup_e2e';
 import { loginAdmin } from '../common/auth';
 
-const testPassword = 'sdvdsvfdvdfw123';
+const testPassword = 'Password1!';
 
 const makeUserPayload = (suffix: string) => ({
   name: `Test User Role ${suffix}`,

@@ -4,5 +4,5 @@ export const ADMIN = {
   id: ADMIN_ID,
   name: 'Alex Admin',
   email: 'admin@gmail.com',
-  password: 'password',
+  password: 'Password1_',
 };

@@ -11,6 +11,6 @@ export const ORDER_PAGINATION_CONFIG: PaginateConfig<Order> = {
   defaultSortBy: [['createdAt', 'DESC']],
   defaultLimit: 10,
   maxLimit: 50,
-  relations: ['orderItems', 'orderItems.ticket'],
+  relations: ['orderItems', 'orderItems.ticket', 'orderItems.generatedTickets'],
   multiWordSearch: true,
 };

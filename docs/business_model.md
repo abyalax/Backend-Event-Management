@@ -65,7 +65,7 @@ This project is a comprehensive event management platform built with NestJS that
 - **Payment Integration**: External payment gateway connectivity
 - **Ticket Generation**: QR code and PDF ticket creation
 - **Media Management**: Event image and promotional material handling
-- **Notification System**: Real-time user notifications
+- **Notification System**: Real-time user notifications and React Email based email templates for event, payment, reminder, and ticket emails
 - **Background Jobs**: Queue-based processing for heavy operations
 
 ## Data Relationships
@@ -95,6 +95,7 @@ This project is a comprehensive event management platform built with NestJS that
 - **Queue System**: BullMQ for background job processing
 - **File Storage**: MinIO for media and ticket files
 - **Authentication**: JWT with HTTP-only cookies
+- **Email Rendering**: React Email templates rendered by `EmailService.sendTemplateEmail()` and delivered through Nodemailer/Mailpit
 
 ## Core Actors
 
@@ -183,4 +184,5 @@ This project is a comprehensive event management platform built with NestJS that
 - Expired or cancelled pending orders automatically release locked quotas
 - All payment processing must be validated through webhooks
 - Generated tickets include QR codes and PDF downloads
+- Payment confirmation, payment expiry, event creation, reminder, and ticket emails are rendered from reusable React Email templates. Use `pnpm email:dev` for local preview.
   _Last Update at 2026-05-15 19:55:20_

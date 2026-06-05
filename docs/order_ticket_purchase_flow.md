@@ -147,6 +147,7 @@ Hasil:
 - Quota ticket langsung di-reserve dengan Redis lock sampai order dibayar, dibatalkan, atau expired.
 - Payment mock akan membuat transaction lokal.
 - Jika `PAYMENT_PROVIDER=mock`, state payment akan langsung ready sehingga order bisa lanjut ke status siap lihat.
+- Email payment confirmation dikirim ke `payerEmail` setelah payment sukses diproses. HTML email dirender dari React Email template.
 
 Contoh response penting:
 
@@ -273,6 +274,7 @@ Tujuan:
 - User melihat ticket yang sudah digenerate untuk order tersebut.
 - Ticket ini sudah terkait ke order item dan ticket event yang dibeli.
 - Nilai `qrCodeUrl` berisi payload QR check-in untuk generated ticket; `pdfUrl` berisi URL download PDF ticket.
+- Saat PDF ticket selesai dibuat, sistem mengirim email ticket ready berisi link download PDF.
 
 Contoh response penting:
 
@@ -299,6 +301,7 @@ Setelah step 5 sampai 8, user bisa melihat:
 - Payment status order
 - Generated ticket QR/PDF jika order sudah paid
 - Quota `sold` bertambah secara atomic ketika payment berhasil, bukan saat order masih pending
+- Email payment dan ticket memakai React Email templates. Preview lokal tersedia dengan `pnpm email:dev`.
 
 ## Catatan
 

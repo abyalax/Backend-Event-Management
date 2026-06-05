@@ -113,7 +113,7 @@ describe('Reminder Email No Loop (e2e)', () => {
 
   it('should send only one reminder email even when overdue processing runs multiple times', async () => {
     const testUserEmail = `reminder-no-loop-${testId}@example.com`;
-    const testUserPassword = 'password123';
+    const testUserPassword = 'Password1!';
 
     await request(app.getHttpServer())
       .post('/auth/register')

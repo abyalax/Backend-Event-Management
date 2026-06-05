@@ -49,9 +49,7 @@ export class EventModule implements OnModuleInit {
     this.queueService.registerQueue(QUEUE.EVENT_NOTIFICATIONS, [
       {
         name: JOB.EVENT_SEND_CREATION_EMAIL,
-        handler: async (data: { eventId: string; userEmail: string; eventTitle: string }) => {
-          await this.sendEventCreationEmail(data);
-        },
+        handler: async (data) => await this.sendEventCreationEmail(data as { eventId: string; userEmail: string; eventTitle: string }),
         options: {
           attempts: 3,
           backoff: {
@@ -67,20 +65,14 @@ export class EventModule implements OnModuleInit {
 
   private async sendEventCreationEmail(data: { eventId: string; userEmail: string; eventTitle: string }) {
     try {
-      const htmlContent = `
-        <h2>Event Created Successfully!</h2>
-        <p>Dear User,</p>
-        <p>Your event "<strong>${data.eventTitle}</strong>" has been successfully created and will be published soon.</p>
-        <p>Event ID: ${data.eventId}</p>
-        <p>Thank you for using our event management system.</p>
-        <br>
-        <p>Best regards,<br>Event Management Team</p>
-      `;
-
-      await this.emailService.sendEmail({
+      await this.emailService.sendTemplateEmail({
         to: data.userEmail,
         subject: `Event Created: ${data.eventTitle}`,
-        html: htmlContent,
+        template: 'event-created',
+        props: {
+          eventId: data.eventId,
+          eventTitle: data.eventTitle,
+        },
         text: `Your event "${data.eventTitle}" has been successfully created and will be published soon.`,
       });
 

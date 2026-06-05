@@ -48,9 +48,7 @@ export class ReminderService {
 
   async createReminder(dto: CreateReminderDto, userId: string): Promise<EventReminder> {
     const event = await this.eventRepository.findOne({ where: { id: dto.eventId } });
-    if (!event) {
-      throw new NotFoundException(`Event ${dto.eventId} not found`);
-    }
+    if (!event) throw new NotFoundException(`Event ${dto.eventId} not found`);
 
     return this.scheduleReminder({
       eventId: dto.eventId,
@@ -248,13 +246,26 @@ export class ReminderService {
     try {
       const subject = reminder.subject || `Reminder: ${reminder.event?.title || 'Upcoming Event'}`;
       const message = reminder.message || this.generateReminderMessage(reminder.event);
+      const orderTicketCount = reminder.order?.orderItems?.reduce((total, item) => total + Number(item.quantity ?? 0), 0) ?? 0;
 
-      const htmlContent = this.generateReminderHtml(reminder, message);
-
-      await this.emailService.sendEmail({
+      await this.emailService.sendTemplateEmail({
         to: reminder.user.email,
         subject,
-        html: htmlContent,
+        template: 'event-reminder',
+        props: {
+          eventTitle: reminder.event?.title || 'Event',
+          eventDate: reminder.event?.startDate,
+          eventLocation: reminder.event?.location,
+          eventDescription: reminder.event?.description,
+          message,
+          order: reminder.order
+            ? {
+                id: reminder.order.id,
+                ticketCount: orderTicketCount,
+                totalAmount: reminder.order.totalAmount,
+              }
+            : null,
+        },
         text: message,
       });
 
@@ -270,66 +281,6 @@ export class ReminderService {
       );
       throw error;
     }
-  }
-
-  private generateReminderHtml(reminder: EventReminder, message: string): string {
-    const event = reminder.event;
-    const eventName = event?.title || 'Event';
-    const eventDate = event?.startDate ? new Date(event.startDate).toLocaleString() : 'TBD';
-    const eventLocation = event?.location || 'TBD';
-    const order = reminder.order;
-    const orderTicketCount = order?.orderItems?.reduce((total, item) => total + Number(item.quantity ?? 0), 0) ?? 0;
-
-    return `
-      <!DOCTYPE html>
-      <html>
-      <head>
-        <meta charset="utf-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Event Reminder</title>
-        <style>
-          body { font-family: Arial, sans-serif; line-height: 1.6; color: #333; }
-          .container { max-width: 600px; margin: 0 auto; padding: 20px; }
-          .header { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 30px; text-align: center; }
-          .content { padding: 30px; background: #f9f9f9; }
-          .event-details { background: white; padding: 20px; border-radius: 8px; margin: 20px 0; }
-          .footer { text-align: center; padding: 20px; color: #666; font-size: 12px; }
-        </style>
-      </head>
-      <body>
-        <div class="container">
-          <div class="header">
-            <h1>🗓️ Event Reminder</h1>
-            <p>${message}</p>
-          </div>
-          <div class="content">
-            <div class="event-details">
-              <h2>${eventName}</h2>
-              <p><strong>📅 Date:</strong> ${eventDate}</p>
-              <p><strong>📍 Location:</strong> ${eventLocation}</p>
-              ${event?.description ? `<p><strong>📝 Description:</strong> ${event.description}</p>` : ''}
-            </div>
-            ${
-              order
-                ? `
-            <div class="event-details">
-              <h3>Order Details</h3>
-              <p><strong>Order ID:</strong> ${order.id}</p>
-              <p><strong>Ticket Quantity:</strong> ${orderTicketCount}</p>
-              <p><strong>Total Amount:</strong> ${order.totalAmount}</p>
-            </div>
-            `
-                : ''
-            }
-            <p>Don't forget to bring your ticket and arrive on time!</p>
-          </div>
-          <div class="footer">
-            <p>This is an automated reminder. Please do not reply to this email.</p>
-          </div>
-        </div>
-      </body>
-      </html>
-    `;
   }
 
   private async sendNotificationReminder(reminder: EventReminder): Promise<void> {

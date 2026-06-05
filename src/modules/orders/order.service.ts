@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unsafe-call */
 import { BadRequestException, ForbiddenException, Inject, Injectable, NotFoundException } from '@nestjs/common';
 import { PinoLogger } from 'nestjs-pino';
 import { In, LessThan, Repository } from 'typeorm';
@@ -32,6 +31,16 @@ type LoadedOrder = Order & {
       generatedTickets?: GeneratedEventTicket[];
     }
   >;
+};
+
+export type OrderRelationProfile = 'summary' | 'response' | 'paymentProcessing' | 'ticketGeneration';
+export type OrderRelations = OrderRelationProfile | string[];
+
+const ORDER_RELATION_PROFILES: Record<OrderRelationProfile, string[]> = {
+  summary: [],
+  response: ['orderItems', 'orderItems.ticket', 'orderItems.generatedTickets'],
+  paymentProcessing: ['orderItems', 'orderItems.ticket', 'orderItems.ticket.event'],
+  ticketGeneration: ['user', 'orderItems', 'orderItems.ticket', 'orderItems.ticket.event'],
 };
 
 @Injectable()
@@ -150,13 +159,13 @@ export class OrderService {
       throw error;
     }
 
-    const order = await this.findOrderById(createdOrder.id, userId);
+    const order = await this.findOrderById(createdOrder.id, userId, 'response');
     const payment = await this.getPaymentByOrderId(order.id);
     return this.toOrderResponse(order, payment);
   }
 
   async getOrderPaymentQris(id: string, userId: string): Promise<{ orderId: string; qrCodeDataUrl: string; qrString: string }> {
-    const order = await this.findOrderById(id, userId);
+    const order = await this.findOrderById(id, userId, 'summary');
     const payment = await this.getPaymentByOrderId(order.id);
 
     if (payment?.paymentMethod !== PaymentMethod.QRIS || !payment.paymentUrl)
@@ -175,13 +184,13 @@ export class OrderService {
   }
 
   async getOrderById(id: string, userId: string): Promise<OrderResponseDto> {
-    const order = await this.findOrderById(id, userId);
+    const order = await this.findOrderById(id, userId, 'response');
     const payment = await this.getPaymentByOrderId(order.id);
     return this.toOrderResponse(order, payment);
   }
 
   async getOrderStatus(id: string, userId: string): Promise<OrderStatusResponseDto> {
-    const order = await this.findOrderById(id, userId);
+    const order = await this.findOrderById(id, userId, 'summary');
     const payment = await this.getPaymentByOrderId(order.id);
 
     return {
@@ -194,7 +203,7 @@ export class OrderService {
   }
 
   async getOrderTickets(id: string, userId: string) {
-    const order = await this.findOrderById(id, userId);
+    const order = await this.findOrderById(id, userId, 'summary');
     if (![OrderStatus.PAID].includes(order.status)) {
       const payment = await this.getPaymentByOrderId(order.id);
       if (payment?.status !== PaymentStatus.SETTLED) {
@@ -206,13 +215,13 @@ export class OrderService {
   }
 
   async cancelOrder(id: string, userId: string): Promise<OrderResponseDto> {
-    const order = await this.findOrderById(id, userId);
+    const order = await this.findOrderById(id, userId, 'summary');
     if (order.status !== OrderStatus.PENDING) {
       throw new BadRequestException('Only pending orders can be cancelled');
     }
 
     await this.cancelOrderInternal(id, false);
-    const updated = await this.findOrderById(id, userId);
+    const updated = await this.findOrderById(id, userId, 'response');
     const payment = await this.getPaymentByOrderId(updated.id);
     return this.toOrderResponse(updated, payment);
   }
@@ -252,10 +261,12 @@ export class OrderService {
     };
   }
 
-  async findOrderById(orderId: string, userId?: string): Promise<LoadedOrder> {
+  async findOrderById(orderId: string, userId?: string): Promise<LoadedOrder>;
+  async findOrderById(orderId: string, userId: string | undefined, relations: OrderRelations): Promise<LoadedOrder>;
+  async findOrderById(orderId: string, userId?: string, relations: OrderRelations = 'response'): Promise<LoadedOrder> {
     const order = await this.orderRepository.findOne({
       where: { id: orderId },
-      relations: ['user', 'orderItems', 'orderItems.ticket', 'orderItems.ticket.event', 'orderItems.generatedTickets'],
+      relations: this.resolveOrderRelations(relations),
     });
 
     if (!order) {
@@ -281,7 +292,7 @@ export class OrderService {
   }
 
   async updateOrderStatus(orderId: string, status: OrderStatus): Promise<Order> {
-    const order = await this.findOrderById(orderId);
+    const order = await this.findOrderById(orderId, undefined, 'summary');
     if (order.status === status) {
       return order;
     }
@@ -302,7 +313,7 @@ export class OrderService {
   }
 
   async updateOrderExpiration(orderId: string, expiredAt: Date): Promise<Order> {
-    const order = await this.findOrderById(orderId);
+    const order = await this.findOrderById(orderId, undefined, 'summary');
     if (order.status !== OrderStatus.PENDING) {
       throw new BadRequestException('Only pending orders can update expiration');
     }
@@ -314,7 +325,7 @@ export class OrderService {
   async releaseTicketQuotas(orderId: string): Promise<void> {
     const order = await this.orderRepository.findOne({
       where: { id: orderId },
-      relations: ['orderItems', 'orderItems.ticket'],
+      relations: ['orderItems'],
     });
 
     if (!order?.orderItems?.length) return;
@@ -322,7 +333,6 @@ export class OrderService {
     const quantityByTicketId = new Map<string, number>();
 
     for (const item of order.orderItems) {
-      if (!item.ticket) continue;
       quantityByTicketId.set(item.ticketId, (quantityByTicketId.get(item.ticketId) ?? 0) + Number(item.quantity));
     }
 
@@ -349,7 +359,7 @@ export class OrderService {
   async generateTicketsForOrder(orderId: string): Promise<GeneratedEventTicket[]> {
     const order = await this.orderRepository.findOne({
       where: { id: orderId },
-      relations: ['orderItems', 'orderItems.ticket', 'orderItems.ticket.event', 'orderItems.generatedTickets'],
+      relations: ORDER_RELATION_PROFILES.ticketGeneration,
     });
 
     if (!order) throw new NotFoundException(`Order ${orderId} not found`);
@@ -420,7 +430,7 @@ export class OrderService {
   }
 
   async handleSuccessfulPayment(orderId: string): Promise<void> {
-    const order = await this.findOrderById(orderId);
+    const order = await this.findOrderById(orderId, undefined, 'paymentProcessing');
     if (order.status !== OrderStatus.PENDING) return;
 
     const quantityByTicketId = new Map<string, number>();
@@ -485,14 +495,14 @@ export class OrderService {
   }
 
   async handleExpiredPayment(orderId: string): Promise<void> {
-    const order = await this.findOrderById(orderId);
+    const order = await this.findOrderById(orderId, undefined, 'summary');
     if (order.status !== OrderStatus.PENDING) return;
 
     await this.updateOrderStatus(orderId, OrderStatus.EXPIRED);
   }
 
   async handleFailedPayment(orderId: string): Promise<void> {
-    const order = await this.findOrderById(orderId);
+    const order = await this.findOrderById(orderId, undefined, 'summary');
     if (order.status !== OrderStatus.PENDING) return;
 
     await this.updateOrderStatus(orderId, OrderStatus.CANCELLED);
@@ -543,7 +553,7 @@ export class OrderService {
   }
 
   private async cancelOrderInternal(orderId: string, dueToPaymentFailure: boolean): Promise<void> {
-    const order = await this.findOrderById(orderId);
+    const order = await this.findOrderById(orderId, undefined, 'summary');
     if (order.status !== OrderStatus.PENDING) return;
 
     order.status = OrderStatus.CANCELLED;
@@ -609,6 +619,10 @@ export class OrderService {
         issuedAt: ticket.issuedAt,
       })),
     };
+  }
+
+  private resolveOrderRelations(relations: OrderRelations): string[] {
+    return Array.isArray(relations) ? relations : ORDER_RELATION_PROFILES[relations];
   }
 
   private async listGeneratedTicketsForOrder(orderId: string): Promise<GeneratedEventTicket[]> {

@@ -34,16 +34,18 @@ export class PaymentExpiryProcessor extends WorkerHost {
 
     if (transaction.payerEmail) {
       try {
-        await this.emailService.sendEmail({
+        await this.emailService.sendTemplateEmail({
           to: transaction.payerEmail,
           subject: 'Payment Expired',
-          html: `<h1>Payment Expired</h1>
-                 <p>Your payment has expired.</p>
-                 <p>Transaction ID: ${transaction.id}</p>
-                 <p>External ID: ${externalId}</p>
-                 <p>Amount: ${transaction.amount} ${transaction.currency}</p>
-                 <p>Payment Method: ${transaction.paymentMethod}</p>
-                 <p>Expires At: ${transaction.expiresAt?.toISOString()}</p>`,
+          template: 'payment-expired',
+          props: {
+            transactionId: transaction.id,
+            externalId,
+            amount: transaction.amount,
+            currency: transaction.currency,
+            paymentMethod: transaction.paymentMethod,
+            expiresAt: transaction.expiresAt,
+          },
         });
         this.logger.info({ transactionId, to: transaction.payerEmail }, 'Payment expiry email sent');
       } catch (error) {

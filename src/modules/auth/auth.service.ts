@@ -35,7 +35,7 @@ export class AuthService {
   }
 
   async signIn(email: string, password: string): Promise<{ access_token: string; refresh_token: string; user: UserDto }> {
-    const userEntity = await this.userService.findByEmail(email);
+    const userEntity = await this.userService.findByEmail(email, true);
     if (!userEntity) throw new NotFoundException('Email not found');
 
     const isMatch = await bcrypt.compare(password, userEntity.password);
@@ -44,9 +44,8 @@ export class AuthService {
     const user = plainToInstance(UserDto, userEntity, {
       excludeExtraneousValues: true,
     });
-    user.roles = [];
 
-    const permissions = await this.userService.getPermissionKeys(userEntity.id);
+    const permissions = this.userService.getPermissionKeysFromUser(userEntity);
 
     const payload: UserPayload = {
       name: user.name,

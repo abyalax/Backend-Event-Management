@@ -3,10 +3,13 @@
 /node_modules
 /build
 /coverage
+/.react-email
+/.react-email-export
 
 # Logs
 logs
 *.log
+.eslintcache
 npm-debug.log*
 pnpm-debug.log*
 yarn-debug.log*

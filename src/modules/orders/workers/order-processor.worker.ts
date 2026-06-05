@@ -71,7 +71,7 @@ export class OrderProcessorWorker {
   private async validatePayment(orderId: string): Promise<void> {
     this.logger.info(`Validating payment for order ${orderId}`);
 
-    const order = await this.orderService.findOrderById(orderId);
+    const order = await this.orderService.findOrderById(orderId, undefined, 'summary');
     if (!order) throw new Error(`Order ${orderId} not found`);
 
     if (order.status !== OrderStatus.PENDING) {
@@ -94,7 +94,7 @@ export class OrderProcessorWorker {
   private async expireOrder(orderId: string): Promise<void> {
     this.logger.info(`Expiring order ${orderId}`);
 
-    const order = await this.orderService.findOrderById(orderId);
+    const order = await this.orderService.findOrderById(orderId, undefined, 'summary');
     if (!order) throw new Error(`Order ${orderId} not found`);
 
     if (order.status !== OrderStatus.PENDING) {
@@ -114,7 +114,7 @@ export class OrderProcessorWorker {
   private async generateTickets(orderId: string): Promise<void> {
     this.logger.info(`Generating tickets for order ${orderId}`);
 
-    const order = await this.orderService.findOrderById(orderId);
+    const order = await this.orderService.findOrderById(orderId, undefined, 'summary');
     if (!order) throw new Error(`Order ${orderId} not found`);
 
     if (order.status !== OrderStatus.PAID) throw new Error(`Order ${orderId} is not in PAID status, current status: ${order.status}`);

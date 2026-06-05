@@ -96,21 +96,10 @@ export class EventService {
       return createdEvent;
     });
 
-    // Load media relations and add bannerUrl
     const media = await this.eventMediaRepository.find({
       where: { eventId: event.id },
       relations: ['media'],
     });
-
-    // Manually load media objects for each EventMedia if the relation is null
-    for (const mediaItem of media) {
-      if (!mediaItem.media && mediaItem.mediaId) {
-        const mediaObject = await this.mediaObjectRepository.findOne({
-          where: { id: mediaItem.mediaId },
-        });
-        if (mediaObject) mediaItem.media = mediaObject;
-      }
-    }
 
     const bannerMedia = media.find(
       (m) => m.type === EEventMediaType.BANNER && (m.media?.accessType === EAccessType.PUBLIC || m.media?.accessType === undefined),
@@ -178,21 +167,7 @@ export class EventService {
 
     if (event === null) throw new NotFoundException('Event not found');
 
-    // Add bannerUrl to the event
-    const media = await this.eventMediaRepository.find({
-      where: { eventId: event.id },
-      relations: ['media'],
-    });
-
-    // Manually load media objects for each EventMedia if the relation is null
-    for (const mediaItem of media) {
-      if (!mediaItem.media && mediaItem.mediaId) {
-        const mediaObject = await this.mediaObjectRepository.findOne({
-          where: { id: mediaItem.mediaId },
-        });
-        if (mediaObject) mediaItem.media = mediaObject;
-      }
-    }
+    const media = event.media ?? [];
 
     const bannerMedia = media.find(
       (m) => m.type === EEventMediaType.BANNER && (m.media?.accessType === EAccessType.PUBLIC || m.media?.accessType === undefined),

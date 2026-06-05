@@ -125,7 +125,7 @@ describe('Event Reminder E2E with Fake Time', () => {
   it('should schedule and send an event reminder email using fake time', async () => {
     const testUserEmail = `reminder-${testId}@example.com`;
     const testUserName = 'Reminder Test User';
-    const testUserPassword = 'password123';
+    const testUserPassword = 'Password1!';
 
     await request(app.getHttpServer())
       .post('/auth/register')
