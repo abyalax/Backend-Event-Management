@@ -5,8 +5,8 @@ services:
     restart: no
     hostname: minio
     ports:
-      - "9000:9000"  # MinIO API
-      - "9001:9001"  # MinIO Console
+      - '9000:9000' # MinIO API
+      - '9001:9001' # MinIO Console
     environment:
       MINIO_ROOT_USER: ${MINIO_ACCESS_KEY:-minioadmin}
       MINIO_ROOT_PASSWORD: ${MINIO_SECRET_KEY:-minioadmin}
@@ -14,13 +14,13 @@ services:
       MINIO_BROWSER_REDIRECT_URL: ${MINIO_BROWSER_REDIRECT_URL:-http://localhost:9001}
       # Performance tuning
       MINIO_API_MAX_CONCURRENT_STREAMS: 16
-      MINIO_CLUSTER_REPLICATION_ENABLED: "true"
+      MINIO_CLUSTER_REPLICATION_ENABLED: 'true'
     volumes:
       - minio_data:/data
-      - ./minio/certs:/root/.minio/certs:ro  # For SSL (optional)
+      - ./minio/certs:/root/.minio/certs:ro # For SSL (optional)
     command: minio server /data --console-address ":9001"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:9000/minio/health/live"]
+      test: ['CMD', 'curl', '-f', 'http://localhost:9000/minio/health/live']
       interval: 30s
       timeout: 20s
       retries: 3
@@ -28,7 +28,7 @@ services:
     networks:
       - storage_network
     labels:
-      - "com.example.description=MinIO Object Storage"
+      - 'com.example.description=MinIO Object Storage'
 
   # MinIO Client (mc) - For bucket creation and management
   minio_mc:
@@ -46,7 +46,7 @@ services:
     entrypoint: >
       /bin/sh -c "
       mc alias set minio http://minio:9000 ${MINIO_ACCESS_KEY:-minioadmin} ${MINIO_SECRET_KEY:-minioadmin};
-      
+
       # Create buckets
       mc mb minio/documents || true;
       mc mb minio/images || true;
@@ -56,10 +56,10 @@ services:
       mc mb minio/events-public || true;
       mc mb minio/backups || true;
       mc mb minio/videos || true;
-      
+
       # Set bucket versioning
       mc version enable minio/backups;
-      
+
       # Set public read policy for images-public bucket
       mc anonymous set public minio/images-public || true;
 
@@ -71,10 +71,10 @@ services:
 
       # Set public read policy for events-public bucket
       mc anonymous set public minio/events-public || true;
-      
+
       # Set bucket lifecycle for automatic cleanup
       mc ilm import minio/backups < /dev/null || true;
-      
+
       echo 'Buckets initialized successfully';
       "
     networks:
@@ -106,13 +106,13 @@ services:
     command: redis-server --requirepass ${REDIS_PASSWORD:-redis_password}
     networks:
       - storage_network
-  
+
   mailpit:
     image: axllent/mailpit:latest
     container_name: event_management_mailpit
     ports:
-      - "${MAILPIT_SMTP_PORT:-1025}:1025"
-      - "${MAILPIT_UI_PORT:-8025}:8025"
+      - '${MAILPIT_SMTP_PORT:-1025}:1025'
+      - '${MAILPIT_UI_PORT:-8025}:8025'
     environment:
       - MP_MAX_MESSAGES=${MAILPIT_MAX_MESSAGES:-1000}
       - MP_SMTP_AUTH_ACCEPT_ANY=${MAILPIT_SMTP_AUTH_ACCEPT_ANY:-true}
@@ -125,7 +125,7 @@ services:
       - MP_DEFAULT_FROM_NAME=${MAILPIT_FROM_NAME:-Evenics}
     volumes:
       - mailpit_data:/var/lib/mailpit/data
-    command: ["--smtp-auth-allow-insecure"]
+    command: ['--smtp-auth-allow-insecure']
     networks:
       - storage_network
 
@@ -133,14 +133,14 @@ services:
     image: dbgate/dbgate
     container_name: event_management_dbms
     restart: no
-    depends_on: 
+    depends_on:
       - postgres
     ports:
       - 8080:3000
     volumes:
       - dbgate-data:/root/.dbgate
     networks:
-          - storage_network
+      - storage_network
     environment:
       PORT: 3000
       CONNECTIONS: POSTGRES
@@ -169,7 +169,7 @@ volumes:
     driver: local
 
 # Usage:
-# 1. Create .env file dengan required variables
+# 1. Create .env file with required variables
 # 2. Run: docker-compose up -d
 # 3. Access MinIO Console: http://localhost:9001
 # 4. Access Mailpit: http://localhost:8025

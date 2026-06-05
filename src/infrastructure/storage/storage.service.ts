@@ -1,5 +1,5 @@
 import { Inject, Injectable, BadRequestException, InternalServerErrorException, NotFoundException } from '@nestjs/common';
-import * as crypto from 'node:crypto';
+import crypto from 'node:crypto';
 import { Readable } from 'node:stream';
 import { MinioProvider } from './providers/minio.provider';
 import { RetryStrategy } from './strategies/retry.strategy';

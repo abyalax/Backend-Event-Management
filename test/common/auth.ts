@@ -1,5 +1,5 @@
 import { INestApplication } from '@nestjs/common';
-import * as request from 'supertest';
+import request from 'supertest';
 import { App } from 'supertest/types';
 import { ADMIN } from '~/infrastructure/database/const/shared-data';
 import { extractHttpOnlyCookie } from '~/test/utils';

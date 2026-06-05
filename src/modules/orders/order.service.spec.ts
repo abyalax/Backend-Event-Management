@@ -16,6 +16,7 @@ import { DashboardCacheService } from '../dashboard/dashboard-cache.service';
 import { DashboardService } from '../dashboard/dashboard.service';
 import { CacheService } from '~/infrastructure/cache/cache.service';
 import { ReminderService } from '~/modules/reminders/reminder.service';
+import { TicketLockService } from '~/infrastructure/cache/ticket-lock.service';
 
 describe('OrderService', () => {
   let service: OrderService;
@@ -50,6 +51,15 @@ describe('OrderService', () => {
           useValue: mockPdfService,
         },
         {
+          provide: TicketLockService,
+          useValue: {
+            initializeQuotaIfAbsent: jest.fn(),
+            lockTicketQuota: jest.fn(),
+            releaseTicketQuota: jest.fn(),
+            confirmTicketQuota: jest.fn(),
+          },
+        },
+        {
           provide: CONFIG_PROVIDER.QR,
           useValue: { secret: 'test-qr-secret' },
         },
@@ -71,6 +81,14 @@ describe('OrderService', () => {
           provide: CONFIG_PROVIDER.ORDER,
           useValue: {
             urlApi: 'http://localhost:4000',
+          },
+        },
+        {
+          provide: CONFIG_PROVIDER.STORAGE,
+          useValue: {
+            buckets: {
+              'tickets-public': 'tickets-public',
+            },
           },
         },
         {

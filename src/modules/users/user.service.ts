@@ -67,6 +67,14 @@ export class UserService {
     return permissions;
   }
 
+  getPermissionKeysFromUser(user: User): string[] {
+    return (
+      user.roles?.flatMap(
+        (role) => role.rolePermissions?.flatMap((rolePermission) => (rolePermission.permission?.key ? [rolePermission.permission.key] : [])) ?? [],
+      ) ?? []
+    );
+  }
+
   async saveRefreshToken(userId: string, refreshToken: string) {
     return await this.userRepository.update(userId, { refreshToken });
   }
@@ -80,11 +88,31 @@ export class UserService {
     return await this.userRepository.save(user);
   }
 
-  async findByEmail(email: string): Promise<User | null> {
-    return await this.userRepository.findOne({
-      where: { email },
-      relations: ['roles', 'roles.rolePermissions', 'roles.rolePermissions.permission'],
-    });
+  async findByEmail(email: string, withRoles = false): Promise<User | null> {
+    if (!withRoles)
+      return await this.userRepository.findOne({
+        where: { email },
+      });
+
+    return await this.userRepository
+      .createQueryBuilder('user')
+      .leftJoinAndSelect('user.roles', 'role')
+      .leftJoinAndSelect('role.rolePermissions', 'rolePermission')
+      .leftJoinAndSelect('rolePermission.permission', 'permission')
+      .select([
+        'user.id',
+        'user.name',
+        'user.email',
+        'user.password',
+        'role.id',
+        'role.name',
+        'rolePermission.id',
+        'permission.id',
+        'permission.name',
+        'permission.key',
+      ])
+      .where('user.email = :email', { email })
+      .getOne();
   }
 
   async findOne(params: FindOneOptions<User>) {

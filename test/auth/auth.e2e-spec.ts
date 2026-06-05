@@ -2,7 +2,7 @@ import { faker } from '@faker-js/faker';
 import { HttpStatus, INestApplication } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { TestingModule } from '@nestjs/testing';
-import * as request from 'supertest';
+import request from 'supertest';
 import { App } from 'supertest/types';
 import { validateDto } from '~/common/helpers/validation';
 import { envSchema } from '~/infrastructure/config/config.schema';
@@ -61,6 +61,22 @@ describe('Module Authentication', () => {
     const data = res.body.data;
     const validated = await validateDto(UserDto, data);
     expect(validated).toBeInstanceOf(UserDto);
+    expect(data).toHaveProperty('roles');
+    expect(Array.isArray(data.roles)).toBe(true);
+    expect(data.roles.length).toBeGreaterThan(0);
+
+    data.roles.forEach((role: { id: number; name: string; permissions: Array<{ id: number; key: string; name: string }> }) => {
+      expect(role).toHaveProperty('id');
+      expect(role).toHaveProperty('name');
+      expect(role).toHaveProperty('permissions');
+      expect(Array.isArray(role.permissions)).toBe(true);
+
+      role.permissions.forEach((permission) => {
+        expect(permission).toHaveProperty('id');
+        expect(permission).toHaveProperty('key');
+        expect(permission).toHaveProperty('name');
+      });
+    });
   });
 
   test('POST /auth/register', async () => {

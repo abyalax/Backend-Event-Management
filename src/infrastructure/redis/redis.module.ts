@@ -1,4 +1,4 @@
-import { DynamicModule, Global, InjectionToken, Module } from '@nestjs/common';
+import { DynamicModule, Global, InjectionToken, Logger, Module } from '@nestjs/common';
 import Redis, { RedisOptions } from 'ioredis';
 import { RedisService } from './redis.service';
 import { CONFIG_PROVIDER } from '~/common/constants/provider';
@@ -23,9 +23,10 @@ export class RedisModule {
         {
           provide: CONFIG_PROVIDER.REDIS_CLIENT,
           useFactory: (opts: RedisOptions) => {
+            const logger = new Logger('RedisModule');
             const client = new Redis(opts);
-            client.on('connect', () => console.log('Redis connected'));
-            client.on('error', (err) => console.error('Redis error:', err));
+            client.on('connect', () => logger.log('Redis connected'));
+            client.on('error', (err) => logger.error('Redis error', err));
             return client;
           },
           inject: [CONFIG_PROVIDER.REDIS_OPTION],

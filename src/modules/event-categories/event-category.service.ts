@@ -19,7 +19,7 @@ export class EventCategoryService {
   }
 
   async getIds(): Promise<number[]> {
-    const rows = await this.eventCategoryRepository.find({ select: {} });
+    const rows = await this.eventCategoryRepository.find({ select: { id: true } });
     return rows.map((r) => Number(r.id));
   }
 

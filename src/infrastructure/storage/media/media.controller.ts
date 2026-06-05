@@ -1,7 +1,8 @@
 import { Controller, Post, Patch, Param, Body, HttpCode, HttpStatus, NotFoundException, BadRequestException, Inject, Get } from '@nestjs/common';
+import { Repository } from 'typeorm';
+import { REPOSITORY } from '~/common/constants/database';
 import { MediaObject } from '../entitiy/media-objects.entity';
 import { StorageService } from '../storage.service';
-import { MediaRepository } from './media.repository';
 import { ConfigService, CONFIG_SERVICE } from '~/infrastructure/config/config.provider';
 import { TResponse } from '~/common/types/response';
 import { PresignedUrlDto, EAccessType } from '../dto/presigned-url.dto';
@@ -38,7 +39,8 @@ export class MediaController {
   constructor(
     private readonly logger: PinoLogger,
     private readonly storageService: StorageService,
-    private readonly mediaRepository: MediaRepository,
+    @Inject(REPOSITORY.MEDIA_OBJECT)
+    private readonly mediaRepository: Repository<MediaObject>,
     @Inject(CONFIG_SERVICE) private readonly configService: ConfigService,
   ) {
     this.defaultBucket = this.configService.get('STORAGE_BUCKET_IMAGES');
@@ -75,7 +77,7 @@ export class MediaController {
 
     // Create media record in database
     try {
-      const media = await this.mediaRepository.create({
+      const media = await this.mediaRepository.save({
         bucket: targetBucket,
         objectKey,
         mimeType,
@@ -118,7 +120,7 @@ export class MediaController {
 
     if (uploaded === undefined) throw new BadRequestException('uploaded field is required');
 
-    const media = await this.mediaRepository.findById(id);
+    const media = await this.mediaRepository.findOne({ where: { id } });
     if (!media) throw new NotFoundException(`Media with ID ${id} not found`);
 
     if (!uploaded) {
@@ -140,7 +142,7 @@ export class MediaController {
       if (metadata.contentType) media.mimeType = metadata.contentType;
 
       // Save updated media record
-      await this.mediaRepository.create(media);
+      await this.mediaRepository.save(media);
     } catch (error) {
       // File doesn't exist in storage, delete the record
       await this.mediaRepository.remove(media);
@@ -162,7 +164,7 @@ export class MediaController {
   @Get(':id/url')
   @HttpCode(HttpStatus.OK)
   async getMediaUrl(@Param('id') id: string): Promise<TResponse<{ url: string }>> {
-    const media = await this.mediaRepository.findById(id);
+    const media = await this.mediaRepository.findOne({ where: { id } });
 
     if (!media) throw new NotFoundException(`Media with ID ${id} not found`);
 
@@ -184,7 +186,7 @@ export class MediaController {
   @Get('public/list')
   @HttpCode(HttpStatus.OK)
   async getPublicMediaList(): Promise<TResponse<{ id: string; url: string; originalName?: string; mimeType?: string }[]>> {
-    const publicMedia = await this.mediaRepository.findByAccessType(EAccessType.PUBLIC);
+    const publicMedia = await this.mediaRepository.find({ where: { accessType: EAccessType.PUBLIC } });
 
     const mediaList = publicMedia.map((media: MediaObject) => ({
       id: media.id,

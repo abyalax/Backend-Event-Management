@@ -10,7 +10,6 @@ import { DeleteEventDto } from './dto/delete-event.dto';
 import { Event } from './entities/event.entity';
 import { EventMedia } from './entities/event-media.entity';
 import { EventService } from './event.service';
-import { EventRepository } from './event.repository';
 import { ParseUUIDPipe } from '~/common/pipes/parse-uuid.pipe';
 import { AttachMediaDto } from './dto/attach-media.dto';
 import { JwtGuard } from '~/common/guards/jwt.guard';
@@ -21,10 +20,7 @@ import { Request } from 'express';
 
 @Controller('events')
 export class EventController {
-  constructor(
-    private readonly eventService: EventService,
-    private readonly eventRepository: EventRepository,
-  ) {}
+  constructor(private readonly eventService: EventService) {}
 
   @Get('public')
   @HttpCode(HttpStatus.OK)
@@ -138,7 +134,7 @@ export class EventController {
   @Post(':id/media')
   @HttpCode(HttpStatus.CREATED)
   async attachMedia(@Param('id', ParseUUIDPipe) id: string, @Body() request: AttachMediaDto): Promise<TResponse<EventMedia>> {
-    const eventMedia = await this.eventRepository.attachMedia(id, request.mediaId, request.type);
+    const eventMedia = await this.eventService.attachMedia(id, request.mediaId, request.type);
 
     return {
       message: 'Media attached to event successfully',

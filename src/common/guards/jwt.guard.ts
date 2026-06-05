@@ -28,7 +28,8 @@ export class JwtGuard implements CanActivate {
         permissions: verifyToken?.permissions ?? [],
       };
       return true;
-    } catch (error) {
+    } catch (err) {
+      const error = err as { name: string };
       if (error.name === 'TokenExpiredError') {
         throw new UnauthorizedException(EMessage.TOKEN_EXPIRED);
       } else if (error.name === 'JsonWebTokenError') {

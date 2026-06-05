@@ -11,6 +11,7 @@ jest.mock('bullmq', () => ({
   Worker: jest.fn(() => mockWorker),
 }));
 jest.mock('ioredis', () => ({
+  __esModule: true,
   default: jest.fn(() => mockRedis),
 }));
 

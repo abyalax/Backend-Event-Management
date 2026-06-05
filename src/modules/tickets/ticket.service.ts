@@ -19,7 +19,7 @@ export class TicketService {
   }
 
   async getIds(): Promise<number[]> {
-    const rows = await this.ticketRepository.find({ select: {} });
+    const rows = await this.ticketRepository.find({ select: { id: true } });
     return rows.map((r) => Number(r.id));
   }
 

@@ -40,9 +40,6 @@ export class Ticket {
   @Column({ name: 'pdf_url', type: 'varchar', nullable: true })
   pdfUrl?: string;
 
-  @Column({ name: 'is_used', type: 'boolean', nullable: false, default: false })
-  isUsed: boolean;
-
   @ManyToOne('Event', 'tickets', { onDelete: 'CASCADE' })
   @JoinColumn({ name: 'event_id', referencedColumnName: 'id' })
   event: Event;

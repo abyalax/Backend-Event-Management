@@ -1,14 +1,30 @@
 import { INestApplication } from '@nestjs/common';
 import { TestingModule } from '@nestjs/testing';
-import * as request from 'supertest';
+import request from 'supertest';
 import { App } from 'supertest/types';
+import { DataSource } from 'typeorm';
+import { CONFIG_PROVIDER } from '~/common/constants/provider';
 import { Permission } from '~/modules/auth/entities/permission.entity';
 import { RoleDto } from '~/modules/role-permissions/dto/role-permission.dto';
 import { Role } from '~/modules/role-permissions/entities/role.entity';
 import { cleanupApplication, setupApplication } from '~/test/setup_e2e';
 import { loginAdmin } from '../common/auth';
 
-const testPassword = 'sdvdsvfdvdfw123';
+const testPassword = 'Password1!';
+
+const makeUserPayload = (suffix: string) => ({
+  name: `Test User Role ${suffix}`,
+  email: `testrole-${suffix}@example.com`,
+  password: testPassword,
+});
+
+const testUserEmails = ['create', 'assign', 'get', 'remove'].map((suffix) => makeUserPayload(suffix).email);
+
+const cleanupTestUsers = async (moduleFixture: TestingModule): Promise<void> => {
+  const dataSource = moduleFixture.get<DataSource>(CONFIG_PROVIDER.PSQL_CONNECTION, { strict: false });
+  await dataSource.query('DELETE FROM user_roles WHERE id_user IN (SELECT id FROM users WHERE email = ANY($1))', [testUserEmails]);
+  await dataSource.query('DELETE FROM users WHERE email = ANY($1)', [testUserEmails]);
+};
 
 describe('Module User Role Management', () => {
   let app: INestApplication<App>;
@@ -16,6 +32,7 @@ describe('Module User Role Management', () => {
 
   beforeAll(async () => {
     [app, moduleFixture] = await setupApplication();
+    await cleanupTestUsers(moduleFixture);
   });
 
   describe('Response Success', () => {
@@ -32,11 +49,7 @@ describe('Module User Role Management', () => {
     });
 
     test('POST /users (Create User for role assignment testing)', async () => {
-      const payload = {
-        name: 'Test User Role Assignment',
-        email: 'testrole@example.com',
-        password: testPassword,
-      };
+      const payload = makeUserPayload('create');
 
       const res = await request(app.getHttpServer())
         .post('/users')
@@ -60,11 +73,7 @@ describe('Module User Role Management', () => {
 
     test('POST /users/:id/roles (Assign Roles to User)', async () => {
       // First create a user
-      const userPayload = {
-        name: 'Test User Role Assignment',
-        email: 'testrole@example.com',
-        password: testPassword,
-      };
+      const userPayload = makeUserPayload('assign');
 
       const userRes = await request(app.getHttpServer())
         .post('/users')
@@ -112,11 +121,7 @@ describe('Module User Role Management', () => {
 
     test('GET /users/:id/roles (Get User Roles)', async () => {
       // First create a user
-      const userPayload = {
-        name: 'Test User Get Roles',
-        email: 'testgetroles@example.com',
-        password: testPassword,
-      };
+      const userPayload = makeUserPayload('get');
 
       const userRes = await request(app.getHttpServer())
         .post('/users')
@@ -189,11 +194,7 @@ describe('Module User Role Management', () => {
 
     test('DELETE /users/:id/roles/:roleId (Remove Role from User)', async () => {
       // First create a user
-      const userPayload = {
-        name: 'Test User Remove Role',
-        email: 'testremoverole@example.com',
-        password: testPassword,
-      };
+      const userPayload = makeUserPayload('remove');
 
       const userRes = await request(app.getHttpServer())
         .post('/users')
@@ -246,6 +247,7 @@ describe('Module User Role Management', () => {
   });
 
   afterAll(async () => {
+    if (moduleFixture) await cleanupTestUsers(moduleFixture);
     await cleanupApplication(app, moduleFixture);
   });
 });

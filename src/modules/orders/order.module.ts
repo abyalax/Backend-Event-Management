@@ -4,11 +4,7 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { DatabaseModule } from '~/infrastructure/database/database.module';
 import { TicketModule } from '../tickets/ticket.module';
 import { PaymentModule } from '../payments/payment.module';
-import { UserModule } from '../users/user.module';
-import { QrModule } from '../qr-code/qr-code.module';
 import { PdfModule } from '../pdf/pdf.module';
-import { EmailModule } from '~/infrastructure/email/email.module';
-import { StorageModule } from '~/infrastructure/storage/storage.module';
 import { DashboardModule } from '../dashboard/dashboard.module';
 import { ReminderModule } from '../reminders/reminder.module';
 import { CONFIG_SERVICE, ConfigService } from '~/infrastructure/config/config.provider';
@@ -22,11 +18,7 @@ import { OrderService } from './order.service';
     ScheduleModule,
     forwardRef(() => TicketModule),
     forwardRef(() => PaymentModule),
-    UserModule,
-    QrModule,
     PdfModule,
-    EmailModule,
-    StorageModule,
     DashboardModule,
     ReminderModule,
     JwtModule.registerAsync({

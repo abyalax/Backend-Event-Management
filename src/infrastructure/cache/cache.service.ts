@@ -1,10 +1,12 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { RedisService } from '../redis/redis.service';
 
 @Injectable()
 export class CacheService {
   private readonly LOCK_SUFFIX = ':lock';
   private readonly LOCK_TTL = 10; // seconds
+  private readonly LOCK_CHANNEL_PREFIX = 'cache-lock-release';
+  private readonly logger = new Logger(CacheService.name);
 
   constructor(private readonly redisService: RedisService) {}
 
@@ -18,7 +20,7 @@ export class CacheService {
       const cached = await this.redisService.get<T>(key);
       if (cached) return cached;
     } catch (error) {
-      console.warn(`Cache read error for key ${key}:`, error);
+      this.logger.warn({ key, error }, 'Cache read error');
     }
 
     // 2. Try acquire lock (NX = only if not exists, EX = auto expire)
@@ -34,7 +36,7 @@ export class CacheService {
         try {
           await this.redisService.set(key, data, ttlSeconds);
         } catch (error) {
-          console.warn(`Cache write error for key ${key}:`, error);
+          this.logger.warn({ key, error }, 'Cache write error');
         }
 
         return data;
@@ -45,7 +47,7 @@ export class CacheService {
           const cached = await this.redisService.get<T>(key);
           if (cached) return cached;
         } catch (error) {
-          console.warn(`Cache retry read error for key ${key}:`, error);
+          this.logger.warn({ key, error }, 'Cache retry read error');
         }
 
         // Fallback: fetch data without cache
@@ -57,7 +59,7 @@ export class CacheService {
         try {
           await this.releaseLock(lockKey, lockValue);
         } catch (error) {
-          console.warn(`Lock release error for key ${lockKey}:`, error);
+          this.logger.warn({ lockKey, error }, 'Lock release error');
         }
       }
     }
@@ -74,7 +76,7 @@ export class CacheService {
       const result = await client.set(lockKey, lockValue, 'EX', this.LOCK_TTL, 'NX');
       return result === 'OK';
     } catch (error) {
-      console.error(`Lock acquire error for key ${lockKey}:`, error);
+      this.logger.error({ lockKey, error }, 'Lock acquire error');
       return false;
     }
   }
@@ -88,8 +90,9 @@ export class CacheService {
       const client = this.redisService.getClient();
       // Lua script: only delete if value matches (prevent releasing other's lock)
       await client.eval(`if redis.call("get", KEYS[1]) == ARGV[1] then return redis.call("del", KEYS[1]) else return 0 end`, 1, lockKey, lockValue);
+      await this.redisService.publish(this.lockChannel(lockKey), { lockKey });
     } catch (error) {
-      console.error(`Lock release error for key ${lockKey}:`, error);
+      this.logger.error({ lockKey, error }, 'Lock release error');
     }
   }
 
@@ -97,27 +100,32 @@ export class CacheService {
    * Wait for cache to be populated by lock holder (with timeout)
    */
   private async waitForCache(key: string, lockKey: string, maxWaitMs: number = 5000): Promise<void> {
-    const startTime = Date.now();
-    const pollIntervalMs = 100;
+    const channel = this.lockChannel(lockKey);
+    let settled = false;
 
-    while (Date.now() - startTime < maxWaitMs) {
-      try {
-        // Check if lock is released
-        const lockExists = await this.redisService.exists(lockKey);
-        if (!lockExists) {
-          // Lock released, cache should be ready
-          return;
-        }
+    await new Promise<void>((resolve) => {
+      const timer = setTimeout(() => {
+        if (settled) return;
+        settled = true;
+        this.logger.warn({ key, lockKey }, 'Timeout waiting for cache key');
+        resolve();
+      }, maxWaitMs);
 
-        // Wait before retry
-        await new Promise((resolve) => setTimeout(resolve, pollIntervalMs));
-      } catch (error) {
-        console.warn(`Wait for cache error for key ${key}:`, error);
-        return;
-      }
-    }
-
-    console.warn(`Timeout waiting for cache key ${key}`);
+      this.redisService
+        .subscribe(channel, () => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          resolve();
+        })
+        .catch((error) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(timer);
+          this.logger.warn({ key, lockKey, error }, 'Wait for cache error');
+          resolve();
+        });
+    });
   }
 
   /**
@@ -125,7 +133,14 @@ export class CacheService {
    */
   async clearByPattern(pattern: string): Promise<number> {
     const client = this.redisService.getClient();
-    const keys = await client.keys(pattern);
+    const keys: string[] = [];
+    let cursor = '0';
+
+    do {
+      const [nextCursor, batch] = await client.scan(cursor, 'MATCH', pattern, 'COUNT', 100);
+      cursor = nextCursor;
+      keys.push(...batch);
+    } while (cursor !== '0');
 
     if (keys.length === 0) return 0;
 
@@ -164,8 +179,12 @@ export class CacheService {
         resetIn: ttl || windowSeconds,
       };
     } catch (error) {
-      console.error('Rate limit error:', error);
+      this.logger.error({ error }, 'Rate limit error');
       throw error;
     }
+  }
+
+  private lockChannel(lockKey: string): string {
+    return `${this.LOCK_CHANNEL_PREFIX}:${lockKey}`;
   }
 }

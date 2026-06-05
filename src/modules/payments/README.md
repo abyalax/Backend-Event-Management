@@ -10,7 +10,7 @@ The payments module handles all payment processing operations using Xendit payme
 - **E-Wallet Payments**: Support for OVO, DANA, ShopeePay, and LinkAja
 - **Webhook Processing**: Handle payment status updates from Xendit
 - **Payment Expiry**: Automatic expiry handling for pending payments
-- **Email Notifications**: Send payment confirmation and expiry notifications
+- **Email Notifications**: Send React Email rendered payment confirmation and expiry notifications
 
 ## Architecture
 
@@ -169,7 +169,7 @@ The module processes webhooks from Xendit to update payment status:
 2. Validate webhook token
 3. Queue webhook for background processing
 4. Update transaction status
-5. Send email notification for successful payments
+5. Send React Email rendered email notification for successful payments
 
 ## Background Jobs
 
@@ -178,7 +178,7 @@ The module processes webhooks from Xendit to update payment status:
 - Runs every 5 minutes
 - Finds expired pending transactions
 - Marks transactions as expired
-- Sends expiry email notifications
+- Sends React Email rendered expiry email notifications
 
 ### Webhook Processing Job
 
@@ -203,6 +203,12 @@ MAILPIT_USER=user
 MAILPIT_PASSWORD=pass
 MAILPIT_FROM_EMAIL=noreply@yourapp.com
 MAILPIT_FROM_NAME=Your App
+```
+
+Payment email HTML is rendered from React Email templates through `EmailService.sendTemplateEmail()`. Preview all email templates locally with:
+
+```bash
+pnpm email:dev
 ```
 
 ## Database Schema
@@ -332,4 +338,4 @@ curl -X POST /payments/webhook \
 - **v1.2.0**: Enhanced error handling and retry logic
 - **v1.3.0**: Added payment expiry handling and email notifications
 - **v1.4.0**: Added mock payment provider for local checkout testing
-_Last Update at 2026-05-15 19:55:20_
+  _Last Update at 2026-05-15 19:55:20_

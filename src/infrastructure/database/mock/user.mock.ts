@@ -1,4 +1,4 @@
-import * as bcrypt from "bcryptjs";
+import bcrypt from "bcryptjs";
 import type { User } from "~/modules/users/entities/user.entity";
 import { faker } from '@faker-js/faker';
 import { ADMIN, ADMIN_ID } from "../const/shared-data";

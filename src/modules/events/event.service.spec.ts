@@ -6,7 +6,6 @@ import { CONFIG_PROVIDER } from '~/common/constants/provider';
 import { mockRedis, mockRepository, mockStorageService, mockRedisService, mockQueueService } from '~/test/common/mock';
 import { EventCategory } from '../event-categories/entities/event-category.entity';
 import { Event } from './entities/event.entity';
-import { EventRepository } from './event.repository';
 import { EventService } from './event.service';
 import { PinoLogger } from 'nestjs-pino';
 import { JwtModule } from '@nestjs/jwt';
@@ -74,13 +73,6 @@ describe('EventService', () => {
         {
           provide: REPOSITORY.EVENT,
           useValue: mockRepository,
-        },
-        {
-          provide: EventRepository,
-          useValue: {
-            create: jest.fn(),
-            attachMedia: jest.fn(),
-          },
         },
         {
           provide: REPOSITORY.EVENT_MEDIA,

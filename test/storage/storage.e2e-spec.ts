@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/no-unsafe-call */
 /* eslint-disable @typescript-eslint/no-unsafe-argument */
 import { INestApplication } from '@nestjs/common';
-import * as request from 'supertest';
-import * as fs from 'node:fs';
-import * as path from 'node:path';
+import request from 'supertest';
+import fs from 'node:fs';
+import path from 'node:path';
 import { TestingModule } from '@nestjs/testing';
 import { setupApplication, cleanupApplication, TestFileTracker, cleanupUploadedFiles, waitForMinIO, UploadedFile } from '../setup_e2e';
 import { App } from 'supertest/types';

@@ -1,6 +1,6 @@
 import type { DataSource } from 'typeorm';
 import type { Seeder } from 'typeorm-extension';
-import * as dotenv from 'dotenv';
+import dotenv from 'dotenv';
 
 import { MediaObject } from '~/infrastructure/storage/entitiy/media-objects.entity';
 
@@ -36,7 +36,7 @@ export default class MediaObjectSeeder implements Seeder {
       const uploadUtil = new MinioUploadUtil(minioConfig);
       await uploadUtil.uploadBannerImages();
     } catch (error) {
-      console.warn('Failed to upload banner images to MinIO:', error.message);
+      console.warn('Failed to upload banner images to MinIO:', (error as Error).message);
       console.log('Continuing with database seeding (MinIO may not be available)');
     }
   }

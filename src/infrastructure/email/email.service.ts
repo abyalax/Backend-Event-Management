@@ -1,9 +1,10 @@
 import { Injectable, Inject } from '@nestjs/common';
 import { PinoLogger } from 'nestjs-pino';
-import * as nodemailer from 'nodemailer';
+import nodemailer from 'nodemailer';
 import { Transporter } from 'nodemailer';
-import { EmailConfig, SendEmailOptions } from './email.interface';
+import { EmailConfig, SendEmailOptions, SendTemplateEmailOptions } from './email.interface';
 import { CONFIG_PROVIDER } from '~/common/constants/provider';
+import { EmailTemplateName, renderEmailTemplate } from './templates';
 
 @Injectable()
 export class EmailService {
@@ -93,6 +94,16 @@ export class EmailService {
       );
       throw error;
     }
+  }
+
+  async sendTemplateEmail<T extends EmailTemplateName>(options: SendTemplateEmailOptions<T>): Promise<void> {
+    const rendered = renderEmailTemplate(options.template, options.props);
+
+    await this.sendEmail({
+      ...options,
+      html: rendered.html,
+      text: options.text ?? rendered.text,
+    });
   }
 
   async verifyConnection(): Promise<boolean> {

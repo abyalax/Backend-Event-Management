@@ -1,3 +1,5 @@
+import type { EmailTemplateName, EmailTemplatePropsMap } from './templates';
+
 export interface EmailConfig {
   host: string;
   port: number;
@@ -18,4 +20,11 @@ export interface SendEmailOptions {
   replyTo?: string | null;
   cc?: string | string[] | null;
   bcc?: string | string[] | null;
+}
+
+export interface SendTemplateEmailOptions<T extends EmailTemplateName> extends Omit<SendEmailOptions, 'html' | 'subject' | 'text'> {
+  template: T;
+  props: EmailTemplatePropsMap[T];
+  subject: string;
+  text?: string | null;
 }

@@ -6,13 +6,11 @@ import { EventCategory } from '../event-categories/entities/event-category.entit
 import { Event } from './entities/event.entity';
 import { EventMedia } from './entities/event-media.entity';
 import { MediaObject } from '~/infrastructure/storage/entitiy/media-objects.entity';
-import { EventRepository } from './event.repository';
 import { EventService } from './event.service';
 import { AttachMediaValidationPipe } from './pipes/attach-media-validation.pipe';
 
 export const eventProvider: Provider[] = [
   EventService,
-  EventRepository,
   AttachMediaValidationPipe,
   {
     provide: REPOSITORY.EVENT,

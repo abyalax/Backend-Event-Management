@@ -6,8 +6,11 @@ import { ZodError } from 'zod';
 import { EMessage } from '../types/response';
 import { ClassValidatorFail } from './exception';
 
-type ErrorConstructor<T extends Error = Error> = new (...args: unknown[]) => T;
-type ExceptionHandler<T = unknown> = (
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ErrorConstructor<T extends Error = Error> = abstract new (...args: any[]) => T;
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+type ExceptionHandler<T = any> = (
   e: T,
   logger: PinoLogger,
 ) => {

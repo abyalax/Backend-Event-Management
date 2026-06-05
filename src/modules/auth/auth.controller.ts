@@ -3,7 +3,6 @@ import { Request as RequestExpress, Response as ResponseExpress } from 'express'
 import { JwtGuard } from '~/common/guards/jwt.guard';
 import { PermissionsGuard } from '~/common/guards/permission.guard';
 import { TResponse } from '~/common/types/response';
-import { AuthGuard } from '../../common/guards/auth.guard';
 import { UserDto } from '../users/dto/user.dto';
 import { AuthService } from './auth.service';
 import { SignInDto } from './dto/sign-in.dto';
@@ -58,7 +57,7 @@ export class AuthController {
     });
   }
 
-  @UseGuards(AuthGuard, JwtGuard, PermissionsGuard)
+  @UseGuards(JwtGuard, PermissionsGuard)
   @Get('permissions')
   async getFullPermissions(@Request() req: RequestExpress): Promise<TResponse<PermissionsDto[] | undefined>> {
     const id = req.user?.id;
@@ -72,7 +71,9 @@ export class AuthController {
 
   @HttpCode(HttpStatus.ACCEPTED)
   @Get('logout')
-  signOut(@Res({ passthrough: true }) response: ResponseExpress): TResponse {
+  async signOut(@Request() req: RequestExpress, @Res({ passthrough: true }) response: ResponseExpress): Promise<TResponse> {
+    const refreshToken: string | undefined = req.signedCookies.refresh_token;
+    if (refreshToken) await this.authService.logout(refreshToken);
     response.cookie('refresh_token', '', {
       httpOnly: true,
       signed: true,

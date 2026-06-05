@@ -4,7 +4,7 @@
 
 import { Injectable } from '@nestjs/common';
 import { Canvas, CanvasRenderingContext2D } from 'canvas';
-import * as canvas from 'canvas';
+import canvas from 'canvas';
 
 interface CanvasAndContext {
   canvas: Canvas;

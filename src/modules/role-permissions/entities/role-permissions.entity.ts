@@ -17,7 +17,7 @@ export class RolePermission {
   @JoinColumn({ name: 'id_role' })
   role: Role;
 
-  @ManyToOne('Permission', 'rolePermissions', { eager: true })
+  @ManyToOne('Permission', 'rolePermissions')
   @JoinColumn({ name: 'id_permission' })
   permission: Permission;
 
