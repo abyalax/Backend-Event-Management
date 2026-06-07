@@ -129,28 +129,29 @@ services:
     networks:
       - storage_network
 
-  dbgate:
-    image: dbgate/dbgate
-    container_name: event_management_dbms
-    restart: no
-    depends_on:
-      - postgres
-    ports:
-      - 8080:3000
-    volumes:
-      - dbgate-data:/root/.dbgate
-    networks:
-      - storage_network
-    environment:
-      PORT: 3000
-      CONNECTIONS: POSTGRES
-      LABEL_POSTGRES: Postgres
-      SERVER_POSTGRES: postgres
-      USER_POSTGRES: root
-      PASSWORD_POSTGRES: postgress_pass
-      PORT_POSTGRES: 5432
-      ENGINE_POSTGRES: postgres@dbgate-plugin-postgres
-      DATABASE_POSTGRES: db_event_management
+# uncomment if need this dbms
+#  dbgate:
+#    image: dbgate/dbgate
+#    container_name: event_management_dbms
+#    restart: no
+#    depends_on:
+#      - postgres
+#    ports:
+#      - 8080:3000
+#    volumes:
+#      - dbgate-data:/root/.dbgate
+#    networks:
+#      - storage_network
+#    environment:
+#      PORT: 3000
+#      CONNECTIONS: POSTGRES
+#      LABEL_POSTGRES: Postgres
+#      SERVER_POSTGRES: postgres
+#       USER_POSTGRES: root
+#      PASSWORD_POSTGRES: postgress_pass
+#      PORT_POSTGRES: 5432
+#      ENGINE_POSTGRES: postgres@dbgate-plugin-postgres
+#      DATABASE_POSTGRES: db_event_management
 
 networks:
   storage_network:

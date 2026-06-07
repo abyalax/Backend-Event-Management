@@ -71,16 +71,16 @@ export class EventService {
   }
 
   async create(payloadEvent: CreateEventDto, userEmail: string) {
+    const category = await this.categoryRepository.findOne({
+      where: { id: Number(payloadEvent.categoryId) },
+    });
+
+    if (!category) throw new NotFoundException(`Category with ID ${payloadEvent.categoryId} not found`);
+
     const event = await this.eventRepository.manager.transaction(async (manager) => {
-      const category = await manager.findOne(EventCategory, {
-        where: { id: Number(payloadEvent.categoryId) },
-      });
-
-      if (!category) throw new NotFoundException(`Category with ID ${payloadEvent.categoryId} not found`);
-
       const createdEvent = await manager.save(Event, {
         ...payloadEvent,
-        categoryId: payloadEvent.categoryId.toString(),
+        categoryId: String(payloadEvent.categoryId),
         category,
       });
 
@@ -96,27 +96,30 @@ export class EventService {
       return createdEvent;
     });
 
-    const media = await this.eventMediaRepository.find({
-      where: { eventId: event.id },
-      relations: ['media'],
-    });
+    const bannerMedia = payloadEvent.bannerMediaId
+      ? await this.eventMediaRepository.findOne({
+          where: {
+            eventId: event.id,
+            type: EEventMediaType.BANNER,
+          },
+          relations: ['media'],
+        })
+      : null;
 
-    const bannerMedia = media.find(
-      (m) => m.type === EEventMediaType.BANNER && (m.media?.accessType === EAccessType.PUBLIC || m.media?.accessType === undefined),
-    );
-
-    const bannerUrl = bannerMedia?.media ? this.buildPublicUrl(bannerMedia.media) : null;
+    const banner = bannerMedia?.media;
+    const canExposeBanner = banner?.accessType === EAccessType.PUBLIC || banner?.accessType === undefined;
+    const bannerUrl = canExposeBanner ? this.buildPublicUrl(banner as MediaObject) : null;
 
     try {
       if (userEmail) {
         // Queue email notification job
         await this.queueService.addJob(QUEUE.EVENT_NOTIFICATIONS, 'send-event-creation-email', {
           eventId: event.id,
-          userEmail: userEmail,
+          userEmail,
           eventTitle: event.title,
         });
 
-        this.logger.info({ eventId: event.id, userEmail: userEmail, eventTitle: event.title }, 'Event creation email notification queued');
+        this.logger.info({ eventId: event.id, userEmail, eventTitle: event.title }, 'Event creation email notification queued');
       } else {
         this.logger.warn({ eventId: event.id, createdBy: payloadEvent.createdBy }, 'User email not available for event creation notification');
       }
@@ -130,7 +133,7 @@ export class EventService {
 
     return {
       ...event,
-      media,
+      bannerMedia,
       bannerUrl,
     };
   }
