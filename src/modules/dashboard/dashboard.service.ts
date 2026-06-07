@@ -1,18 +1,16 @@
 import { Inject, Injectable } from '@nestjs/common';
 import { REPOSITORY } from '~/common/constants/database';
-
 import type { Repository } from 'typeorm';
 import { QueryDashboardDto } from './dto/query-dashboard.dto';
 import { Payment } from '../payments/entities/payment.entity';
-import { PinoLogger } from 'nestjs-pino';
 import { TopEvents, TotalSales } from './dashboard.interface';
+import { PaymentStatus } from '../payments/payment.enum';
 
 @Injectable()
 export class DashboardService {
   constructor(
     @Inject(REPOSITORY.PAYMENT)
     private readonly paymentRepository: Repository<Payment>,
-    private readonly logger: PinoLogger,
   ) {}
 
   /**
@@ -57,10 +55,9 @@ export class DashboardService {
       .createQueryBuilder('payment')
       .select('SUM(payment.amount)', 'totalSales')
       .addSelect('COUNT(DISTINCT payment.orderId)', 'totalOrders')
-      .where('payment.status = :status', { status: 'COMPLETED' });
+      .where('payment.status = :status', { status: PaymentStatus.COMPLETED });
 
     if (startDate) queryBuilder.andWhere('payment.paidAt >= :startDate', { startDate });
-
     if (endDate) queryBuilder.andWhere('payment.paidAt <= :endDate', { endDate });
 
     const result = await queryBuilder.getRawOne<TotalSales>();
@@ -77,13 +74,12 @@ export class DashboardService {
       .leftJoin('order.orderItems', 'orderItem')
       .leftJoin('orderItem.ticket', 'ticket')
       .leftJoin('ticket.event', 'event')
-      .where('payment.status = :status', { status: 'COMPLETED' })
+      .where('payment.status = :status', { status: PaymentStatus.COMPLETED })
       .groupBy('event.id, event.title')
       .orderBy('totalSales', 'DESC')
       .limit(limit);
 
     if (startDate) queryBuilder.andWhere('payment.paidAt >= :startDate', { startDate });
-
     if (endDate) queryBuilder.andWhere('payment.paidAt <= :endDate', { endDate });
 
     const result = await queryBuilder.getRawMany<TopEvents>();
@@ -101,13 +97,12 @@ export class DashboardService {
       .leftJoin('orderItem.ticket', 'ticket')
       .leftJoin('ticket.event', 'event')
       .leftJoin('event.category', 'category')
-      .where('payment.status = :status', { status: 'COMPLETED' })
+      .where('payment.status = :status', { status: PaymentStatus.COMPLETED })
       .groupBy('category.id, category.name')
       .orderBy('totalSales', 'DESC')
       .limit(limit);
 
     if (startDate) queryBuilder.andWhere('payment.paidAt >= :startDate', { startDate });
-
     if (endDate) queryBuilder.andWhere('payment.paidAt <= :endDate', { endDate });
 
     const result = await queryBuilder.getRawMany();
