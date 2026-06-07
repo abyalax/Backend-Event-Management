@@ -55,7 +55,7 @@ export class OrderExpirationWorker {
 
   async checkOrderExpiration(orderId: string): Promise<boolean> {
     try {
-      const order = await this.orderService.findOrderById(orderId, undefined, 'summary');
+      const order = await this.orderService.findOrderById(orderId, 'summary');
 
       if (!order) {
         this.logger.warn(`Order ${orderId} not found`);
@@ -89,7 +89,7 @@ export class OrderExpirationWorker {
 
   async getOrderExpirationTime(orderId: string): Promise<Date | null> {
     try {
-      const order = await this.orderService.findOrderById(orderId, undefined, 'summary');
+      const order = await this.orderService.findOrderById(orderId, 'summary');
 
       if (!order || order?.status !== OrderStatus.PENDING) return null;
       if (!order.createdAt) return null;
@@ -106,7 +106,7 @@ export class OrderExpirationWorker {
 
   async extendOrderExpiration(orderId: string, additionalMinutes: number = ORDER_TTL_MINUTES): Promise<boolean> {
     try {
-      const order = await this.orderService.findOrderById(orderId, undefined, 'summary');
+      const order = await this.orderService.findOrderById(orderId, 'summary');
 
       if (!order || order?.status !== OrderStatus.PENDING) {
         this.logger.warn(`Cannot extend expiration for order ${orderId}: not found or not pending`);

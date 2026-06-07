@@ -11,6 +11,7 @@ export enum PaymentStatus {
   EXPIRED = 'EXPIRED',
   FAILED = 'FAILED',
   SETTLED = 'SETTLED',
+  COMPLETED = 'COMPLETED',
 }
 
 export enum EwalletType {

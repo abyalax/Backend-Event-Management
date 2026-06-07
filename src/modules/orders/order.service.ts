@@ -51,9 +51,6 @@ export class OrderService {
     @Inject(REPOSITORY.ORDER)
     private readonly orderRepository: Repository<Order>,
 
-    @Inject(REPOSITORY.TICKET)
-    private readonly ticketRepository: Repository<Ticket>,
-
     @Inject(REPOSITORY.GENERATED_EVENT_TICKET)
     private readonly generatedTicketRepository: Repository<GeneratedEventTicket>,
 
@@ -159,13 +156,13 @@ export class OrderService {
       throw error;
     }
 
-    const order = await this.findOrderById(createdOrder.id, userId, 'response');
+    const order = await this.findOrderById(createdOrder.id, 'response', userId);
     const payment = await this.getPaymentByOrderId(order.id);
     return this.toOrderResponse(order, payment);
   }
 
   async getOrderPaymentQris(id: string, userId: string): Promise<{ orderId: string; qrCodeDataUrl: string; qrString: string }> {
-    const order = await this.findOrderById(id, userId, 'summary');
+    const order = await this.findOrderById(id, 'summary', userId);
     const payment = await this.getPaymentByOrderId(order.id);
 
     if (payment?.paymentMethod !== PaymentMethod.QRIS || !payment.paymentUrl)
@@ -184,13 +181,13 @@ export class OrderService {
   }
 
   async getOrderById(id: string, userId: string): Promise<OrderResponseDto> {
-    const order = await this.findOrderById(id, userId, 'response');
+    const order = await this.findOrderById(id, 'response', userId);
     const payment = await this.getPaymentByOrderId(order.id);
     return this.toOrderResponse(order, payment);
   }
 
   async getOrderStatus(id: string, userId: string): Promise<OrderStatusResponseDto> {
-    const order = await this.findOrderById(id, userId, 'summary');
+    const order = await this.findOrderById(id, 'summary', userId);
     const payment = await this.getPaymentByOrderId(order.id);
 
     return {
@@ -203,7 +200,7 @@ export class OrderService {
   }
 
   async getOrderTickets(id: string, userId: string) {
-    const order = await this.findOrderById(id, userId, 'summary');
+    const order = await this.findOrderById(id, 'summary', userId);
     if (![OrderStatus.PAID].includes(order.status)) {
       const payment = await this.getPaymentByOrderId(order.id);
       if (payment?.status !== PaymentStatus.SETTLED) {
@@ -215,13 +212,13 @@ export class OrderService {
   }
 
   async cancelOrder(id: string, userId: string): Promise<OrderResponseDto> {
-    const order = await this.findOrderById(id, userId, 'summary');
+    const order = await this.findOrderById(id, 'summary', userId);
     if (order.status !== OrderStatus.PENDING) {
       throw new BadRequestException('Only pending orders can be cancelled');
     }
 
     await this.cancelOrderInternal(id, false);
-    const updated = await this.findOrderById(id, userId, 'response');
+    const updated = await this.findOrderById(id, 'response', userId);
     const payment = await this.getPaymentByOrderId(updated.id);
     return this.toOrderResponse(updated, payment);
   }
@@ -261,17 +258,14 @@ export class OrderService {
     };
   }
 
-  async findOrderById(orderId: string, userId?: string): Promise<LoadedOrder>;
-  async findOrderById(orderId: string, userId: string | undefined, relations: OrderRelations): Promise<LoadedOrder>;
-  async findOrderById(orderId: string, userId?: string, relations: OrderRelations = 'response'): Promise<LoadedOrder> {
+  async findOrderById(orderId: string, relations: OrderRelations, userId?: string): Promise<LoadedOrder>;
+  async findOrderById(orderId: string, relations: OrderRelations = 'response', userId?: string): Promise<LoadedOrder> {
     const order = await this.orderRepository.findOne({
       where: { id: orderId },
       relations: this.resolveOrderRelations(relations),
     });
 
-    if (!order) {
-      throw new NotFoundException(`Order ${orderId} not found`);
-    }
+    if (!order) throw new NotFoundException(`Order ${orderId} not found`);
 
     if (userId && order.userId !== userId) {
       throw new ForbiddenException('You are not allowed to access this order');
@@ -292,7 +286,7 @@ export class OrderService {
   }
 
   async updateOrderStatus(orderId: string, status: OrderStatus): Promise<Order> {
-    const order = await this.findOrderById(orderId, undefined, 'summary');
+    const order = await this.findOrderById(orderId, 'summary');
     if (order.status === status) {
       return order;
     }
@@ -313,7 +307,7 @@ export class OrderService {
   }
 
   async updateOrderExpiration(orderId: string, expiredAt: Date): Promise<Order> {
-    const order = await this.findOrderById(orderId, undefined, 'summary');
+    const order = await this.findOrderById(orderId, 'summary');
     if (order.status !== OrderStatus.PENDING) {
       throw new BadRequestException('Only pending orders can update expiration');
     }
@@ -430,7 +424,7 @@ export class OrderService {
   }
 
   async handleSuccessfulPayment(orderId: string): Promise<void> {
-    const order = await this.findOrderById(orderId, undefined, 'paymentProcessing');
+    const order = await this.findOrderById(orderId, 'paymentProcessing');
     if (order.status !== OrderStatus.PENDING) return;
 
     const quantityByTicketId = new Map<string, number>();
@@ -495,14 +489,14 @@ export class OrderService {
   }
 
   async handleExpiredPayment(orderId: string): Promise<void> {
-    const order = await this.findOrderById(orderId, undefined, 'summary');
+    const order = await this.findOrderById(orderId, 'summary');
     if (order.status !== OrderStatus.PENDING) return;
 
     await this.updateOrderStatus(orderId, OrderStatus.EXPIRED);
   }
 
   async handleFailedPayment(orderId: string): Promise<void> {
-    const order = await this.findOrderById(orderId, undefined, 'summary');
+    const order = await this.findOrderById(orderId, 'summary');
     if (order.status !== OrderStatus.PENDING) return;
 
     await this.updateOrderStatus(orderId, OrderStatus.CANCELLED);
@@ -553,7 +547,7 @@ export class OrderService {
   }
 
   private async cancelOrderInternal(orderId: string, dueToPaymentFailure: boolean): Promise<void> {
-    const order = await this.findOrderById(orderId, undefined, 'summary');
+    const order = await this.findOrderById(orderId, 'summary');
     if (order.status !== OrderStatus.PENDING) return;
 
     order.status = OrderStatus.CANCELLED;
