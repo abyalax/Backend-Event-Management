@@ -6,6 +6,13 @@ export const mockRepository = {
   delete: jest.fn(),
 };
 
+export const mockEventRepository = {
+  findDetailById: jest.fn(),
+  findWithMediaById: jest.fn(),
+  findManyByIds: jest.fn(),
+  findMissingIds: jest.fn(),
+};
+
 export const mockRedis = {
   get: jest.fn(),
   set: jest.fn(),

@@ -3,7 +3,7 @@ import { Repository } from 'typeorm';
 import { REPOSITORY } from '~/common/constants/database';
 import { CONFIG_SERVICE } from '~/infrastructure/config/config.provider';
 import { CONFIG_PROVIDER } from '~/common/constants/provider';
-import { mockRedis, mockRepository, mockStorageService, mockRedisService, mockQueueService } from '~/test/common/mock';
+import { mockRedis, mockRepository, mockStorageService, mockRedisService, mockQueueService, mockEventRepository } from '~/test/common/mock';
 import { EventCategory } from '../event-categories/entities/event-category.entity';
 import { Event } from './entities/event.entity';
 import { EventService } from './event.service';
@@ -13,6 +13,7 @@ import { StorageService } from '~/infrastructure/storage/storage.service';
 import { RedisService } from '~/infrastructure/redis/redis.service';
 import { CacheService } from '~/infrastructure/cache/cache.service';
 import { QueueService } from '~/infrastructure/queue/queue.service';
+import { EventRepository } from './event.repository';
 
 describe('EventService', () => {
   let service: EventService;
@@ -99,6 +100,10 @@ describe('EventService', () => {
             getLock: jest.fn(),
             releaseLock: jest.fn(),
           },
+        },
+        {
+          provide: EventRepository,
+          useValue: mockEventRepository,
         },
         {
           provide: RedisService,
