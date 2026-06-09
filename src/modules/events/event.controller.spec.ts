@@ -2,7 +2,15 @@ import { JwtModule } from '@nestjs/jwt';
 import { Test, TestingModule } from '@nestjs/testing';
 import { REPOSITORY } from '~/common/constants/database';
 import { CONFIG_SERVICE } from '~/infrastructure/config/config.provider';
-import { mockRedis, mockRepository, mockConfigService, mockStorageService, mockRedisService, mockQueueService } from '~/test/common/mock';
+import {
+  mockRedis,
+  mockRepository,
+  mockConfigService,
+  mockStorageService,
+  mockRedisService,
+  mockQueueService,
+  mockEventRepository,
+} from '~/test/common/mock';
 import { EventController } from './event.controller';
 import { EventService } from './event.service';
 import { PinoLogger } from 'nestjs-pino';
@@ -10,6 +18,7 @@ import { CONFIG_PROVIDER } from '~/common/constants/provider';
 import { StorageService } from '~/infrastructure/storage/storage.service';
 import { RedisService } from '~/infrastructure/redis/redis.service';
 import { QueueService } from '~/infrastructure/queue/queue.service';
+import { EventRepository } from './event.repository';
 
 describe('EventController', () => {
   let controller: EventController;
@@ -81,6 +90,10 @@ describe('EventController', () => {
         {
           provide: REPOSITORY.MEDIA_OBJECT,
           useValue: mockRepository,
+        },
+        {
+          provide: EventRepository,
+          useValue: mockEventRepository,
         },
         {
           provide: QueueService,

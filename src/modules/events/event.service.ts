@@ -15,13 +15,11 @@ import { MediaObject } from '~/infrastructure/storage/entitiy/media-objects.enti
 import { EAccessType } from '~/infrastructure/storage/dto/presigned-url.dto';
 import { StorageService } from '~/infrastructure/storage/storage.service';
 import { ConfigService, CONFIG_SERVICE } from '~/infrastructure/config/config.provider';
+import { EventRepository } from './event.repository';
 
 @Injectable()
 export class EventService {
   constructor(
-    @Inject(REPOSITORY.EVENT)
-    private readonly eventRepository: Repository<Event>,
-
     @Inject(REPOSITORY.EVENT_CATEGORY)
     private readonly categoryRepository: Repository<EventCategory>,
 
@@ -34,6 +32,7 @@ export class EventService {
     @Inject(CONFIG_SERVICE) private readonly configService: ConfigService,
     private readonly storageService: StorageService,
 
+    private readonly eventRepository: EventRepository,
     private readonly queueService: QueueService,
     private readonly logger: PinoLogger,
   ) {}
@@ -163,15 +162,10 @@ export class EventService {
   }
 
   async findOneByID(id: string) {
-    const event = await this.eventRepository.findOne({
-      where: { id },
-      relations: ['category', 'media', 'media.media', 'tickets'],
-    });
-
+    const event = await this.eventRepository.findDetailById(id);
     if (event === null) throw new NotFoundException('Event not found');
 
     const media = event.media ?? [];
-
     const bannerMedia = media.find(
       (m) => m.type === EEventMediaType.BANNER && (m.media?.accessType === EAccessType.PUBLIC || m.media?.accessType === undefined),
     );
@@ -186,11 +180,7 @@ export class EventService {
 
   async update(id: string, payloadEvent: UpdateEventDto): Promise<boolean> {
     // Find existing event with media relations
-    const existingEvent = await this.eventRepository.findOne({
-      where: { id },
-      relations: ['media', 'media.media'],
-    });
-
+    const existingEvent = await this.eventRepository.findWithMediaById(id);
     if (!existingEvent) throw new NotFoundException('Event not found');
 
     // Handle banner media deletion if bannerMediaId is being updated
@@ -239,15 +229,8 @@ export class EventService {
     if (!ids || ids.length === 0) throw new BadRequestException('Event IDs are required');
 
     // Check if events exist
-    const events = await this.eventRepository.find({
-      where: ids.map((id) => ({ id })),
-    });
-
-    if (events.length !== ids.length) {
-      const foundIds = new Set(events.map((e) => e.id));
-      const missingIds = ids.filter((id) => !foundIds.has(id));
-      throw new NotFoundException(`Events not found: ${missingIds.join(', ')}`);
-    }
+    const missingIds = await this.eventRepository.findMissingIds(ids);
+    if (missingIds.length > 0) throw new NotFoundException(`Events not found: ${missingIds.join(', ')}`);
 
     // Update events status to PUBLISHED
     const result = await this.eventRepository.update(
@@ -267,21 +250,12 @@ export class EventService {
 
   async bulkDelete(ids: string[]) {
     if (!ids || ids.length === 0) throw new BadRequestException('Event IDs are required');
-    const events = await this.eventRepository.find({
-      where: ids.map((id) => ({ id })),
-    });
-
-    if (events.length !== ids.length) {
-      const foundIds = new Set(events.map((e) => e.id));
-      const missingIds = ids.filter((id) => !foundIds.has(id));
-      throw new NotFoundException(`Events not found: ${missingIds.join(', ')}`);
-    }
+    const missingIds = await this.eventRepository.findMissingIds(ids);
+    if (missingIds.length > 0) throw new NotFoundException(`Events not found: ${missingIds.join(', ')}`);
 
     // Soft delete events
     const result = await this.eventRepository.softDelete(ids);
-
     if (result.affected === 0) throw new NotFoundException('No events were deleted');
-
     this.logger.info({ eventIds: ids, affected: result.affected }, 'Events deleted successfully');
 
     return {

@@ -8,10 +8,12 @@ import { EventMedia } from './entities/event-media.entity';
 import { MediaObject } from '~/infrastructure/storage/entitiy/media-objects.entity';
 import { EventService } from './event.service';
 import { AttachMediaValidationPipe } from './pipes/attach-media-validation.pipe';
+import { EventRepository } from './event.repository';
 
 export const eventProvider: Provider[] = [
   EventService,
   AttachMediaValidationPipe,
+  EventRepository,
   {
     provide: REPOSITORY.EVENT,
     useFactory: (dataSource: DataSource) => dataSource.getRepository(Event),
